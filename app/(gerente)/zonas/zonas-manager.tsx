@@ -4,7 +4,7 @@ import { useState } from "react";
 import { criarZona } from "./actions";
 import { InlineTextForm } from "./inline-text-form";
 import { ZonaCard } from "./zona-card";
-import { FOCUS_RING, TAP_TARGET } from "./styles";
+import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 
 type Zona = { id: string; nome: string; regioes: { id: string; nome: string }[] };
 

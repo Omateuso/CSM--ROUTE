@@ -5,7 +5,7 @@ import { renomearZona, excluirZona, criarRegiao } from "./actions";
 import { InlineTextForm } from "./inline-text-form";
 import { DeleteTrigger, ConfirmDeleteBar } from "./confirm-delete";
 import { RegiaoRow } from "./regiao-row";
-import { FOCUS_RING, TAP_TARGET } from "./styles";
+import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 
 type Regiao = { id: string; nome: string };
 

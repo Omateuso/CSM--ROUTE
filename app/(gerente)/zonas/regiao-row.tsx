@@ -4,7 +4,7 @@ import { useState } from "react";
 import { renomearRegiao, excluirRegiao } from "./actions";
 import { InlineTextForm } from "./inline-text-form";
 import { DeleteTrigger, ConfirmDeleteBar } from "./confirm-delete";
-import { FOCUS_RING, TAP_TARGET } from "./styles";
+import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 
 export function RegiaoRow({ id, nome }: { id: string; nome: string }) {
   const [modo, setModo] = useState<"visualizando" | "editando" | "excluindo">("visualizando");

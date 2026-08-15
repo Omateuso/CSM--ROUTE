@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef, type KeyboardEvent } from "react";
 import type { ActionState } from "./actions";
-import { FOCUS_RING, TAP_TARGET } from "./styles";
+import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 
 export function InlineTextForm({
   action,

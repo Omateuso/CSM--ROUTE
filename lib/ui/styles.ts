@@ -1,5 +1,5 @@
 // Anel de foco compartilhado — mesmo tratamento visual em todo botão/link
-// de texto da tela, consistente com o anel accent já usado nos inputs.
+// de texto do sistema, consistente com o anel accent já usado nos inputs.
 export const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-surface rounded-[var(--radius-sm)]";
 

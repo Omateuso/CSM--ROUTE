@@ -52,8 +52,8 @@ Gap entre cards: `gap-4` (16px). Linhas de lista: `py-2` (8px vertical).
 - **Botão de ação em texto** (Renomear/Excluir/Cancelar/+Adicionar): `text-xs
   font-medium`, cor `text-tertiary` (neutro) ou `text-accent`
   (ação positiva/"+"), hover mais escuro. Sempre com `FOCUS_RING` e
-  `TAP_TARGET` (ver `app/(gerente)/zonas/styles.ts` — extrair pra
-  `lib/ui` se o padrão se repetir numa 3ª tela).
+  `TAP_TARGET`, importados de `lib/ui/styles.ts` (extraído aqui porque já
+  é a 2ª tela reaproveitando — zonas e RTs importam do mesmo lugar).
 - **Botão primário** (submit de form pequeno): `bg-accent text-white
   rounded-sm px-3 py-1.5 text-xs font-medium`.
 - **Input de texto inline**: `border-border bg-surface-input rounded-sm
@@ -67,6 +67,33 @@ Gap entre cards: `gap-4` (16px). Linhas de lista: `py-2` (8px vertical).
   cabeçalho/linha (não tentam conviver espremidas ao lado do título) — mais
   prático e previsível em qualquer largura do que depender de `flex-wrap`
   aninhado.
+- **Tabela densa** (dataset pequeno, ex.: RTs — 98 linhas, filtra no
+  client): `<table>` com `<th scope="col">`, linhas em `divide-y
+  divide-border`, primeira coluna (código/id) em `font-mono text-xs
+  tabular-nums`, coluna principal com texto primário + linha secundária
+  `text-tertiary` embaixo (em vez de mais colunas). Envolver em `<div
+  className="overflow-x-auto">` **com a própria `<table>` levando
+  `min-w-[Npx]`** — sem o min-width a tabela só espreme/corta colunas em
+  mobile em vez de habilitar o scroll horizontal.
+- **Diálogo de formulário maior** (4+ campos — não cabe inline): `<dialog>`
+  nativo via `showModal()`/`close()` (focus trap e retorno de foco de
+  graça, confirmado empiricamente). Precisa de 3 coisas manuais que o
+  navegador não dá sozinho: (1) `aria-labelledby` apontando pro `<h2>` do
+  título; (2) fechar no clique do backdrop, comparando `event.target ===
+  dialogRef.current` no `onClick` do próprio `<dialog>`; (3)
+  **centralização explícita** (`fixed top-1/2 left-1/2 -translate-x-1/2
+  -translate-y-1/2 m-0`) — o Tailwind Preflight zera `margin`, o que
+  quebra a centralização nativa via `margin: auto` do `dialog:modal` e
+  gruda o modal no canto superior esquerdo. Formulário maior (7+ campos)
+  fica remontado a cada abertura via `key` incremental no componente pai
+  — `defaultValue`/`useActionState` só aplicam o valor inicial na
+  montagem, então reabrir o mesmo `<dialog>` (sem remontar) pra editar um
+  registro diferente mantém os campos/erro da abertura anterior.
+- **Status ativo/inativo**: neutro, não usa verde (reservado pro
+  vocabulário de SLA). Ativo = ponto+texto discreto em `text-tertiary`,
+  sem badge. Inativo = badge com borda (`border-border-strong` +
+  `bg-surface-input`) em `text-secondary` — o estado raro/exceção ganha
+  mais peso visual que o comum.
 
 ## Acessibilidade — padrões obrigatórios
 
@@ -82,6 +109,10 @@ Gap entre cards: `gap-4` (16px). Linhas de lista: `py-2` (8px vertical).
   (WCAG 2.5.3 Label in Name) mas desambigua pra leitor de tela.
 - Mensagens de erro dinâmicas (ex.: violação de FK) usam `role="alert"`.
 - Tecla Escape fecha formulários inline (paridade com "Cancelar").
+- Tabelas: `<th scope="col">` em todo cabeçalho de coluna (WCAG 1.3.1).
+- Ação repetida em várias linhas de uma tabela (Editar/Ativar/Desativar por
+  linha): mesmo tratamento do "Renomear" acima — `aria-label` com o
+  identificador da linha (`Editar RT ${codigo}`).
 
 ## Pendências conhecidas (não bloqueiam, revisitar se acumular)
 
