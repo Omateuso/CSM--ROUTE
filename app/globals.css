@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base neutra levemente quente ("papel de registro"), não cinza frio de
+     template — decisão do design system, ver .interface-design/system.md */
+  --background: #faf9f7;
+  --surface: #ffffff;
+  --surface-input: #f5f4f2;
+
+  --border: rgba(28, 25, 23, 0.08);
+  --border-strong: rgba(28, 25, 23, 0.16);
+
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-tertiary: #6b6560; /* ~5.3:1 sobre --background — AA ok com folga */
+  /* --text-muted NÃO passa WCAG AA (~2.2:1) sobre --background — só usar
+     em contexto genuinamente decorativo (nunca em texto que o usuário
+     precisa ler). Para qualquer texto informativo de baixa ênfase, usar
+     --text-tertiary. */
+  --text-muted: #a8a29e;
+
+  /* Azul "planta baixa" — único accent de ação/foco do sistema. Não usar
+     as cores operacionais (vermelho/laranja/amarelo/verde/roxo) fora dos
+     badges de prioridade/SLA definidos no CLAUDE.md. */
+  --accent: #1e3a6e;
+  --accent-hover: #16305a;
+
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-input: var(--surface-input);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LogoutButton from "./logout-button";
@@ -20,12 +21,12 @@ export default async function Home() {
     .single();
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4">
-      <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
-        <h1 className="text-lg font-semibold text-zinc-900">
+    <div className="flex flex-1 items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-[var(--radius-md)] border border-border bg-surface p-8 text-center">
+        <h1 className="text-lg font-semibold text-text-primary">
           Base operacional configurada
         </h1>
-        <p className="mt-2 text-sm text-zinc-600">
+        <p className="mt-2 text-sm text-text-secondary">
           Logado como <strong>{profile?.nome ?? user.email}</strong>
           {profile?.role && (
             <>
@@ -34,10 +35,22 @@ export default async function Home() {
             </>
           )}
         </p>
-        <p className="mt-4 text-xs text-zinc-400">
+        <p className="mt-4 text-xs text-text-tertiary">
           Placeholder temporário da Parte A — será substituído pelo dashboard
-          real na Parte B.
+          real ao final da Parte B.
         </p>
+
+        {profile?.role === "gerente" && (
+          <div className="mt-6 border-t border-border pt-4">
+            <Link
+              href="/zonas"
+              className="rounded-[var(--radius-sm)] text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-surface"
+            >
+              Zonas e regiões →
+            </Link>
+          </div>
+        )}
+
         <div className="mt-6">
           <LogoutButton />
         </div>
