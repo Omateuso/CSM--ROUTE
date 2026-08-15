@@ -7,14 +7,17 @@ import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
 import { FOCUS_RING, FIELD_INPUT, FIELD_LABEL } from "@/lib/ui/styles";
 
 type Regiao = { id: string; nome: string; zonaNome: string };
+type Caps = { id: string; nome: string };
 
 export function RtCreateDialog({
   open,
   regioes,
+  caps,
   onClose,
 }: {
   open: boolean;
   regioes: Regiao[];
+  caps: Caps[];
   onClose: () => void;
 }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(criarRT, {
@@ -29,6 +32,7 @@ export function RtCreateDialog({
   const idCodigo = `${uid}-codigo`;
   const idNome = `${uid}-nome`;
   const idRegiao = `${uid}-regiao`;
+  const idCaps = `${uid}-caps`;
   const idBairro = `${uid}-bairro`;
   const idEndereco = `${uid}-endereco`;
   const idLatitude = `${uid}-latitude`;
@@ -104,6 +108,22 @@ export function RtCreateDialog({
                     </option>
                   ))}
               </optgroup>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor={idCaps} className={FIELD_LABEL}>
+            CAPS
+          </label>
+          <select id={idCaps} name="capsId" defaultValue="" required className={FIELD_INPUT}>
+            <option value="" disabled>
+              Selecione...
+            </option>
+            {caps.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
             ))}
           </select>
         </div>

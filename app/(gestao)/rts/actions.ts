@@ -10,7 +10,7 @@ function traduzErro(error: { code?: string; message: string }): string {
     return "Já existe uma RT com esse código.";
   }
   if (error.code === "23503") {
-    return "A região selecionada não existe mais — atualize a página e tente de novo.";
+    return "A região ou o CAPS selecionado não existe mais — atualize a página e tente de novo.";
   }
   if (error.code === "42501") {
     return "Você não tem permissão pra fazer essa alteração.";
@@ -26,6 +26,7 @@ export async function criarRT(_prev: ActionState, formData: FormData): Promise<A
   const endereco = String(formData.get("endereco") ?? "").trim();
   const bairro = String(formData.get("bairro") ?? "").trim();
   const regiaoId = String(formData.get("regiaoId") ?? "");
+  const capsId = String(formData.get("capsId") ?? "");
   const latitude = Number(String(formData.get("latitude") ?? "").replace(",", "."));
   const longitude = Number(String(formData.get("longitude") ?? "").replace(",", "."));
   const ativo = formData.get("ativo") === "on";
@@ -35,6 +36,7 @@ export async function criarRT(_prev: ActionState, formData: FormData): Promise<A
   if (!endereco) return { error: "Informe o endereço." };
   if (!bairro) return { error: "Informe o bairro." };
   if (!regiaoId) return { error: "Selecione a região." };
+  if (!capsId) return { error: "Selecione o CAPS." };
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return { error: "Latitude inválida." };
   if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return { error: "Longitude inválida." };
 
@@ -45,6 +47,7 @@ export async function criarRT(_prev: ActionState, formData: FormData): Promise<A
     p_endereco: endereco,
     p_bairro: bairro,
     p_regiao_id: regiaoId,
+    p_caps_id: capsId,
     p_latitude: latitude,
     p_longitude: longitude,
     p_ativo: ativo,
@@ -55,17 +58,20 @@ export async function criarRT(_prev: ActionState, formData: FormData): Promise<A
   return { error: null };
 }
 
-// Só nome/ativo — o código é a identidade permanente da RT (não muda
-// depois de criada) e o endereço só muda via trocarEnderecoRT.
+// Nome/ativo/CAPS — o código é a identidade permanente da RT (não muda
+// depois de criada) e o endereço só muda via trocarEnderecoRT. CAPS não
+// tem histórico (diferente do endereço): é só um update normal.
 export async function editarRT(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const id = String(formData.get("id") ?? "");
   const nome = String(formData.get("nome") ?? "").trim();
+  const capsId = String(formData.get("capsId") ?? "");
   const ativo = formData.get("ativo") === "on";
 
   if (!nome) return { error: "Informe o nome da RT." };
+  if (!capsId) return { error: "Selecione o CAPS." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("rts").update({ nome, ativo }).eq("id", id);
+  const { error } = await supabase.from("rts").update({ nome, ativo, caps_id: capsId }).eq("id", id);
   if (error) return { error: traduzErro(error) };
 
   revalidatePath("/rts");

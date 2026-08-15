@@ -18,14 +18,25 @@ type RtRow = {
   longitude: number;
   ativo: boolean;
   regiao_id: string;
+  caps_id: string;
   regiaoNome: string;
   zonaNome: string;
+  capsNome: string;
 };
 type Regiao = { id: string; nome: string; zonaNome: string };
+type Caps = { id: string; nome: string };
 
 type ModoDialogo = "nenhum" | "criar" | "editar" | "endereco";
 
-export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }) {
+export function RtsManager({
+  rts,
+  regioes,
+  caps,
+}: {
+  rts: RtRow[];
+  regioes: Regiao[];
+  caps: Caps[];
+}) {
   const zonas = useMemo(() => [...new Set(regioes.map((r) => r.zonaNome))], [regioes]);
 
   const [busca, setBusca] = useState("");
@@ -49,7 +60,8 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
         rt.codigo.toLowerCase().includes(termo) ||
         rt.nome.toLowerCase().includes(termo) ||
         rt.endereco.toLowerCase().includes(termo) ||
-        rt.bairro.toLowerCase().includes(termo)
+        rt.bairro.toLowerCase().includes(termo) ||
+        rt.capsNome.toLowerCase().includes(termo)
       );
     });
   }, [rts, busca, zonaFiltro]);
@@ -83,7 +95,7 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
           type="search"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por código, nome, bairro ou endereço..."
+          placeholder="Buscar por código, nome, bairro, endereço ou CAPS..."
           className="min-w-64 flex-1 rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
 
@@ -123,7 +135,7 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
             <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
               <th scope="col" className="px-4 py-2.5 font-medium">Código</th>
               <th scope="col" className="px-4 py-2.5 font-medium">Nome / endereço</th>
-              <th scope="col" className="px-4 py-2.5 font-medium">Região</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">CAPS</th>
               <th scope="col" className="px-4 py-2.5 font-medium">Status</th>
               <th scope="col" className="px-4 py-2.5 font-medium">
                 <span className="sr-only">Ações</span>
@@ -141,8 +153,8 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
                   <p className="mt-0.5 text-xs text-text-tertiary">{rt.endereco}</p>
                 </td>
                 <td className="px-4 py-2.5 align-top text-text-secondary">
-                  <p>{rt.regiaoNome}</p>
-                  <p className="mt-0.5 text-xs text-text-tertiary">{rt.zonaNome}</p>
+                  <p>{rt.capsNome}</p>
+                  <p className="mt-0.5 text-xs text-text-tertiary">{rt.bairro}</p>
                 </td>
                 <td className="px-4 py-2.5 align-top">
                   <StatusBadge ativo={rt.ativo} />
@@ -194,12 +206,14 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
         key={`criar-${dialogInstancia}`}
         open={modoDialogo === "criar"}
         regioes={regioes}
+        caps={caps}
         onClose={fechar}
       />
       <RtEditDialog
         key={`editar-${dialogInstancia}`}
         open={modoDialogo === "editar"}
         rt={rtSelecionada}
+        caps={caps}
         onClose={fechar}
       />
       <RtEnderecoDialog

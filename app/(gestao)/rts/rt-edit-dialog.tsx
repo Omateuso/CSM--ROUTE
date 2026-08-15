@@ -6,13 +6,17 @@ import { Modal } from "@/lib/ui/modal";
 import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
 import { FOCUS_RING, FIELD_INPUT, FIELD_LABEL } from "@/lib/ui/styles";
 
+type Caps = { id: string; nome: string };
+
 export function RtEditDialog({
   open,
   rt,
+  caps,
   onClose,
 }: {
   open: boolean;
-  rt: { id: string; codigo: string; nome: string; ativo: boolean } | null;
+  rt: { id: string; codigo: string; nome: string; ativo: boolean; caps_id: string } | null;
+  caps: Caps[];
   onClose: () => void;
 }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(editarRT, {
@@ -22,6 +26,7 @@ export function RtEditDialog({
 
   const uid = useId();
   const idNome = `${uid}-nome`;
+  const idCaps = `${uid}-caps`;
 
   if (!rt) return null;
 
@@ -52,6 +57,28 @@ export function RtEditDialog({
             required
             className={FIELD_INPUT}
           />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor={idCaps} className={FIELD_LABEL}>
+            CAPS
+          </label>
+          <select
+            id={idCaps}
+            name="capsId"
+            defaultValue={rt.caps_id}
+            required
+            className={FIELD_INPUT}
+          >
+            <option value="" disabled>
+              Selecione...
+            </option>
+            {caps.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-text-secondary">

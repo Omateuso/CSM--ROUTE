@@ -3,10 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { RtsManager } from "./rts-manager";
 
 // Sem Database types gerados pro client do Supabase ainda — o embed
-// aninhado (rts.regioes / regioes.zonas) fica ambíguo pro TypeScript
-// (array vs objeto único), embora em runtime seja sempre um objeto único
-// (é um FK to-one). Normaliza aqui, uma vez só, pra o resto do app
-// trabalhar com tipos limpos e simples.
+// aninhado (rts.regioes / regioes.zonas / rts.caps) fica ambíguo pro
+// TypeScript (array vs objeto único), embora em runtime seja sempre um
+// objeto único (é um FK to-one). Normaliza aqui, uma vez só, pra o resto
+// do app trabalhar com tipos limpos e simples.
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
@@ -37,24 +37,30 @@ export default async function RtsPage() {
     );
   }
 
-  const [{ data: rtsRaw, error: rtsError }, { data: regioesRaw, error: regioesError }] = await Promise.all([
+  const [
+    { data: rtsRaw, error: rtsError },
+    { data: regioesRaw, error: regioesError },
+    { data: capsRaw, error: capsError },
+  ] = await Promise.all([
     supabase
       .from("rts")
       .select(
-        "id, codigo, nome, endereco, bairro, latitude, longitude, ativo, regiao_id, regioes(nome, zonas(nome))",
+        "id, codigo, nome, endereco, bairro, latitude, longitude, ativo, regiao_id, caps_id, regioes(nome, zonas(nome)), caps(nome)",
       )
       .order("codigo", { ascending: true }),
     supabase
       .from("regioes")
       .select("id, nome, zonas(nome)")
       .order("nome", { ascending: true }),
+    supabase.from("caps").select("id, nome").order("nome", { ascending: true }),
   ]);
 
-  if (rtsError || regioesError) {
+  if (rtsError || regioesError || capsError) {
     return (
       <div className="flex flex-1 items-center justify-center px-4">
         <p className="text-sm text-danger">
-          Não foi possível carregar os dados ({rtsError?.message ?? regioesError?.message}).
+          Não foi possível carregar os dados (
+          {rtsError?.message ?? regioesError?.message ?? capsError?.message}).
         </p>
       </div>
     );
@@ -64,6 +70,11 @@ export default async function RtsPage() {
     id: r.id as string,
     nome: r.nome as string,
     zonaNome: unwrapOne(r.zonas)?.nome ?? "—",
+  }));
+
+  const caps = (capsRaw ?? []).map((c) => ({
+    id: c.id as string,
+    nome: c.nome as string,
   }));
 
   const rts = (rtsRaw ?? []).map((rt) => {
@@ -78,8 +89,10 @@ export default async function RtsPage() {
       longitude: rt.longitude as number,
       ativo: rt.ativo as boolean,
       regiao_id: rt.regiao_id as string,
+      caps_id: rt.caps_id as string,
       regiaoNome: regiao?.nome ?? "—",
       zonaNome: unwrapOne(regiao?.zonas)?.nome ?? "—",
+      capsNome: unwrapOne(rt.caps)?.nome ?? "—",
     };
   });
 
@@ -91,12 +104,13 @@ export default async function RtsPage() {
         </p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">RTs</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Residências Terapêuticas atendidas — endereço, localização e região
-          de cada uma. Base usada pelo mapa, pelas rotas e pelos chamados.
+          Residências Terapêuticas atendidas — endereço, localização, CAPS
+          responsável e bairro de cada uma. Base usada pelo mapa, pelas
+          rotas e pelos chamados.
         </p>
       </header>
 
-      <RtsManager rts={rts} regioes={regioes} />
+      <RtsManager rts={rts} regioes={regioes} caps={caps} />
     </div>
   );
 }
