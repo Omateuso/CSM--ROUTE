@@ -32,7 +32,7 @@ Regra de negócio que atravessa todas as fases: **prioridade e SLA são camadas 
 - Deploy inicial (Vercel recomendado, por integrar nativamente com Next.js).
 
 ### Dados e telas
-- **Cadastro de RTs**: código, nome, endereço, bairro, região, latitude/longitude, status ativo/inativo. **Endereço tem histórico** (tabela `rt_enderecos`, migration `0005`) — a tela precisa de dois fluxos separados: editar dados da RT (nome/ativo, update normal) e trocar endereço (só via `fn_trocar_endereco_rt`, nunca update direto nas colunas de endereço/lat/long/região de `rts`). Ver seção dedicada no CLAUDE.md.
+- **Cadastro de RTs**: código, nome, endereço, bairro, região, latitude/longitude, status ativo/inativo. **Endereço tem histórico** (tabela `rt_enderecos`, migration `0005`) — a tela precisa de dois fluxos separados: editar dados da RT (nome/ativo, update normal) e trocar endereço (só via `fn_trocar_endereco_rt`, nunca update direto nas colunas de endereço/lat/long/região de `rts`). Ver seção dedicada no CLAUDE.md. **Exclusivo do perfil gestão** (migration `0006`) — gerente e técnico ficam somente-leitura em `rts`/`rt_enderecos`; a tela vive em `(gestao)/rts`, não em `(gerente)`.
 - **Cadastro de zonas/regiões**: hierarquia zona → região/bairro.
 - **Chamados**: entrada manual inicial (tabela `chamados`) com prioridade, SLA, RT vinculada — a sincronização automática com o TomTicket fica para a Fase 5, mas o campo `tomticket_id` já existe desde já para não precisar migrar depois.
 - **Regras de SLA**: tabela `sla_regras` (prazo em horas por prioridade), campo calculado/derivado de status do SLA (dentro / próximo / vencido).
@@ -116,12 +116,12 @@ Regra de negócio que atravessa todas as fases: **prioridade e SLA são camadas 
   /(auth)/login
   /(gerente)/dashboard
   /(gerente)/mapa
-  /(gerente)/rts
   /(gerente)/rotas/montar
   /(gerente)/rotas/confirmadas
   /(gerente)/validacao
   /(tecnico)/servicos-do-dia
   /(tecnico)/servico/[id]
+  /(gestao)/rts
   /(gestao)/painel
   /(gestao)/relatorios
   /api/... (rotas server-side quando precisar de service role ou lógica de sugestão de rota)

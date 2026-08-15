@@ -27,11 +27,11 @@ export default async function RtsPage() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "gerente") {
+  if (profile?.role !== "gestao") {
     return (
       <div className="flex flex-1 items-center justify-center px-4">
         <p className="text-sm text-text-secondary">
-          Essa página é exclusiva do perfil gerente.
+          Essa página é exclusiva do perfil gestão.
         </p>
       </div>
     );

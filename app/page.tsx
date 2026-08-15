@@ -48,6 +48,11 @@ export default async function Home() {
             >
               Zonas e regiões →
             </Link>
+          </div>
+        )}
+
+        {profile?.role === "gestao" && (
+          <div className="mt-6 flex flex-col items-center gap-2 border-t border-border pt-4">
             <Link
               href="/rts"
               className="rounded-[var(--radius-sm)] text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-surface"
