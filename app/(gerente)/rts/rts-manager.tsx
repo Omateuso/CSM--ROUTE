@@ -2,21 +2,37 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { alternarAtivo } from "./actions";
-import { RtDialog, type RT } from "./rt-dialog";
+import { RtCreateDialog } from "./rt-create-dialog";
+import { RtEditDialog } from "./rt-edit-dialog";
+import { RtEnderecoDialog } from "./rt-endereco-dialog";
 import { StatusBadge } from "./status-badge";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 
-type RtRow = RT & { regiaoNome: string; zonaNome: string };
+type RtRow = {
+  id: string;
+  codigo: string;
+  nome: string;
+  endereco: string;
+  bairro: string;
+  latitude: number;
+  longitude: number;
+  ativo: boolean;
+  regiao_id: string;
+  regiaoNome: string;
+  zonaNome: string;
+};
 type Regiao = { id: string; nome: string; zonaNome: string };
+
+type ModoDialogo = "nenhum" | "criar" | "editar" | "endereco";
 
 export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }) {
   const zonas = useMemo(() => [...new Set(regioes.map((r) => r.zonaNome))], [regioes]);
 
   const [busca, setBusca] = useState("");
   const [zonaFiltro, setZonaFiltro] = useState("todas");
-  const [dialogAberto, setDialogAberto] = useState(false);
-  const [rtEmEdicao, setRtEmEdicao] = useState<RT | null>(null);
-  // Incrementa a cada abertura — força o RtDialog a remontar do zero
+  const [modoDialogo, setModoDialogo] = useState<ModoDialogo>("nenhum");
+  const [rtSelecionada, setRtSelecionada] = useState<RtRow | null>(null);
+  // Incrementa a cada abertura — força o diálogo a remontar do zero
   // (useActionState e defaultValue só aplicam valor inicial na montagem;
   // sem isso, reabrir pra editar um registro diferente mantinha os
   // campos/estado da abertura anterior).
@@ -38,16 +54,14 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
     });
   }, [rts, busca, zonaFiltro]);
 
-  function abrirNova() {
-    setRtEmEdicao(null);
-    setDialogAberto(true);
+  function abrir(modo: ModoDialogo, rt: RtRow | null = null) {
+    setRtSelecionada(rt);
+    setModoDialogo(modo);
     setDialogInstancia((n) => n + 1);
   }
 
-  function abrirEdicao(rt: RT) {
-    setRtEmEdicao(rt);
-    setDialogAberto(true);
-    setDialogInstancia((n) => n + 1);
+  function fechar() {
+    setModoDialogo("nenhum");
   }
 
   function handleToggleAtivo(rt: RtRow) {
@@ -92,7 +106,7 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
 
         <button
           type="button"
-          onClick={abrirNova}
+          onClick={() => abrir("criar")}
           className={`ml-auto rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
         >
           + Nova RT
@@ -104,7 +118,7 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
       </p>
 
       <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
+        <table className="w-full min-w-[820px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
               <th scope="col" className="px-4 py-2.5 font-medium">Código</th>
@@ -137,11 +151,19 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
                   <div className="flex items-center justify-end gap-3 whitespace-nowrap">
                     <button
                       type="button"
-                      onClick={() => abrirEdicao(rt)}
+                      onClick={() => abrir("editar", rt)}
                       aria-label={`Editar RT ${rt.codigo}`}
                       className={`text-xs font-medium text-text-tertiary transition-colors hover:text-text-primary ${FOCUS_RING} ${TAP_TARGET}`}
                     >
                       Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => abrir("endereco", rt)}
+                      aria-label={`Trocar endereço da RT ${rt.codigo}`}
+                      className={`text-xs font-medium text-text-tertiary transition-colors hover:text-text-primary ${FOCUS_RING} ${TAP_TARGET}`}
+                    >
+                      Trocar endereço
                     </button>
                     <button
                       type="button"
@@ -168,12 +190,24 @@ export function RtsManager({ rts, regioes }: { rts: RtRow[]; regioes: Regiao[] }
         </table>
       </div>
 
-      <RtDialog
-        key={dialogInstancia}
-        open={dialogAberto}
-        rt={rtEmEdicao}
+      <RtCreateDialog
+        key={`criar-${dialogInstancia}`}
+        open={modoDialogo === "criar"}
         regioes={regioes}
-        onClose={() => setDialogAberto(false)}
+        onClose={fechar}
+      />
+      <RtEditDialog
+        key={`editar-${dialogInstancia}`}
+        open={modoDialogo === "editar"}
+        rt={rtSelecionada}
+        onClose={fechar}
+      />
+      <RtEnderecoDialog
+        key={`endereco-${dialogInstancia}`}
+        open={modoDialogo === "endereco"}
+        rt={rtSelecionada}
+        regioes={regioes}
+        onClose={fechar}
       />
     </div>
   );

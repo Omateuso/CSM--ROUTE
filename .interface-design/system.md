@@ -75,20 +75,38 @@ Gap entre cards: `gap-4` (16px). Linhas de lista: `py-2` (8px vertical).
   className="overflow-x-auto">` **com a própria `<table>` levando
   `min-w-[Npx]`** — sem o min-width a tabela só espreme/corta colunas em
   mobile em vez de habilitar o scroll horizontal.
-- **Diálogo de formulário maior** (4+ campos — não cabe inline): `<dialog>`
-  nativo via `showModal()`/`close()` (focus trap e retorno de foco de
-  graça, confirmado empiricamente). Precisa de 3 coisas manuais que o
-  navegador não dá sozinho: (1) `aria-labelledby` apontando pro `<h2>` do
-  título; (2) fechar no clique do backdrop, comparando `event.target ===
-  dialogRef.current` no `onClick` do próprio `<dialog>`; (3)
-  **centralização explícita** (`fixed top-1/2 left-1/2 -translate-x-1/2
-  -translate-y-1/2 m-0`) — o Tailwind Preflight zera `margin`, o que
-  quebra a centralização nativa via `margin: auto` do `dialog:modal` e
-  gruda o modal no canto superior esquerdo. Formulário maior (7+ campos)
-  fica remontado a cada abertura via `key` incremental no componente pai
+- **Diálogo de formulário maior** (4+ campos — não cabe inline): usar
+  `<Modal>` de `lib/ui/modal.tsx` (casco compartilhado — não hand-roll de
+  novo por tela). Ele resolve as 3 coisas que o `<dialog>` nativo não dá
+  de graça: `aria-labelledby` pro `<h2>` do título; fechar no clique do
+  backdrop (`event.target === dialogRef.current`); e **centralização
+  explícita** (`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+  m-0`) — o Tailwind Preflight zera `margin`, quebrando o `margin: auto`
+  nativo do `dialog:modal` e grudando o modal no canto superior esquerdo.
+  Focus trap e retorno de foco já vêm de graça do `<dialog>` nativo.
+  O componente pai remonta o diálogo a cada abertura via `key` incremental
   — `defaultValue`/`useActionState` só aplicam o valor inicial na
-  montagem, então reabrir o mesmo `<dialog>` (sem remontar) pra editar um
-  registro diferente mantém os campos/erro da abertura anterior.
+  montagem, então reabrir sem remontar (pra editar um registro diferente,
+  ou reabrir "criar" depois de já ter criado um) mantém campos/erro da
+  abertura anterior. Usar `useCloseOnSuccess` de `lib/ui/use-close-on-success.ts`
+  pra fechar sozinho quando a submissão terminar sem erro.
+- **IDs de campo únicos por instância**: como os diálogos de uma tela
+  costumam ficar todos montados ao mesmo tempo no DOM (só alternam
+  open/close, não montam/desmontam), **nunca usar `id` fixo** em campo de
+  formulário dentro de diálogo (`id="nome"` colide se dois diálogos
+  tiverem campo "nome"). Usar `useId()` no componente e compor
+  (`` `${uid}-nome` ``) — barato, e evita quebrar a associação de
+  `<label>` (idêntico ao problema de IDs duplicados em HTML puro).
+- **Uma operação sensível = uma função Postgres dedicada, nunca vários
+  fluxos de UI escrevendo na mesma coluna por caminhos diferentes**: RTs
+  tem 3 diálogos (criar / editar dados básicos / trocar endereço) porque
+  cada um mapeia pra uma operação de banco com contrato próprio (ver
+  CLAUDE.md, "Endereço de RT tem histórico"). Ao criar uma função RPC
+  nova, **o cache de schema do PostgREST não pega automaticamente** —
+  depois de rodar a migration no SQL Editor, rode também `NOTIFY pgrst,
+  'reload schema';` (ou, se mesmo assim der `PGRST202`, é sinal de que a
+  função não foi criada de fato — confira com `select proname from
+  pg_proc where proname = '...'` antes de assumir que é só cache).
 - **Status ativo/inativo**: neutro, não usa verde (reservado pro
   vocabulário de SLA). Ativo = ponto+texto discreto em `text-tertiary`,
   sem badge. Inativo = badge com borda (`border-border-strong` +

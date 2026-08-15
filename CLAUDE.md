@@ -44,6 +44,14 @@ Cada tela deve deixar claro para qual dessas 3 personas ela é. Nunca misture a 
 - **Bonificação/incentivo para técnicos: não implementar.** Pode ser citada em texto como possibilidade futura (Fase 5), mas não crie schema, tela ou lógica para isso a menos que o usuário peça explicitamente.
 - **Dados fictícios apenas em exemplos/seeds.** Nunca use dados pessoais reais em massa de teste ou documentação.
 
+## Endereço de RT tem histórico — nunca sobrescrever sem registrar
+
+> O código da RT (ex.: "SRT 16") é a identidade permanente — `chamados.rt_id` aponta pra essa identidade, não pro endereço, e é isso que preserva o histórico de chamados quando uma RT muda de imóvel. Mas o endereço em si também muda: desde dez/2023 várias RTs já trocaram de imóvel (confirmado na prática ao importar os dados reais — SRT 16, 19 e 44 tinham endereço antigo e novo registrados no mesmo arquivo).
+
+- **Nunca crie uma linha nova em `rts` porque o endereço mudou.** Isso fragmentaria o histórico de chamados entre a RT "antiga" e a "nova" — que na verdade são a mesma RT.
+- **Nunca faça `UPDATE` direto nas colunas `endereco`/`bairro`/`regiao_id`/`latitude`/`longitude` de `rts`.** O único jeito suportado de trocar o endereço de uma RT é a função `fn_trocar_endereco_rt(...)` (migration [`0005_historico_enderecos_rt.sql`](supabase/migrations/0005_historico_enderecos_rt.sql)) — ela fecha o endereço vigente em `rt_enderecos`, abre o novo, e sincroniza as colunas espelhadas em `rts` (mantidas de propósito, pra dashboard/mapa continuarem lendo direto de `rts` sem join).
+- Toda tela de cadastro/edição de RT precisa separar dois fluxos: **"Editar RT"** (nome, ativo — `UPDATE` normal) e **"Trocar endereço"** (chama `fn_trocar_endereco_rt`, nunca update direto).
+
 ## Sistema de cores (manter consistente em toda a UI)
 
 | Cor | Significado | Uso |

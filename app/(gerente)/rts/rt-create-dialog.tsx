@@ -1,61 +1,38 @@
 "use client";
 
-import { useActionState, useEffect, useId, useRef, type FormEvent } from "react";
-import { criarRT, atualizarRT, type ActionState } from "./actions";
-import { FOCUS_RING } from "@/lib/ui/styles";
+import { useActionState, useId, useRef } from "react";
+import { criarRT, type ActionState } from "./actions";
+import { Modal } from "@/lib/ui/modal";
+import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
+import { FOCUS_RING, FIELD_INPUT, FIELD_LABEL } from "@/lib/ui/styles";
 
 type Regiao = { id: string; nome: string; zonaNome: string };
 
-export type RT = {
-  id: string;
-  codigo: string;
-  nome: string;
-  endereco: string;
-  bairro: string;
-  latitude: number;
-  longitude: number;
-  ativo: boolean;
-  regiao_id: string;
-};
-
-const inputClass =
-  "w-full rounded-[var(--radius-sm)] border border-border bg-surface-input px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent";
-const labelClass = "text-xs font-medium text-text-secondary";
-
-export function RtDialog({
+export function RtCreateDialog({
   open,
-  rt,
   regioes,
   onClose,
 }: {
   open: boolean;
-  rt: RT | null;
   regioes: Regiao[];
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const bairroRef = useRef<HTMLInputElement>(null);
-  const titleId = useId();
-  const action = rt ? atualizarRT : criarRT;
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(action, {
+  const [state, formAction, isPending] = useActionState<ActionState, FormData>(criarRT, {
     error: null,
   });
-  const wasPending = useRef(false);
+  useCloseOnSuccess(isPending, state.error, onClose);
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  useEffect(() => {
-    if (wasPending.current && !isPending && state.error === null) {
-      onClose();
-    }
-    wasPending.current = isPending;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPending, state]);
+  const bairroRef = useRef<HTMLInputElement>(null);
+  // Os 3 diálogos da tela ficam sempre montados no DOM (só alternam
+  // open/close via showModal/close) — ids fixos colidiriam entre eles.
+  const uid = useId();
+  const idCodigo = `${uid}-codigo`;
+  const idNome = `${uid}-nome`;
+  const idRegiao = `${uid}-regiao`;
+  const idBairro = `${uid}-bairro`;
+  const idEndereco = `${uid}-endereco`;
+  const idLatitude = `${uid}-latitude`;
+  const idLongitude = `${uid}-longitude`;
 
   function handleRegiaoChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const regiao = regioes.find((r) => r.id === event.target.value);
@@ -68,77 +45,51 @@ export function RtDialog({
     if (bairroRef.current) bairroRef.current.dataset.editadoManualmente = "true";
   }
 
-  function handleDialogCancel(event: FormEvent<HTMLDialogElement>) {
-    event.preventDefault();
-    onClose();
-  }
-
-  // Clique no backdrop fecha — o alvo do click é o próprio <dialog> só
-  // quando cai fora do conteúdo (o <form> cobre toda a área do card).
-  function handleBackdropClick(event: React.MouseEvent<HTMLDialogElement>) {
-    if (event.target === dialogRef.current) onClose();
-  }
-
   const zonas = [...new Set(regioes.map((r) => r.zonaNome))];
 
   return (
-    <dialog
-      ref={dialogRef}
-      onCancel={handleDialogCancel}
-      onClose={onClose}
-      onClick={handleBackdropClick}
-      aria-labelledby={titleId}
-      className="fixed top-1/2 left-1/2 m-0 max-h-[90vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-lg)] border border-border bg-surface p-0 text-text-primary backdrop:bg-text-primary/40"
-    >
-      <form action={formAction} className="flex flex-col gap-4 p-6">
-        {rt && <input type="hidden" name="id" value={rt.id} />}
-
-        <h2 id={titleId} className="text-base font-semibold text-text-primary">
-          {rt ? `Editar ${rt.codigo}` : "Nova RT"}
-        </h2>
-
+    <Modal open={open} title="Nova RT" onClose={onClose}>
+      <form action={formAction} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <label htmlFor="codigo" className={labelClass}>
+            <label htmlFor={idCodigo} className={FIELD_LABEL}>
               Código
             </label>
             <input
-              id="codigo"
+              id={idCodigo}
               name="codigo"
               type="text"
               placeholder="SRT 042"
-              defaultValue={rt?.codigo}
               required
-              className={inputClass}
+              className={FIELD_INPUT}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="nome" className={labelClass}>
+            <label htmlFor={idNome} className={FIELD_LABEL}>
               Nome
             </label>
             <input
-              id="nome"
+              id={idNome}
               name="nome"
               type="text"
               placeholder="SRT 042 — Campo Grande"
-              defaultValue={rt?.nome}
               required
-              className={inputClass}
+              className={FIELD_INPUT}
             />
           </div>
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="regiaoId" className={labelClass}>
+          <label htmlFor={idRegiao} className={FIELD_LABEL}>
             Região
           </label>
           <select
-            id="regiaoId"
+            id={idRegiao}
             name="regiaoId"
-            defaultValue={rt?.regiao_id ?? ""}
+            defaultValue=""
             onChange={handleRegiaoChange}
             required
-            className={inputClass}
+            className={FIELD_INPUT}
           >
             <option value="" disabled>
               Selecione...
@@ -158,65 +109,61 @@ export function RtDialog({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="bairro" className={labelClass}>
+          <label htmlFor={idBairro} className={FIELD_LABEL}>
             Bairro
           </label>
           <input
             ref={bairroRef}
-            id="bairro"
+            id={idBairro}
             name="bairro"
             type="text"
-            defaultValue={rt?.bairro}
             onInput={handleBairroInput}
             required
-            className={inputClass}
+            className={FIELD_INPUT}
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="endereco" className={labelClass}>
+          <label htmlFor={idEndereco} className={FIELD_LABEL}>
             Endereço
           </label>
           <input
-            id="endereco"
+            id={idEndereco}
             name="endereco"
             type="text"
             placeholder="Rua Exemplo 123 - Casa 01"
-            defaultValue={rt?.endereco}
             required
-            className={inputClass}
+            className={FIELD_INPUT}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <label htmlFor="latitude" className={labelClass}>
+            <label htmlFor={idLatitude} className={FIELD_LABEL}>
               Latitude
             </label>
             <input
-              id="latitude"
+              id={idLatitude}
               name="latitude"
               type="number"
               step="0.000001"
               placeholder="-22.912345"
-              defaultValue={rt?.latitude}
               required
-              className={`${inputClass} font-mono tabular-nums`}
+              className={`${FIELD_INPUT} font-mono tabular-nums`}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="longitude" className={labelClass}>
+            <label htmlFor={idLongitude} className={FIELD_LABEL}>
               Longitude
             </label>
             <input
-              id="longitude"
+              id={idLongitude}
               name="longitude"
               type="number"
               step="0.000001"
               placeholder="-43.312345"
-              defaultValue={rt?.longitude}
               required
-              className={`${inputClass} font-mono tabular-nums`}
+              className={`${FIELD_INPUT} font-mono tabular-nums`}
             />
           </div>
         </div>
@@ -225,7 +172,7 @@ export function RtDialog({
           <input
             type="checkbox"
             name="ativo"
-            defaultChecked={rt?.ativo ?? true}
+            defaultChecked
             className="h-4 w-4 rounded-sm border-border accent-accent"
           />
           RT ativa
@@ -255,6 +202,6 @@ export function RtDialog({
           </button>
         </div>
       </form>
-    </dialog>
+    </Modal>
   );
 }

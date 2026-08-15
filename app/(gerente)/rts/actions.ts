@@ -18,58 +18,88 @@ function traduzErro(error: { code?: string; message: string }): string {
   return `Não foi possível salvar (${error.message}).`;
 }
 
-function lerCamposRT(formData: FormData) {
+// Toda RT nasce já com sua primeira linha em rt_enderecos — nunca um
+// insert direto em `rts` (ver CLAUDE.md, "Endereço de RT tem histórico").
+export async function criarRT(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const codigo = String(formData.get("codigo") ?? "").trim();
+  const nome = String(formData.get("nome") ?? "").trim();
+  const endereco = String(formData.get("endereco") ?? "").trim();
+  const bairro = String(formData.get("bairro") ?? "").trim();
+  const regiaoId = String(formData.get("regiaoId") ?? "");
   const latitude = Number(String(formData.get("latitude") ?? "").replace(",", "."));
   const longitude = Number(String(formData.get("longitude") ?? "").replace(",", "."));
+  const ativo = formData.get("ativo") === "on";
 
-  return {
-    codigo: String(formData.get("codigo") ?? "").trim(),
-    nome: String(formData.get("nome") ?? "").trim(),
-    endereco: String(formData.get("endereco") ?? "").trim(),
-    bairro: String(formData.get("bairro") ?? "").trim(),
-    regiao_id: String(formData.get("regiaoId") ?? ""),
-    latitude,
-    longitude,
-    ativo: formData.get("ativo") === "on",
-  };
-}
-
-function validarCamposRT(campos: ReturnType<typeof lerCamposRT>): string | null {
-  if (!campos.codigo) return "Informe o código da RT.";
-  if (!campos.nome) return "Informe o nome da RT.";
-  if (!campos.endereco) return "Informe o endereço.";
-  if (!campos.bairro) return "Informe o bairro.";
-  if (!campos.regiao_id) return "Selecione a região.";
-  if (!Number.isFinite(campos.latitude) || campos.latitude < -90 || campos.latitude > 90) {
-    return "Latitude inválida.";
-  }
-  if (!Number.isFinite(campos.longitude) || campos.longitude < -180 || campos.longitude > 180) {
-    return "Longitude inválida.";
-  }
-  return null;
-}
-
-export async function criarRT(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const campos = lerCamposRT(formData);
-  const erroValidacao = validarCamposRT(campos);
-  if (erroValidacao) return { error: erroValidacao };
+  if (!codigo) return { error: "Informe o código da RT." };
+  if (!nome) return { error: "Informe o nome da RT." };
+  if (!endereco) return { error: "Informe o endereço." };
+  if (!bairro) return { error: "Informe o bairro." };
+  if (!regiaoId) return { error: "Selecione a região." };
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return { error: "Latitude inválida." };
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return { error: "Longitude inválida." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("rts").insert(campos);
+  const { error } = await supabase.rpc("fn_criar_rt_com_endereco", {
+    p_codigo: codigo,
+    p_nome: nome,
+    p_endereco: endereco,
+    p_bairro: bairro,
+    p_regiao_id: regiaoId,
+    p_latitude: latitude,
+    p_longitude: longitude,
+    p_ativo: ativo,
+  });
   if (error) return { error: traduzErro(error) };
 
   revalidatePath("/rts");
   return { error: null };
 }
 
-export async function atualizarRT(_prev: ActionState, formData: FormData): Promise<ActionState> {
+// Só nome/ativo — o código é a identidade permanente da RT (não muda
+// depois de criada) e o endereço só muda via trocarEnderecoRT.
+export async function editarRT(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const id = String(formData.get("id") ?? "");
-  const campos = lerCamposRT(formData);
-  const erroValidacao = validarCamposRT(campos);
-  if (erroValidacao) return { error: erroValidacao };
+  const nome = String(formData.get("nome") ?? "").trim();
+  const ativo = formData.get("ativo") === "on";
+
+  if (!nome) return { error: "Informe o nome da RT." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("rts").update(campos).eq("id", id);
+  const { error } = await supabase.from("rts").update({ nome, ativo }).eq("id", id);
+  if (error) return { error: traduzErro(error) };
+
+  revalidatePath("/rts");
+  return { error: null };
+}
+
+// Único jeito suportado de mudar endereço/bairro/região/lat/long de uma
+// RT — fecha o endereço vigente em rt_enderecos, abre o novo, sincroniza
+// rts. Nunca um update direto nessas colunas (ver CLAUDE.md).
+export async function trocarEnderecoRT(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const id = String(formData.get("id") ?? "");
+  const endereco = String(formData.get("endereco") ?? "").trim();
+  const bairro = String(formData.get("bairro") ?? "").trim();
+  const regiaoId = String(formData.get("regiaoId") ?? "");
+  const latitude = Number(String(formData.get("latitude") ?? "").replace(",", "."));
+  const longitude = Number(String(formData.get("longitude") ?? "").replace(",", "."));
+  const motivo = String(formData.get("motivo") ?? "").trim();
+
+  if (!endereco) return { error: "Informe o endereço." };
+  if (!bairro) return { error: "Informe o bairro." };
+  if (!regiaoId) return { error: "Selecione a região." };
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return { error: "Latitude inválida." };
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return { error: "Longitude inválida." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_trocar_endereco_rt", {
+    p_rt_id: id,
+    p_endereco: endereco,
+    p_bairro: bairro,
+    p_regiao_id: regiaoId,
+    p_latitude: latitude,
+    p_longitude: longitude,
+    p_motivo: motivo || null,
+  });
   if (error) return { error: traduzErro(error) };
 
   revalidatePath("/rts");
