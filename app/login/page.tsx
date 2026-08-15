@@ -4,6 +4,14 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+const SENHA_TESTE = "senha-teste-123";
+
+const CONTAS_DE_TESTE = [
+  { label: "Gerente", email: "gerente.teste@csm.local" },
+  { label: "Técnico", email: "tecnico.teste@csm.local" },
+  { label: "Gestão", email: "gestao.teste@csm.local" },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -87,6 +95,29 @@ export default function LoginPage() {
             {carregando ? "Entrando..." : "Entrar"}
           </button>
         </form>
+
+        {process.env.NODE_ENV !== "production" && (
+          <div className="mt-6 border-t border-zinc-100 pt-4">
+            <p className="text-xs font-medium text-zinc-400">
+              Contas de teste (dev)
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CONTAS_DE_TESTE.map((conta) => (
+                <button
+                  key={conta.email}
+                  type="button"
+                  onClick={() => {
+                    setEmail(conta.email);
+                    setSenha(SENHA_TESTE);
+                  }}
+                  className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900"
+                >
+                  {conta.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
