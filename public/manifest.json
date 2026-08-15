@@ -1,0 +1,25 @@
+{
+  "name": "Gestão Operacional de Manutenção — RTs",
+  "short_name": "Gestão RTs",
+  "description": "Plataforma de gestão operacional de manutenção das Residências Terapêuticas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#1e293b",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
