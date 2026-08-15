@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# dados reais sensíveis (endereços de RTs) — só local, nunca no histórico do git
+zonas-regioes-rts-final.xlsx
+~$zonas-regioes-rts-final.xlsx
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
