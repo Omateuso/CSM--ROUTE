@@ -1,8 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import LogoutButton from "./logout-button";
 
+// Com o menu lateral (gerente/gestão) cobrindo a navegação entre páginas,
+// "/" não precisa mais ser um hub de links — cada perfil vai direto pra
+// sua página principal. Técnico já ia direto pra /servicos-do-dia desde a
+// Fase 3 (interface mobile-first, "poucos toques por tela").
 export default async function Home() {
   const supabase = await createClient();
 
@@ -16,56 +18,15 @@ export default async function Home() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("nome, role")
+    .select("role")
     .eq("id", user.id)
     .single();
 
-  return (
-    <div className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-[var(--radius-md)] border border-border bg-surface p-8 text-center">
-        <h1 className="text-lg font-semibold text-text-primary">
-          Base operacional configurada
-        </h1>
-        <p className="mt-2 text-sm text-text-secondary">
-          Logado como <strong>{profile?.nome ?? user.email}</strong>
-          {profile?.role && (
-            <>
-              {" "}
-              · perfil <strong>{profile.role}</strong>
-            </>
-          )}
-        </p>
-        <p className="mt-4 text-xs text-text-tertiary">
-          Placeholder temporário da Parte A — será substituído pelo dashboard
-          real ao final da Parte B.
-        </p>
+  if (profile?.role === "tecnico") redirect("/servicos-do-dia");
+  if (profile?.role === "gerente") redirect("/dashboard");
+  if (profile?.role === "gestao") redirect("/painel");
 
-        {profile?.role === "gerente" && (
-          <div className="mt-6 flex flex-col items-center gap-2 border-t border-border pt-4">
-            <Link
-              href="/zonas"
-              className="rounded-[var(--radius-sm)] text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-surface"
-            >
-              Zonas e regiões →
-            </Link>
-          </div>
-        )}
-
-        {profile?.role === "gestao" && (
-          <div className="mt-6 flex flex-col items-center gap-2 border-t border-border pt-4">
-            <Link
-              href="/rts"
-              className="rounded-[var(--radius-sm)] text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-surface"
-            >
-              RTs →
-            </Link>
-          </div>
-        )}
-
-        <div className="mt-6">
-          <LogoutButton />
-        </div>
-      </div>
-    </div>
-  );
+  // Sem role reconhecido (não deveria acontecer em uso normal) — fica
+  // aqui só como fallback silencioso, sem tela pra manter.
+  redirect("/login");
 }

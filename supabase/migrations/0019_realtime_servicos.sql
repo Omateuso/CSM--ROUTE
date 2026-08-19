@@ -1,0 +1,21 @@
+-- =============================================================================
+-- Fase 4, Parte B — Painel do gerente (tempo real)
+--
+-- Habilita Supabase Realtime (Postgres Changes) na tabela `servicos` — é a
+-- tabela que muda a cada passo do pipeline de execução (planejado →
+-- em_execucao → concluido_tecnico → validado, ou cancelado por
+-- reagendamento), então é o gatilho certo pro painel do gerente se
+-- atualizar sozinho sem precisar de F5.
+--
+-- RLS já cobre isso sem mudança nenhuma: o Realtime respeita a policy de
+-- SELECT já existente (`servicos_select`, 0001) — só entrega o evento pra
+-- quem passaria no `using (tecnico_id = auth.uid() or fn_current_role() in
+-- ('gerente','gestao'))`, ou seja, gerente/gestão recebem tudo, técnico só
+-- vê os próprios. Nenhuma tabela nova, nenhuma policy nova.
+--
+-- Não idempotente de propósito (sem IF NOT EXISTS — ALTER PUBLICATION não
+-- aceita essa cláusula pra ADD TABLE): se já rodou uma vez, rodar de novo
+-- dá erro "servicos is already member of publication" — nesse caso é só
+-- ignorar, já está feito.
+-- =============================================================================
+alter publication supabase_realtime add table servicos;

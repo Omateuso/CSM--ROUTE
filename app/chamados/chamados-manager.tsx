@@ -1,0 +1,298 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { ChamadoCreateDialog } from "./chamado-create-dialog";
+import { ChamadoDetalheDialog } from "./chamado-detalhe-dialog";
+import { PrioridadeBadge, type Prioridade } from "./prioridade-badge";
+import { SlaBadge } from "./sla-badge";
+import { StatusChamadoBadge, type StatusChamado } from "./status-chamado-badge";
+import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
+import { computeSlaStatus, type SlaStatus } from "@/lib/sla";
+import { type HistoricoEvento } from "@/lib/ui/historico-chamado";
+
+type Rt = { id: string; codigo: string; endereco: string; regiaoNome: string; zonaNome: string };
+
+export type ChamadoRow = {
+  id: string;
+  tomticketId: string | null;
+  rtId: string;
+  rtCodigo: string;
+  rtNome: string;
+  regiaoNome: string;
+  zonaNome: string;
+  assunto: string;
+  descricao: string | null;
+  prioridade: Prioridade;
+  status: StatusChamado;
+  slaPrazo: string | null;
+  criadoEm: string;
+  historico: HistoricoEvento[];
+};
+
+const SLA_OPTIONS: { value: SlaStatus; label: string }[] = [
+  { value: "vencido", label: "SLA vencido" },
+  { value: "proximo", label: "Próximo do vencimento" },
+  { value: "dentro", label: "Dentro do prazo" },
+];
+
+type ModoDialogo = "nenhum" | "criar" | "detalhes";
+
+const formatoData = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+export function ChamadosManager({
+  chamados,
+  rts,
+  podeCriar,
+}: {
+  chamados: ChamadoRow[];
+  rts: Rt[];
+  podeCriar: boolean;
+}) {
+  const [busca, setBusca] = useState("");
+  const [prioridadeFiltro, setPrioridadeFiltro] = useState("todas");
+  const [regiaoFiltro, setRegiaoFiltro] = useState("todas");
+  const [slaFiltro, setSlaFiltro] = useState("todos");
+  const [modoDialogo, setModoDialogo] = useState<ModoDialogo>("nenhum");
+  const [chamadoSelecionado, setChamadoSelecionado] = useState<ChamadoRow | null>(null);
+  // ver comentário equivalente em rts-manager.tsx: força os diálogos a
+  // remontar do zero a cada abertura.
+  const [dialogInstancia, setDialogInstancia] = useState(0);
+
+  // Regiões agrupadas por zona (mesma fonte que o seletor de RT dos
+  // diálogos) — todas as 98 RTs entram aqui, então o filtro sempre lista
+  // todas as regiões existentes, mesmo as sem chamado em aberto agora.
+  const regioesPorZona = useMemo(() => {
+    const porZona = new Map<string, Set<string>>();
+    for (const rt of rts) {
+      const zona = porZona.get(rt.zonaNome) ?? new Set<string>();
+      zona.add(rt.regiaoNome);
+      porZona.set(rt.zonaNome, zona);
+    }
+    return [...porZona.entries()].map(([zona, regioes]) => ({
+      zona,
+      regioes: [...regioes].sort(),
+    }));
+  }, [rts]);
+
+  const linhasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return chamados.filter((c) => {
+      if (prioridadeFiltro !== "todas" && c.prioridade !== prioridadeFiltro) return false;
+      if (regiaoFiltro !== "todas" && c.regiaoNome !== regiaoFiltro) return false;
+      if (slaFiltro !== "todos") {
+        // chamado encerrado mostra "—" no badge de SLA (ver sla-badge.tsx)
+        // — não faz sentido ele aparecer num filtro de estado de SLA ativo.
+        if (c.status === "finalizado" || c.status === "cancelado") return false;
+        if (computeSlaStatus(c.slaPrazo) !== slaFiltro) return false;
+      }
+      if (!termo) return true;
+      return (
+        c.assunto.toLowerCase().includes(termo) ||
+        c.rtCodigo.toLowerCase().includes(termo) ||
+        c.rtNome.toLowerCase().includes(termo) ||
+        (c.tomticketId ?? "").toLowerCase().includes(termo)
+      );
+    });
+  }, [chamados, busca, prioridadeFiltro, regiaoFiltro, slaFiltro]);
+
+  function abrir(modo: ModoDialogo, chamado: ChamadoRow | null = null) {
+    setChamadoSelecionado(chamado);
+    setModoDialogo(modo);
+    setDialogInstancia((n) => n + 1);
+  }
+
+  function fechar() {
+    setModoDialogo("nenhum");
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <label className="sr-only" htmlFor="busca-chamados">
+          Buscar chamados
+        </label>
+        <input
+          id="busca-chamados"
+          type="search"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por assunto, RT ou protocolo..."
+          className="min-w-64 flex-1 rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        />
+
+        <label className="sr-only" htmlFor="filtro-prioridade">
+          Filtrar por prioridade
+        </label>
+        <select
+          id="filtro-prioridade"
+          value={prioridadeFiltro}
+          onChange={(e) => setPrioridadeFiltro(e.target.value)}
+          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        >
+          <option value="todas">Todas as prioridades</option>
+          <option value="emergencial">Emergencial</option>
+          <option value="alta">Alta</option>
+          <option value="normal">Normal</option>
+          <option value="baixa">Baixa</option>
+        </select>
+
+        <label className="sr-only" htmlFor="filtro-regiao">
+          Filtrar por região
+        </label>
+        <select
+          id="filtro-regiao"
+          value={regiaoFiltro}
+          onChange={(e) => setRegiaoFiltro(e.target.value)}
+          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        >
+          <option value="todas">Todas as regiões</option>
+          {regioesPorZona.map(({ zona, regioes }) => (
+            <optgroup key={zona} label={zona}>
+              {regioes.map((regiao) => (
+                <option key={regiao} value={regiao}>
+                  {regiao}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+
+        <label className="sr-only" htmlFor="filtro-sla">
+          Filtrar por status de SLA
+        </label>
+        <select
+          id="filtro-sla"
+          value={slaFiltro}
+          onChange={(e) => setSlaFiltro(e.target.value)}
+          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        >
+          <option value="todos">Todos os status de SLA</option>
+          {SLA_OPTIONS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+
+        <div className="ml-auto flex flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={() => abrir("criar")}
+            disabled={!podeCriar}
+            title={
+              podeCriar
+                ? undefined
+                : "Em avaliação pela gestão — por enquanto, chamados criados manualmente entram pela tela da gestão."
+            }
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-text-muted disabled:hover:bg-text-muted ${FOCUS_RING}`}
+          >
+            + Novo chamado
+          </button>
+          {!podeCriar && (
+            <p className="text-xs text-text-tertiary">Em avaliação pela gestão</p>
+          )}
+        </div>
+      </div>
+
+      <p className="mb-2 text-xs text-text-tertiary" role="status">
+        {linhasFiltradas.length} de {chamados.length} chamados
+      </p>
+
+      <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+        <table className="w-full min-w-[920px] border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
+              <th scope="col" className="px-4 py-2.5 font-medium">RT</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">Assunto</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">Prioridade</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">SLA</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">Status</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">Criado em</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">
+                <span className="sr-only">Ações</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {linhasFiltradas.map((c) => (
+              <tr
+                key={c.id}
+                onClick={() => abrir("detalhes", c)}
+                className="cursor-pointer transition-colors hover:bg-surface-input"
+              >
+                <td className="px-4 py-2.5 align-top">
+                  <p className="font-mono text-xs tabular-nums text-text-secondary">
+                    {c.rtCodigo}
+                  </p>
+                  <p className="mt-0.5 text-xs text-text-tertiary">{c.rtNome}</p>
+                </td>
+                <td className="px-4 py-2.5 align-top">
+                  <p className="text-text-primary">{c.assunto}</p>
+                  {c.tomticketId && (
+                    <p className="mt-0.5 font-mono text-xs text-text-tertiary">
+                      #{c.tomticketId}
+                    </p>
+                  )}
+                </td>
+                <td className="px-4 py-2.5 align-top">
+                  <PrioridadeBadge prioridade={c.prioridade} />
+                </td>
+                <td className="px-4 py-2.5 align-top">
+                  <SlaBadge slaPrazo={c.slaPrazo} status={c.status} />
+                </td>
+                <td className="px-4 py-2.5 align-top">
+                  <StatusChamadoBadge status={c.status} />
+                </td>
+                <td className="px-4 py-2.5 align-top whitespace-nowrap text-xs text-text-tertiary">
+                  {formatoData.format(new Date(c.criadoEm))}
+                </td>
+                <td className="px-4 py-2.5 align-top">
+                  <div className="flex items-center justify-end whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        abrir("detalhes", c);
+                      }}
+                      aria-label={`Ver detalhes do chamado ${c.assunto}`}
+                      className={`text-xs font-medium text-text-tertiary transition-colors hover:text-text-primary ${FOCUS_RING} ${TAP_TARGET}`}
+                    >
+                      Ver detalhes
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+
+            {linhasFiltradas.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-10 text-center text-sm text-text-tertiary">
+                  Nenhum chamado encontrado com esses filtros.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <ChamadoCreateDialog
+        key={`criar-${dialogInstancia}`}
+        open={modoDialogo === "criar"}
+        rts={rts}
+        onClose={fechar}
+      />
+      <ChamadoDetalheDialog
+        key={`detalhes-${dialogInstancia}`}
+        open={modoDialogo === "detalhes"}
+        chamado={chamadoSelecionado}
+        onClose={fechar}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,12 @@
+-- =============================================================================
+-- Fase 4, Parte B — ajuste complementar à 0019.
+--
+-- REPLICA IDENTITY FULL na tabela `servicos` — recomendado pela doc do
+-- Supabase Realtime pra Postgres Changes funcionar de forma confiável
+-- (garante que o evento carregue a linha completa, não só a chave
+-- primária). Não deve ser a causa raiz de o canal não receber evento
+-- nenhum (isso cheira mais a cache do serviço de Realtime não tendo
+-- pego a mudança da 0019 ainda), mas é seguro e recomendado de qualquer
+-- forma — sem custo, sem risco.
+-- =============================================================================
+alter table servicos replica identity full;

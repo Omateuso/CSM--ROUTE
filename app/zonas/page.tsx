@@ -17,15 +17,23 @@ export default async function ZonasPage() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "gerente") {
+  const role = profile?.role;
+  if (role !== "gerente" && role !== "gestao") {
     return (
       <div className="flex flex-1 items-center justify-center px-4">
         <p className="text-sm text-text-secondary">
-          Essa página é exclusiva do perfil gerente.
+          Essa página é exclusiva dos perfis gerente e gestão.
         </p>
       </div>
     );
   }
+
+  // Criar zona/região continua com o gerente; renomear/excluir passou a
+  // ser exclusivo da gestão (migration 0013, decisão de 17/08/2026) — a
+  // RLS é quem impede de fato, isso aqui só evita mostrar um botão que a
+  // API vai recusar.
+  const podeCriar = role === "gerente";
+  const podeEditar = role === "gestao";
 
   const { data: zonas, error } = await supabase
     .from("zonas")
@@ -59,7 +67,7 @@ export default async function ZonasPage() {
         </p>
       </header>
 
-      <ZonasManager zonas={zonas ?? []} />
+      <ZonasManager zonas={zonas ?? []} podeCriar={podeCriar} podeEditar={podeEditar} />
     </div>
   );
 }

@@ -41,6 +41,11 @@ yarn-error.log*
 zonas-regioes-rts-final.xlsx
 ~$zonas-regioes-rts-final.xlsx
 
+# import de chamados reais do TomTicket — tem dado pessoal nas descrições
+# (nome/e-mail de coordenador de CAPS etc.), só local, nunca no histórico
+# do git (decisão do usuário, 19/08/2026)
+supabase/migrations/Import_chamados_final.sql
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -13,10 +13,14 @@ export function ZonaCard({
   id,
   nome,
   regioes,
+  podeCriar,
+  podeEditar,
 }: {
   id: string;
   nome: string;
   regioes: Regiao[];
+  podeCriar: boolean;
+  podeEditar: boolean;
 }) {
   const [modo, setModo] = useState<"visualizando" | "editando" | "excluindo">("visualizando");
   const [adicionandoRegiao, setAdicionandoRegiao] = useState(false);
@@ -53,28 +57,30 @@ export function ZonaCard({
                 {regioes.length} {regioes.length === 1 ? "região" : "regiões"}
               </span>
             </div>
-            <div className="flex shrink-0 items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setModo("editando")}
-                aria-label={`Renomear zona ${nome}`}
-                className={`text-xs font-medium text-text-tertiary transition-colors hover:text-text-primary ${FOCUS_RING} ${TAP_TARGET}`}
-              >
-                Renomear
-              </button>
-              <DeleteTrigger
-                onClick={() => setModo("excluindo")}
-                label="Excluir zona"
-                ariaLabel={`Excluir zona ${nome}`}
-              />
-            </div>
+            {podeEditar && (
+              <div className="flex shrink-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModo("editando")}
+                  aria-label={`Renomear zona ${nome}`}
+                  className={`text-xs font-medium text-text-tertiary transition-colors hover:text-text-primary ${FOCUS_RING} ${TAP_TARGET}`}
+                >
+                  Renomear
+                </button>
+                <DeleteTrigger
+                  onClick={() => setModo("excluindo")}
+                  label="Excluir zona"
+                  ariaLabel={`Excluir zona ${nome}`}
+                />
+              </div>
+            )}
           </div>
         )}
       </header>
 
       <ul className="mt-3 ml-1 divide-y divide-border border-l border-border pl-4">
         {regioes.map((regiao) => (
-          <RegiaoRow key={regiao.id} id={regiao.id} nome={regiao.nome} />
+          <RegiaoRow key={regiao.id} id={regiao.id} nome={regiao.nome} podeEditar={podeEditar} />
         ))}
 
         {regioes.length === 0 && !adicionandoRegiao && (
@@ -83,27 +89,29 @@ export function ZonaCard({
           </li>
         )}
 
-        <li className="py-2">
-          {adicionandoRegiao ? (
-            <InlineTextForm
-              action={criarRegiao}
-              hiddenFields={{ zonaId: id }}
-              label={`Nome da nova região em ${nome}`}
-              placeholder="Nome da região"
-              submitLabel="Adicionar"
-              onCancel={() => setAdicionandoRegiao(false)}
-              onSuccess={() => setAdicionandoRegiao(false)}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAdicionandoRegiao(true)}
-              className={`text-xs font-medium text-accent transition-colors hover:text-accent-hover ${FOCUS_RING} ${TAP_TARGET}`}
-            >
-              + Adicionar região
-            </button>
-          )}
-        </li>
+        {podeCriar && (
+          <li className="py-2">
+            {adicionandoRegiao ? (
+              <InlineTextForm
+                action={criarRegiao}
+                hiddenFields={{ zonaId: id }}
+                label={`Nome da nova região em ${nome}`}
+                placeholder="Nome da região"
+                submitLabel="Adicionar"
+                onCancel={() => setAdicionandoRegiao(false)}
+                onSuccess={() => setAdicionandoRegiao(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdicionandoRegiao(true)}
+                className={`text-xs font-medium text-accent transition-colors hover:text-accent-hover ${FOCUS_RING} ${TAP_TARGET}`}
+              >
+                + Adicionar região
+              </button>
+            )}
+          </li>
+        )}
       </ul>
     </section>
   );

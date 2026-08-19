@@ -28,6 +28,19 @@
   --danger: #b91c1c;
   --danger-hover: #991b1b;
 
+  /* Cores operacionais (ver CLAUDE.md, "Sistema de cores") — só usar nos
+     badges de prioridade/SLA de chamados, nunca como accent genérico.
+     Prioridade "baixa" fica sem cor (neutra) — não faz parte da tabela
+     original do CLAUDE.md, decisão tomada ao implementar B3: preservar
+     verde/azul só pros significados já definidos alhures. */
+  --priority-emergencial: #b91c1c; /* vermelho */
+  --priority-alta: #c2410c;        /* laranja */
+  --priority-normal: #d97706;      /* amarelo */
+
+  --sla-dentro: #16a34a;   /* verde */
+  --sla-proximo: #d97706;  /* amarelo — mesma escala de "normal", eixo diferente (SLA, não prioridade) */
+  --sla-vencido: #7e22ce;  /* roxo */
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -51,6 +64,14 @@
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
 
+  --color-priority-emergencial: var(--priority-emergencial);
+  --color-priority-alta: var(--priority-alta);
+  --color-priority-normal: var(--priority-normal);
+
+  --color-sla-dentro: var(--sla-dentro);
+  --color-sla-proximo: var(--sla-proximo);
+  --color-sla-vencido: var(--sla-vencido);
+
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -63,4 +84,22 @@ body {
   background: var(--color-background);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
+}
+
+/* Anel de destaque do marcador "crítico" (emergencial + SLA vencido) no
+   mapa operacional — ver app/(gerente)/mapa/mapa-client.tsx. Cor vem de
+   uma CSS var já definida no elemento, então só anima opacidade/escala. */
+@keyframes marker-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
 }

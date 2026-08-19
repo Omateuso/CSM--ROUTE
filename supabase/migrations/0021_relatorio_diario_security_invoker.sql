@@ -1,0 +1,31 @@
+-- =============================================================================
+-- Fase 4, Parte D — Relatório diário
+--
+-- Achado ao preparar a exposição de `vw_relatorio_diario` (existe desde a
+-- 0001, nunca tinha sido lida por nenhuma tela/API até agora — por isso
+-- esse problema ficou adormecido sem causar dano real): a view foi criada
+-- sem `security_invoker`, que no Postgres (padrão pré-15 e também o
+-- default explícito quando a opção não é setada) faz a view rodar as
+-- checagens de RLS das tabelas por trás (`rotas`, `servicos`, `regioes`)
+-- com o privilégio do DONO da view (o role que rodou a migration,
+-- efetivamente ignora RLS), não do usuário que está consultando.
+--
+-- Combinado com o GRANT amplo da 0003 (`select ... on all tables in
+-- schema public to anon, authenticated, service_role` — que também cobre
+-- views), isso deixava `vw_relatorio_diario` **legível até por `anon`, sem
+-- login nenhum** — bypassa completamente a RLS que protege `servicos`
+-- (só técnico dono ou gerente/gestão deveriam ver). Prática recomendada
+-- de segurança do Supabase pra views desde o Postgres 15: sempre
+-- `security_invoker = true`, a menos que o bypass seja intencional.
+--
+-- Com o fix: a view volta a respeitar a RLS de cada tabela por trás pra
+-- quem está consultando. `rotas`/`regioes` continuam com policy aberta
+-- pra qualquer autenticado (`rotas_select_authenticated`, já existia antes
+-- desta migration, não é regressão nova) — só `servicos` é restrito por
+-- linha; um técnico consultando a view só computaria os totais dos
+-- próprios serviços, mas essa tela é exclusiva de `gestao` (ver tela nova
+-- `(gestao)/relatorio`), então isso não chega a importar na prática.
+-- `anon` (sem login) passa a não ver nenhuma linha, porque nenhuma das
+-- policies das tabelas por trás libera pra `anon`.
+-- =============================================================================
+alter view vw_relatorio_diario set (security_invoker = true);
