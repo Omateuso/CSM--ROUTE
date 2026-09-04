@@ -1,3 +1,5 @@
+import { StatusDot } from "@/lib/ui/status-dot";
+
 export type Prioridade = "emergencial" | "alta" | "normal" | "baixa";
 
 // Cores da tabela em CLAUDE.md ("Sistema de cores"). "baixa" não está na
@@ -34,10 +36,5 @@ export const PRIORIDADE_OPTIONS: { value: Prioridade; label: string }[] = (
 
 export function PrioridadeBadge({ prioridade }: { prioridade: Prioridade }) {
   const c = CONFIG[prioridade];
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs ${c.textClass}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${c.dotClass}`} aria-hidden="true" />
-      {c.label}
-    </span>
-  );
+  return <StatusDot label={c.label} dotClassName={c.dotClass} textClassName={c.textClass} />;
 }

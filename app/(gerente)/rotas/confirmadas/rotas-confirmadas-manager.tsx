@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Modal } from "@/lib/ui/modal";
 import { CorrigirDataDialog } from "./corrigir-data-dialog";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
+import { StatusDot } from "@/lib/ui/status-dot";
 
 type Regiao = { id: string; nome: string; zonaNome: string };
 
@@ -38,15 +39,11 @@ const formatoHora = new Intl.DateTimeFormat("pt-BR", {
 function StatusRotaBadge({ status }: { status: string }) {
   const cancelada = status === "cancelada";
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-xs ${cancelada ? "text-text-tertiary" : "text-text-secondary"}`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${cancelada ? "border border-text-tertiary" : "bg-text-tertiary"}`}
-        aria-hidden="true"
-      />
-      {STATUS_LABEL[status] ?? status}
-    </span>
+    <StatusDot
+      label={STATUS_LABEL[status] ?? status}
+      dotClassName={cancelada ? "border border-text-tertiary" : "bg-text-tertiary"}
+      textClassName={cancelada ? "text-text-tertiary" : "text-text-secondary"}
+    />
   );
 }
 

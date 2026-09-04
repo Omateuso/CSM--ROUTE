@@ -1,0 +1,78 @@
+/* Cards de "Operação de hoje" — pedido do usuário (23/08/2026), efeito de
+   preenchimento (barra da esquerda expande até cobrir o card no hover,
+   texto vira branco). Removido do exemplo original: o link "More about"
+   (não faz sentido aqui, esses cards não navegam pra lugar nenhum) e a
+   imagem de fundo do `after` (URL do Figma já expirada, e não foi pedida).
+   Cor trocada em 27/08/2026 (pedido do usuário) de #11BE86 (fornecida na
+   implementação original) pra #008A83 — mesmo teal usado no botão
+   "Entrar" do login e no botão "Proximidade de rota". Componente
+   compartilhado: usado no Dashboard, na Validação e no Painel da gestão
+   ("Serviços em execução") — mudar aqui afeta as 3 telas de uma vez. */
+.card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.375rem;
+  transition: border-color 0.3s ease-in-out;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.375rem;
+  background: #008a83;
+  z-index: 0;
+  transition: width 0.3s ease-in-out;
+}
+
+.card:hover {
+  border-color: #008a83;
+}
+
+.card:hover::before {
+  width: 100%;
+}
+
+.label {
+  position: relative;
+  z-index: 1;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease-in-out;
+}
+
+.valor {
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  transition: color 0.3s ease-in-out;
+}
+
+.card:hover .label,
+.card:hover .valor {
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card::before,
+  .label,
+  .valor {
+    transition: none;
+  }
+}

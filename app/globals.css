@@ -27,6 +27,11 @@
 
   --danger: #b91c1c;
   --danger-hover: #991b1b;
+  /* Contraparte positiva genérica do --danger (mesma ideia: sinal de
+     feedback de UI, não uma das "cores operacionais" reservadas pra
+     prioridade/SLA abaixo) — usado pelo selo de integridade quando a
+     localização da evidência confere com a RT (25/08/2026). */
+  --success: #15803d;
 
   /* Cores operacionais (ver CLAUDE.md, "Sistema de cores") — só usar nos
      badges de prioridade/SLA de chamados, nunca como accent genérico.
@@ -63,6 +68,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
+  --color-success: var(--success);
 
   --color-priority-emergencial: var(--priority-emergencial);
   --color-priority-alta: var(--priority-alta);

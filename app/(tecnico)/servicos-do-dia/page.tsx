@@ -6,6 +6,8 @@ import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badg
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { StatusServicoBadge, type StatusServico } from "../status-servico-badge";
 
+const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" });
+
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
 // runtime seja sempre objeto único (FK to-one).
@@ -36,10 +38,15 @@ export default async function ServicosDoDiaPage() {
   const { data: servicosRaw, error: servicosError } = await supabase
     .from("servicos")
     .select(
-      "id, status, rota_id, rt_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco)",
+      "id, status, rota_id, rt_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco)",
     )
     .eq("tecnico_id", user.id)
-    .eq("rotas.data", hoje);
+    .eq("rotas.data", hoje)
+    // Migration 0025: recusar/pendência de material podem cancelar um
+    // serviço de HOJE (diferente de reagendar, que só atuava em rota já
+    // passada) — cancelado não tem mais ação nenhuma pro técnico, não
+    // precisa aparecer na lista.
+    .neq("status", "cancelado");
 
   if (servicosError) {
     return (
@@ -71,6 +78,7 @@ export default async function ServicosDoDiaPage() {
         rtEndereco: rt?.endereco as string,
         assunto: chamado?.assunto as string,
         protocolo: (chamado?.tomticket_id as string | null) ?? null,
+        criadoEm: chamado?.criado_em as string,
         prioridade: chamado?.prioridade as Prioridade,
         slaPrazo: (chamado?.sla_prazo as string | null) ?? null,
         chamadoStatus: chamado?.status as "aberto" | "em_andamento" | "finalizado" | "cancelado",
@@ -111,6 +119,11 @@ export default async function ServicosDoDiaPage() {
                     <span className="font-mono text-xs text-text-secondary">{s.rtCodigo}</span>
                     {s.protocolo && (
                       <span className="font-mono text-xs text-text-tertiary">#{s.protocolo}</span>
+                    )}
+                    {s.criadoEm && (
+                      <span className="text-xs text-text-tertiary">
+                        criado em {formatoDataCurta.format(new Date(s.criadoEm))}
+                      </span>
                     )}
                     <span className="ml-auto">
                       <StatusServicoBadge status={s.status} />

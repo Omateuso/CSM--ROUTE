@@ -1,0 +1,265 @@
+/* Port do menu-pasta (26/08/2026) — arquivo de referência aprovado pelo
+   usuário: menu-pasta-ospower.html (portado literalmente, ver prompt v2).
+   Variáveis, geometria da lingueta/corpo/canto côncavo, medição por
+   elemento fantasma, FLIP das pílulas e o tempo/curva de animação vêm
+   direto do arquivo — não são valores inventados aqui. Substitui de vez a
+   pill bar/dock flutuante de 24-25/08 (mesma decisão de manter os tokens
+   locais deste componente, não em app/globals.css, só que agora a pasta
+   TAMBÉM é o fundo do conteúdo — ver .paper abaixo — não só da barra).
+   Duas diferenças conscientes do arquivo, ambas exigidas pela stack real
+   (app multi-página, não uma demo de painel único):
+   1) `body{padding;background}` do arquivo virou `.shellOuter` (só entra
+      em cena quando o usuário está logado como gerente/gestão — login e
+      a interface do técnico continuam fora dessa paleta/moldura).
+   2) `height:100%` encadeado por html/body virou `height:100dvh` aqui —
+      precisa ser um valor de viewport de verdade (não só min-height) pra
+      que o excesso de conteúdo fique contido dentro de `.paper` (que tem
+      overflow:auto), em vez de vazar por baixo do `overflow:hidden` da
+      pasta. */
+.shellOuter {
+  --shell: #56574f; /* moldura cinza escuro */
+  --paper: #e3e5de; /* pasta: lingueta + corpo */
+  --pill: #e9eae4; /* abas inativas */
+  --pill-hover: #f2f3ee;
+  --ink: #2b2b28;
+  --muted: #6b6c66;
+  --line: #d6d8d0;
+
+  --r-shell: 30px;
+  --r-body: 24px;
+  --r-tab: 20px;
+  --notch: 18px;
+  --header: 64px;
+  --inset: 14px;
+  /* --tab-pad-l: 28px, não 50px — arquivo reserva 50px pro botão fechar
+     (removido aqui, ver app-nav.tsx: "nada pra fechar" nesse contexto,
+     autorizado explicitamente no prompt). */
+  --tab-pad-l: 28px;
+  --tab-pad-r: 34px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur: 420ms;
+
+  height: 100dvh;
+  /* Sem padding no topo (era 16px nos 4 lados) — o header/pasta deve
+     começar rente ao topo da janela, sem faixa/gap reservado ali. Mantém
+     o "cartão flutuante" nas laterais/embaixo, que não foi apontado como
+     problema. */
+  padding: 0 16px 16px;
+  background: radial-gradient(120% 120% at 50% 0%, #fbfbfa 0%, #eceded 100%);
+  color: var(--ink);
+}
+
+.app {
+  position: relative;
+  height: 100%;
+  background: var(--shell);
+  /* Cantos de cima retos (era var(--r-shell) nos 4) — com o topo agora
+     rente à janela, um raio ali criaria de novo um pedacinho de faixa
+     clara "vazando" nos ~30px do canto (o arco do border-radius passaria
+     a expor o fundo externo bem onde o topo deveria estar flush). Embaixo
+     continua arredondado, mesmo efeito de cartão que já existia. */
+  border-radius: 0 0 var(--r-shell) var(--r-shell);
+  box-shadow: 0 40px 90px -35px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+/* ---------- topo: pílulas + usuário ---------- */
+/* O arquivo de referência usa `right:16px; max-width:calc(100% - 340px)`
+   — um valor fixo que só funciona porque a demo é uma tela larga única.
+   Aqui a largura da lingueta varia por rota (label curto vs. "Rotas
+   confirmadas"/"Zonas e regiões") E o viewport vai de desktop a celular
+   — um número mágico fixo ou deixa espaço demais numa aba curta ou
+   esmaga as pílulas numa tela estreita (chegou a sumir quase inteiro em
+   390px de largura). Troca: `left` calculado em JS a partir da largura
+   real medida da lingueta (--tab-left, ver app-nav.tsx) + `right:16px` —
+   o navegador calcula a largura disponível sozinho (right - left),
+   corretamente pra qualquer combinação de label/viewport, sem número
+   mágico. */
+.topright {
+  position: absolute;
+  z-index: 4;
+  left: var(--tab-left, var(--inset));
+  right: 16px;
+  top: 12px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.pills::-webkit-scrollbar {
+  display: none;
+}
+.pill {
+  height: 40px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition:
+    background 160ms var(--ease),
+    transform 160ms var(--ease);
+}
+.pill:hover {
+  background: var(--pill-hover);
+  transform: translateY(-1px);
+}
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.user {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+.logout {
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pill);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: background 160ms var(--ease);
+}
+.logout:hover {
+  background: var(--pill-hover);
+}
+
+/* ---------- a pasta ---------- */
+.tab {
+  position: absolute;
+  left: var(--inset);
+  top: 12px;
+  height: calc(var(--header) - 12px);
+  padding: 0 var(--tab-pad-r) 0 var(--tab-pad-l);
+  background: var(--paper);
+  border-radius: var(--r-tab) var(--r-tab) 0 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: width var(--dur) var(--ease);
+}
+.tabInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.joint {
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--header) - var(--notch));
+  width: var(--notch);
+  height: var(--notch);
+  background: radial-gradient(circle at 100% 0%, transparent var(--notch), var(--paper) calc(var(--notch) + 0.5px));
+  transition: left var(--dur) var(--ease);
+  pointer-events: none;
+}
+.paper {
+  position: absolute;
+  left: var(--inset);
+  right: var(--inset);
+  top: var(--header);
+  bottom: 0;
+  background: var(--paper);
+  border-radius: 0 var(--r-body) var(--r-body) var(--r-body);
+  overflow: auto;
+}
+
+.ghost {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 0 var(--tab-pad-r) 0 var(--tab-pad-l);
+  font-size: 13.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.pill:focus-visible,
+.tab:focus-visible,
+.logout:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .joint,
+  .pill {
+    transition: none;
+  }
+}
+
+/* Ninguém quer imprimir a moldura escura/pasta — só o conteúdo da página
+   (achado ao construir a impressão do relatório com timbrado, 26/08/2026,
+   que herda esse shell por estar dentro do layout raiz; corrigido aqui de
+   propósito pra beneficiar qualquer página, não só o relatório). Reset
+   pontual (não `all:unset`, que apagaria herança sem querer) das
+   propriedades que criam a moldura/pasta — `.paper` volta a ser um bloco
+   comum em fluxo normal, deixando `@page`/cabeçalho/rodapé fixos de cada
+   página cuidar da impressão sozinhos. */
+@media print {
+  .shellOuter {
+    height: auto;
+    padding: 0;
+    background: none;
+  }
+  .app {
+    position: static;
+    height: auto;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .topright,
+  .tab,
+  .joint {
+    display: none;
+  }
+  .paper {
+    position: static;
+    inset: auto;
+    background: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+}

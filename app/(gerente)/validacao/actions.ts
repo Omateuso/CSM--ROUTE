@@ -47,3 +47,26 @@ export async function reagendarServico(_prev: ActionState, formData: FormData): 
   revalidatePath("/dashboard");
   return { error: null };
 }
+
+// Migration 0025 (achado de uso real, 21/08/2026): diferente de reagendar
+// (serviço nunca atendido), recusar é pra quando o gerente não confia na
+// evidência de um serviço JÁ concluído pelo técnico — cancela e libera o
+// chamado pra próxima rota, mesmo efeito de banco do reagendamento, mas
+// evento de histórico próprio (`servico_recusado`).
+export async function recusarServico(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const servicoId = String(formData.get("servicoId") ?? "");
+  const motivo = String(formData.get("motivo") ?? "").trim();
+  if (!servicoId) return { error: "Serviço inválido." };
+  if (!motivo) return { error: "Informe o motivo da recusa." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_recusar_servico", {
+    p_servico_id: servicoId,
+    p_motivo: motivo,
+  });
+  if (error) return { error: traduzErro(error) };
+
+  revalidatePath("/validacao");
+  revalidatePath("/dashboard");
+  return { error: null };
+}

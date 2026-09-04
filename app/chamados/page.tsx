@@ -80,7 +80,7 @@ export default async function ChamadosPage() {
   // gera evento), então trazer tudo e agrupar em JS é mais simples e leve.
   const { data: historicoRaw } = await supabase
     .from("historico")
-    .select("id, chamado_id, evento, descricao, criado_em, criado_por:criado_por(nome)")
+    .select("id, chamado_id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
     .order("criado_em", { ascending: true });
 
   const historicoPorChamado = new Map<string, HistoricoEvento[]>();
@@ -91,6 +91,7 @@ export default async function ChamadosPage() {
       id: h.id as string,
       evento: h.evento as string,
       descricao: h.descricao as string | null,
+      categoria: (h.categoria as string | null) ?? null,
       criadoEm: h.criado_em as string,
       criadoPorNome: unwrapOne(h.criado_por)?.nome ?? null,
     });

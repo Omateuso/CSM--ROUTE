@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { ValidacaoCard, type ServicoConcluidoRow } from "./validacao-card";
 import { ReagendamentoCard, type ServicoTravadoRow } from "./reagendamento-card";
 import { ValidadosRecentes, type ValidadoRow } from "./validados-recentes";
+import { PendenciasLinkButton } from "./pendencias-link-button";
+import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
 import { type HistoricoEvento } from "@/lib/ui/historico-chamado";
+import { detectarHashesDuplicados, avaliarIntegridadeOs, type OsIntegridadeInfo } from "./integridade";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -46,7 +49,7 @@ export default async function ValidacaoPage() {
     supabase
       .from("servicos")
       .select(
-        "id, chamado_id, concluido_em, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco), conclusoes(observacao), evidencias(tipo, storage_path)",
+        "id, chamado_id, concluido_em, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco, latitude, longitude), conclusoes(observacao), evidencias(tipo, momento, storage_path, latitude, longitude, hash_arquivo)",
       )
       .eq("status", "concluido_tecnico")
       .order("concluido_em", { ascending: true }),
@@ -59,7 +62,7 @@ export default async function ValidacaoPage() {
     supabase
       .from("validacoes")
       .select(
-        "id, validado_em, servicos(chamado_id, concluido_em, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco), conclusoes(observacao), evidencias(tipo, storage_path))",
+        "id, validado_em, servicos(id, chamado_id, concluido_em, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco, latitude, longitude), conclusoes(observacao), evidencias(tipo, momento, storage_path, latitude, longitude, hash_arquivo))",
       )
       .order("validado_em", { ascending: false })
       .limit(20),
@@ -92,7 +95,7 @@ export default async function ValidacaoPage() {
   if (todosChamadoIds.length > 0) {
     const { data: historicoRaw } = await supabase
       .from("historico")
-      .select("id, chamado_id, evento, descricao, criado_em, criado_por:criado_por(nome)")
+      .select("id, chamado_id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
       .in("chamado_id", todosChamadoIds)
       .order("criado_em", { ascending: true });
 
@@ -103,10 +106,55 @@ export default async function ValidacaoPage() {
         id: h.id as string,
         evento: h.evento as string,
         descricao: h.descricao as string | null,
+        categoria: (h.categoria as string | null) ?? null,
         criadoEm: h.criado_em as string,
         criadoPorNome: unwrapOne(h.criado_por)?.nome ?? null,
       });
       historicoPorChamado.set(chave, lista);
+    }
+  }
+
+  // Pacote 2 (auditoria de segurança, 21/08/2026): detecta OS reaproveitada
+  // entre serviços diferentes — traz o hash de TODA OS do projeto (não só
+  // os serviços desta página), agrupa em JS, e resolve uma referência
+  // (código da RT + data da rota) só pros serviços "outros" que de fato
+  // compartilham hash com algo aqui na tela.
+  // .order("criado_em") é essencial aqui — detectarHashesDuplicados assume
+  // que o primeiro servicoId de cada grupo é quem anexou aquele arquivo
+  // primeiro (ver comentário em integridade.ts).
+  const { data: osHashesRaw } = await supabase
+    .from("evidencias")
+    .select("servico_id, hash_arquivo, criado_em")
+    .eq("tipo", "os")
+    .not("hash_arquivo", "is", null)
+    .order("criado_em", { ascending: true });
+
+  const hashesDuplicados = detectarHashesDuplicados(
+    (osHashesRaw ?? []).map((r) => ({
+      servicoId: r.servico_id as string,
+      hashArquivo: r.hash_arquivo as string,
+      criadoEm: r.criado_em as string,
+    })),
+  );
+
+  const servicoIdsParaResolver = new Set<string>();
+  for (const ids of hashesDuplicados.values()) {
+    ids.forEach((id) => servicoIdsParaResolver.add(id));
+  }
+
+  const refPorServicoId = new Map<string, OsIntegridadeInfo["ref"]>();
+  if (servicoIdsParaResolver.size > 0) {
+    const { data: refsRaw } = await supabase
+      .from("servicos")
+      .select("id, rts(codigo), rotas(data)")
+      .in("id", [...servicoIdsParaResolver]);
+    for (const s of refsRaw ?? []) {
+      const rt = unwrapOne(s.rts);
+      const rota = unwrapOne(s.rotas);
+      refPorServicoId.set(s.id as string, {
+        rtCodigo: rt?.codigo ?? "—",
+        rotaData: (rota?.data as string | null) ?? null,
+      });
     }
   }
 
@@ -129,6 +177,14 @@ export default async function ValidacaoPage() {
   const concluidos: ServicoConcluidoRow[] = (concluidosRaw ?? []).map((s) => {
     const chamado = unwrapOne(s.chamados);
     const rt = unwrapOne(s.rts);
+    const evidencias = unwrapMany(s.evidencias).map((e) => ({
+      tipo: e.tipo as "foto" | "os" | "documento",
+      momento: (e.momento as "antes" | "depois" | null) ?? null,
+      latitude: (e.latitude as number | null) ?? null,
+      longitude: (e.longitude as number | null) ?? null,
+      hashArquivo: (e.hash_arquivo as string | null) ?? null,
+      url: urlPorCaminho.get(e.storage_path as string) ?? null,
+    }));
     return {
       servicoId: s.id as string,
       concluidoEm: s.concluido_em as string | null,
@@ -136,6 +192,8 @@ export default async function ValidacaoPage() {
       rtCodigo: rt?.codigo ?? "—",
       rtNome: rt?.nome ?? "—",
       rtEndereco: rt?.endereco ?? "—",
+      rtLatitude: (rt?.latitude as number | null) ?? null,
+      rtLongitude: (rt?.longitude as number | null) ?? null,
       chamadoAssunto: chamado?.assunto ?? "—",
       chamadoDescricao: (chamado?.descricao as string | null) ?? null,
       prioridade: chamado?.prioridade ?? "normal",
@@ -143,10 +201,8 @@ export default async function ValidacaoPage() {
       chamadoStatus: chamado?.status ?? "aberto",
       tomticketId: (chamado?.tomticket_id as string | null) ?? null,
       observacao: unwrapOne(s.conclusoes)?.observacao ?? null,
-      evidencias: unwrapMany(s.evidencias).map((e) => ({
-        tipo: e.tipo as "foto" | "os" | "documento",
-        url: urlPorCaminho.get(e.storage_path as string) ?? null,
-      })),
+      evidencias,
+      osIntegridade: avaliarIntegridadeOs(s.id as string, evidencias, hashesDuplicados, refPorServicoId),
       historico: historicoPorChamado.get(s.chamado_id as string) ?? [],
     };
   });
@@ -184,6 +240,16 @@ export default async function ValidacaoPage() {
     const servico = unwrapOne(v.servicos);
     const chamado = servico ? unwrapOne(servico.chamados) : null;
     const rt = servico ? unwrapOne(servico.rts) : null;
+    const evidencias = servico
+      ? unwrapMany(servico.evidencias).map((e) => ({
+          tipo: e.tipo as "foto" | "os" | "documento",
+          momento: (e.momento as "antes" | "depois" | null) ?? null,
+          latitude: (e.latitude as number | null) ?? null,
+          longitude: (e.longitude as number | null) ?? null,
+          hashArquivo: (e.hash_arquivo as string | null) ?? null,
+          url: urlPorCaminho.get(e.storage_path as string) ?? null,
+        }))
+      : [];
     return {
       validacaoId: v.id as string,
       validadoEm: v.validado_em as string,
@@ -192,6 +258,8 @@ export default async function ValidacaoPage() {
       rtCodigo: rt?.codigo ?? "—",
       rtNome: rt?.nome ?? "—",
       rtEndereco: rt?.endereco ?? "—",
+      rtLatitude: (rt?.latitude as number | null) ?? null,
+      rtLongitude: (rt?.longitude as number | null) ?? null,
       chamadoAssunto: chamado?.assunto ?? "—",
       chamadoDescricao: (chamado?.descricao as string | null) ?? null,
       prioridade: chamado?.prioridade ?? "normal",
@@ -199,30 +267,40 @@ export default async function ValidacaoPage() {
       chamadoStatus: chamado?.status ?? "aberto",
       tomticketId: (chamado?.tomticket_id as string | null) ?? null,
       observacao: servico ? (unwrapOne(servico.conclusoes)?.observacao ?? null) : null,
-      evidencias: servico
-        ? unwrapMany(servico.evidencias).map((e) => ({
-            tipo: e.tipo as "foto" | "os" | "documento",
-            url: urlPorCaminho.get(e.storage_path as string) ?? null,
-          }))
-        : [],
+      evidencias,
+      osIntegridade: servico
+        ? avaliarIntegridadeOs(servico.id as string, evidencias, hashesDuplicados, refPorServicoId)
+        : null,
       historico: historicoPorChamado.get(servico?.chamado_id as string) ?? [],
     };
   });
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Execução</p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary">Validação</h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Confira o que o técnico concluiu e feche o ciclo, ou reagende o que ficou parado numa rota
-          que já passou.
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Execução</p>
+          <h1 className="mt-1 text-2xl font-semibold text-text-primary uppercase">Validação</h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            Confira o que o técnico concluiu e feche o ciclo, ou reagende o que ficou parado numa rota
+            que já passou.
+          </p>
+        </div>
+        <PendenciasLinkButton />
       </header>
 
-      <ValidadosRecentes validados={validados} />
+      {/* Resumo clicável (25/08/2026) — mesmo layout dos cards de "Operação
+          de hoje" do Dashboard, mas cada um navega (âncora) pra listagem
+          correspondente logo abaixo, na ordem em que elas aparecem na página. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <OperacaoHojeCard label="Validados recentemente" value={validados.length} href="#validados-recentemente" />
+        <OperacaoHojeCard label="Aguardando validação" value={concluidos.length} href="#aguardando-validacao" />
+        <OperacaoHojeCard label="Travados em rota já passada" value={travados.length} href="#travados" />
+      </div>
 
-      <section className="mt-10">
+      <ValidadosRecentes validados={validados} id="validados-recentemente" />
+
+      <section id="aguardando-validacao" className="mt-10 scroll-mt-24">
         <h2 className="text-sm font-semibold text-text-primary">
           Aguardando validação <span className="font-normal text-text-tertiary">({concluidos.length})</span>
         </h2>
@@ -239,7 +317,7 @@ export default async function ValidacaoPage() {
         )}
       </section>
 
-      <section className="mt-10">
+      <section id="travados" className="mt-10 scroll-mt-24">
         <h2 className="text-sm font-semibold text-text-primary">
           Travados em rota já passada <span className="font-normal text-text-tertiary">({travados.length})</span>
         </h2>

@@ -60,14 +60,20 @@ function rotularSemDeslocamento(candidatas: Candidata[]): void {
 // resto do lote caía abaixo do corte relativo de 50%, mesmo estando perto.
 // "Boa opção" agora é o padrão pra tudo que não é a recomendada nem está
 // geograficamente longe, independente de quão mais alto o score do topo é.
-function rotularComDeslocamento(candidatas: Candidata[]): void {
+//
+// `raioKm` (pedido do usuário, 27/08/2026): o gerente escolhe o raio de
+// proximidade antes de montar a rota (5/10/15/20/25 km, ver
+// app/(gerente)/rotas/montar/montar-rota-client.tsx) — antes era sempre
+// ROUTE_PROXIMITY_RADIUS_KM fixo. Só afeta esse corte de rótulo, igual já
+// era (nunca filtrou candidatas nem mudou a pontuação/ordem — "raio é
+// configuração, nunca parede", CLAUDE.md).
+function rotularComDeslocamento(candidatas: Candidata[], raioKm: number): void {
   candidatas.forEach((c, indice) => {
     if (indice === 0) {
       c.rotulo = "recomendada";
       return;
     }
-    const longeDemais =
-      c.distanciaKm !== null && c.distanciaKm > ROUTE_PROXIMITY_RADIUS_KM * ALTO_DESLOCAMENTO_MULTIPLICADOR;
+    const longeDemais = c.distanciaKm !== null && c.distanciaKm > raioKm * ALTO_DESLOCAMENTO_MULTIPLICADOR;
     c.rotulo = longeDemais ? "alto_deslocamento" : "boa_opcao";
   });
 }
@@ -110,6 +116,7 @@ function sugerirPrimeiraEscolha(
 async function sugerirProximaEscolha(
   referencia: RtParaRoteirizacao,
   pool: RtParaRoteirizacao[],
+  raioKm: number,
 ): Promise<SugestaoRota> {
   const proximas = maisProximas(referencia, pool, MAX_CANDIDATAS_PARA_ROTEIRIZAR);
   if (proximas.length === 0) return { candidatas: [], nucleo: null };
@@ -159,7 +166,7 @@ async function sugerirProximaEscolha(
   });
 
   resultado.sort((a, b) => b.score - a.score);
-  rotularComDeslocamento(resultado);
+  rotularComDeslocamento(resultado, raioKm);
   return { candidatas: resultado, nucleo };
 }
 
@@ -168,8 +175,9 @@ export async function sugerirProximasRts(params: {
   referenciaRtId: string | null;
   regiaoId: string | null;
   jaSelecionadas: string[];
+  raioKm?: number;
 }): Promise<SugestaoRota> {
-  const { todasRts, referenciaRtId, regiaoId, jaSelecionadas } = params;
+  const { todasRts, referenciaRtId, regiaoId, jaSelecionadas, raioKm = ROUTE_PROXIMITY_RADIUS_KM } = params;
   const excluidas = new Set(jaSelecionadas);
   const referencia = referenciaRtId ? todasRts.find((r) => r.id === referenciaRtId) ?? null : null;
 
@@ -186,5 +194,5 @@ export async function sugerirProximasRts(params: {
   // item 4: a partir daqui, região NUNCA bloqueia — o pool é todas as RTs
   // ativas, e quem decide é a proximidade geográfica real.
   const pool = todasRts.filter((r) => !excluidas.has(r.id) && r.id !== referencia.id);
-  return sugerirProximaEscolha(referencia, pool);
+  return sugerirProximaEscolha(referencia, pool, raioKm);
 }

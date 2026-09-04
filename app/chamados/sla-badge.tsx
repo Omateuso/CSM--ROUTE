@@ -1,4 +1,5 @@
 import { computeSlaStatus } from "@/lib/sla";
+import { StatusDot } from "@/lib/ui/status-dot";
 
 type StatusChamado = "aberto" | "em_andamento" | "finalizado" | "cancelado";
 
@@ -34,10 +35,5 @@ export function SlaBadge({
   }
 
   const c = CONFIG[computeSlaStatus(slaPrazo)];
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs ${c.textClass}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${c.dotClass}`} aria-hidden="true" />
-      {c.label}
-    </span>
-  );
+  return <StatusDot label={c.label} dotClassName={c.dotClass} textClassName={c.textClass} />;
 }

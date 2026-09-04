@@ -35,3 +35,10 @@ export const NUCLEO_MIN_RTS = 3;
 // Acima disso (relativo ao raio de proximidade), uma candidata é rotulada
 // "alto deslocamento" mesmo que tenha pontuação boa por outros motivos.
 export const ALTO_DESLOCAMENTO_MULTIPLICADOR = 1.5;
+
+// Auditoria de segurança (Pacote 1, 21/08/2026): distância máxima entre a
+// geolocalização da foto de conclusão e a RT cadastrada pra considerar
+// "localização confere". Folga generosa (400m) de propósito — GPS indoor
+// nas RTs erra bastante, e o objetivo é sinalizar discrepância grande pro
+// gerente, nunca bloquear o técnico por erro normal de precisão.
+export const EVIDENCIA_DISTANCIA_LIMITE_KM = 0.4;

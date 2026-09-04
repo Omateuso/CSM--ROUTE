@@ -5,6 +5,7 @@ import { EquipeCreateDialog } from "./equipe-create-dialog";
 import { EquipeEditDialog } from "./equipe-edit-dialog";
 import { alternarAtivoEquipe, alternarAtivoTecnico, atualizarEquipeTecnico } from "./actions";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
+import { StatusDot } from "@/lib/ui/status-dot";
 
 export type Zona = { id: string; nome: string };
 export type Responsavel = { id: string; nome: string };
@@ -118,15 +119,11 @@ export function EquipesManager({
                     {e.responsavelNome ?? "—"}
                   </td>
                   <td className="px-4 py-2.5 align-top">
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-xs ${e.ativo ? "text-text-tertiary" : "text-text-secondary"}`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${e.ativo ? "bg-text-tertiary" : "border border-text-secondary"}`}
-                        aria-hidden="true"
-                      />
-                      {e.ativo ? "Ativa" : "Inativa"}
-                    </span>
+                    <StatusDot
+                      label={e.ativo ? "Ativa" : "Inativa"}
+                      dotClassName={e.ativo ? "bg-text-tertiary" : "border border-text-secondary"}
+                      textClassName={e.ativo ? "text-text-tertiary" : "text-text-secondary"}
+                    />
                   </td>
                   <td className="px-4 py-2.5 align-top">
                     <div className="flex items-center justify-end gap-3 whitespace-nowrap">

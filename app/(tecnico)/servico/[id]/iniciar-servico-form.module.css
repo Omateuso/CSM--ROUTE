@@ -1,0 +1,69 @@
+/* Botão "Iniciar atendimento" — CSS fornecido pronto pelo usuário
+   (25/08/2026), cores/efeito de grade radial mantidos exatamente como
+   vieram (mesma decisão já tomada pro botão de Pendências e pro card
+   "Atenção agora"). Adaptações estruturais: largura 100% (span o form),
+   letter-spacing/font-size reduzidos do original (0.5rem/1.5rem estourava
+   com "INICIAR ATENDIMENTO", mais longo que o "Iniciar" do exemplo), estado
+   :disabled (não existia no CSS original) e :focus-visible próprio (mesmo
+   padrão dos outros botões com CSS Module deste projeto). */
+.button {
+  --main-color: rgb(46, 213, 115);
+  --main-bg-color: rgba(46, 213, 116, 0.36);
+  --pattern-color: rgba(46, 213, 116, 0.073);
+
+  filter: hue-rotate(0deg);
+
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.15rem;
+  background: radial-gradient(circle, var(--main-bg-color) 0%, rgba(0, 0, 0, 0) 95%),
+    linear-gradient(var(--pattern-color) 1px, transparent 1px),
+    linear-gradient(to right, var(--pattern-color) 1px, transparent 1px);
+  background-size:
+    cover,
+    15px 15px,
+    15px 15px;
+  background-position:
+    center center,
+    center center,
+    center center;
+  border-style: solid;
+  border-image: radial-gradient(circle, var(--main-color) 0%, rgba(0, 0, 0, 0) 100%) 1;
+  border-width: 1px 0 1px 0;
+  color: var(--main-color);
+  padding: 1rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  transition: background-size 0.2s ease-in-out;
+}
+
+.button:hover:not(:disabled) {
+  background-size:
+    cover,
+    10px 10px,
+    10px 10px;
+}
+
+.button:active:not(:disabled) {
+  filter: hue-rotate(250deg);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: none;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--main-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}

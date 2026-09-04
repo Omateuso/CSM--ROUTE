@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { computeSlaStatus } from "@/lib/sla";
 import { sugerirProximasRts, type RtParaRoteirizacao } from "@/lib/routing/intelligent-route";
+import { ROUTE_PROXIMITY_RADIUS_KM } from "@/lib/routing/config";
+
+// Raios que o gerente pode escolher na tela (pedido do usuário, 27/08/2026)
+// — validados aqui pra não aceitar valor arbitrário vindo do client.
+const RAIOS_PERMITIDOS_KM = [5, 10, 15, 20, 25];
 
 // Lógica de sugestão de rota fica inteira no servidor (item 17 do spec da
 // Fase 2/Parte B) — nunca no client. Isso também é onde a chave da Routes
@@ -33,6 +38,10 @@ export async function POST(request: Request) {
   const jaSelecionadas: string[] = Array.isArray(body.jaSelecionadas)
     ? body.jaSelecionadas.filter((v: unknown): v is string => typeof v === "string")
     : [];
+  const raioKm =
+    typeof body.raioKm === "number" && RAIOS_PERMITIDOS_KM.includes(body.raioKm)
+      ? body.raioKm
+      : ROUTE_PROXIMITY_RADIUS_KM;
 
   const [{ data: rtsRaw, error: rtsError }, { data: chamadosRaw, error: chamadosError }] = await Promise.all([
     supabase
@@ -91,7 +100,7 @@ export async function POST(request: Request) {
   });
 
   try {
-    const resultado = await sugerirProximasRts({ todasRts, referenciaRtId, regiaoId, jaSelecionadas });
+    const resultado = await sugerirProximasRts({ todasRts, referenciaRtId, regiaoId, jaSelecionadas, raioKm });
     return NextResponse.json(resultado);
   } catch (err) {
     return NextResponse.json(

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import RegisterServiceWorker from "./register-service-worker";
-import { Sidebar } from "./sidebar";
+import { AppNav } from "./app-nav";
 import { createClient } from "@/lib/supabase/server";
 
 const geistSans = Geist({
@@ -30,9 +30,11 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  // Menu lateral só existe pra gerente/gestão — técnico continua sem ele
-  // de propósito (interface mobile-first, "poucos toques por tela"), e
+  // AppNav (menu-pasta) só existe pra gerente/gestão — técnico continua sem
+  // ele de propósito (interface mobile-first, "poucos toques por tela"), e
   // deslogado (ex.: /login) nunca teria papel nenhum aqui de qualquer jeito.
+  // AppNav envolve `children` (não só a barra): o conteúdo da página É o
+  // corpo da pasta, ver app/app-nav.tsx.
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,14 +56,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {role ? (
-          <div className="flex flex-1">
-            <Sidebar role={role} nome={nome} />
-            <main className="flex min-w-0 flex-1 flex-col">{children}</main>
-          </div>
-        ) : (
-          children
-        )}
+        {role ? <AppNav role={role} nome={nome}>{children}</AppNav> : children}
         <RegisterServiceWorker />
       </body>
     </html>

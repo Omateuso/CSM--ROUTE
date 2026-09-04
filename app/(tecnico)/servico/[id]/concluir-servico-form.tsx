@@ -1,17 +1,24 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, useState } from "react";
 import { concluirServico, type ActionState } from "./actions";
+import { CameraCaptureField } from "./camera-capture-field";
 import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
 
 export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(concluirServico, {
     error: null,
   });
+  const [fotoPronta, setFotoPronta] = useState(false);
+  // OS é obrigatória no servidor (fn_concluir_servico) desde sempre, mas
+  // até aqui só o atributo `required` do input cuidava disso — o botão só
+  // reagia à foto, então ficava clicável mesmo sem OS (bloqueava só na
+  // hora de enviar, com o aviso nativo do navegador). Achado real do
+  // usuário testando no celular, 27/08/2026.
+  const [osPronta, setOsPronta] = useState(false);
 
   const uid = useId();
   const idObservacao = `${uid}-observacao`;
-  const idFotos = `${uid}-fotos`;
   const idOs = `${uid}-os`;
 
   return (
@@ -32,20 +39,10 @@ export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor={idFotos} className={FIELD_LABEL}>
-          Foto do serviço <span className="text-text-tertiary">(opcional)</span>
-        </label>
-        <input
-          id={idFotos}
-          name="fotos"
-          type="file"
-          accept="image/*"
-          capture="environment"
-          multiple
-          className="text-sm text-text-secondary file:mr-3 file:rounded-[var(--radius-sm)] file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
-        />
-      </div>
+      {/* Migration 0023 (auditoria de segurança): foto "depois" voltou a
+          ser obrigatória (reverte a 0017) — mesmo componente da tela de
+          Iniciar, com geolocalização e carimbo. */}
+      <CameraCaptureField name="fotoDepois" label="Foto de depois do atendimento" onReadyChange={setFotoPronta} />
 
       <div className="flex flex-col gap-1">
         <label htmlFor={idOs} className={FIELD_LABEL}>
@@ -58,6 +55,7 @@ export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
           accept="image/*,application/pdf"
           capture="environment"
           required
+          onChange={(e) => setOsPronta(!!e.target.files && e.target.files.length > 0)}
           className="text-sm text-text-secondary file:mr-3 file:rounded-[var(--radius-sm)] file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
         />
       </div>
@@ -70,7 +68,7 @@ export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
 
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || !fotoPronta || !osPronta}
         className={`mt-1 w-full rounded-[var(--radius-sm)] bg-accent px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
       >
         {isPending ? "Enviando..." : "Concluir serviço"}

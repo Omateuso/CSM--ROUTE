@@ -6,6 +6,8 @@ import { tomticketSearchUrl } from "@/lib/tomticket";
 import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badge";
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
+import { IntegridadeBadge } from "./integridade-badge";
+import { avaliarLocalizacaoConclusao, type EvidenciaComGeo, type OsIntegridadeInfo } from "./integridade";
 
 export type ValidadoRow = {
   validacaoId: string;
@@ -15,6 +17,8 @@ export type ValidadoRow = {
   rtCodigo: string;
   rtNome: string;
   rtEndereco: string;
+  rtLatitude: number | null;
+  rtLongitude: number | null;
   chamadoAssunto: string;
   chamadoDescricao: string | null;
   prioridade: Prioridade;
@@ -22,7 +26,8 @@ export type ValidadoRow = {
   chamadoStatus: "aberto" | "em_andamento" | "finalizado" | "cancelado";
   tomticketId: string | null;
   observacao: string | null;
-  evidencias: { tipo: "foto" | "os" | "documento"; url: string | null }[];
+  evidencias: EvidenciaComGeo[];
+  osIntegridade: OsIntegridadeInfo | null;
   historico: HistoricoEvento[];
 };
 
@@ -33,6 +38,8 @@ const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
   minute: "2-digit",
 });
 
+const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" });
+
 const LABEL_EVIDENCIA: Record<string, string> = { foto: "Foto", os: "OS", documento: "Documento" };
 
 // Mesmo layout de card do ValidacaoCard (Aguardando validação) — depois de
@@ -40,6 +47,11 @@ const LABEL_EVIDENCIA: Record<string, string> = { foto: "Foto", os: "OS", docume
 // outra tela; o gerente precisa deles aqui pra copiar o texto e anexar a
 // OS de volta no TomTicket (pedido do usuário, 19/08/2026).
 function ValidadoCard({ servico }: { servico: ValidadoRow }) {
+  const statusLocalizacao = avaliarLocalizacaoConclusao(servico.evidencias, {
+    latitude: servico.rtLatitude,
+    longitude: servico.rtLongitude,
+  });
+
   return (
     <article className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -92,6 +104,33 @@ function ValidadoCard({ servico }: { servico: ValidadoRow }) {
             )}
           </div>
         )}
+
+        {(statusLocalizacao !== "sem_foto" || servico.osIntegridade) && (
+          <div className="mt-2 flex flex-wrap gap-3">
+            {statusLocalizacao === "confere" && <IntegridadeBadge tone="positivo">✓ Localização confere</IntegridadeBadge>}
+            {statusLocalizacao === "sem_localizacao" && <IntegridadeBadge tone="neutro">📍 sem localização</IntegridadeBadge>}
+            {statusLocalizacao === "fora_do_limite" && (
+              <IntegridadeBadge tone="alerta">⚠️ Localização não confere</IntegridadeBadge>
+            )}
+            {servico.osIntegridade?.papel === "reaproveitada" && (
+              <IntegridadeBadge tone="alerta">
+                ⚠️ OS idêntica a outro serviço ({servico.osIntegridade.ref.rtCodigo}
+                {servico.osIntegridade.ref.rotaData
+                  ? `, ${formatoDataCurta.format(new Date(`${servico.osIntegridade.ref.rotaData}T00:00:00`))}`
+                  : ""}
+                )
+              </IntegridadeBadge>
+            )}
+            {servico.osIntegridade?.papel === "original" && (
+              <IntegridadeBadge tone="neutro">
+                ℹ️ OS original — reaproveitada depois em {servico.osIntegridade.ref.rtCodigo}
+                {servico.osIntegridade.ref.rotaData
+                  ? `, ${formatoDataCurta.format(new Date(`${servico.osIntegridade.ref.rotaData}T00:00:00`))}`
+                  : ""}
+              </IntegridadeBadge>
+            )}
+          </div>
+        )}
       </div>
 
       {servico.historico.length > 0 && (
@@ -126,7 +165,7 @@ function ValidadoCard({ servico }: { servico: ValidadoRow }) {
   );
 }
 
-export function ValidadosRecentes({ validados }: { validados: ValidadoRow[] }) {
+export function ValidadosRecentes({ validados, id }: { validados: ValidadoRow[]; id?: string }) {
   const [busca, setBusca] = useState("");
 
   const filtrados = useMemo(() => {
@@ -142,7 +181,7 @@ export function ValidadosRecentes({ validados }: { validados: ValidadoRow[] }) {
   }, [validados, busca]);
 
   return (
-    <section>
+    <section id={id} className="mt-10 scroll-mt-24">
       <h2 className="text-sm font-semibold text-text-primary">
         Validados recentemente <span className="font-normal text-text-tertiary">({validados.length})</span>
       </h2>

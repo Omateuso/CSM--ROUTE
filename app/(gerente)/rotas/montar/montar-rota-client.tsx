@@ -3,7 +3,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { MontarRotaMapa } from "./montar-rota-mapa";
 import { ConfirmarRotaDialog } from "./confirmar-rota-dialog";
+import { RaioProximidadePicker } from "./raio-proximidade-picker";
+import { RaioProximidadeButton } from "./raio-proximidade-button";
+import { Modal } from "@/lib/ui/modal";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
+import { ROUTE_PROXIMITY_RADIUS_KM } from "@/lib/routing/config";
 import type { Candidata } from "@/lib/routing/intelligent-route";
 import type { Nucleo } from "@/lib/routing/clusters";
 
@@ -24,6 +28,18 @@ export type RtParaRota = {
 };
 
 type Regiao = { id: string; nome: string; zonaNome: string };
+
+// Pedido do usuário (22/08/2026, usando o app de verdade): o total de
+// chamados em aberto precisa ser a primeira coisa que o gerente vê num
+// card de candidata — é o número que mais pesa numa decisão rápida de "vou
+// nessa RT ou não". O resto do texto (emergenciais/alta/SLA vencido/
+// distância) continua igual, só sem repetir o total que já foi pro
+// destaque. `c.motivo` (gerarMotivo, lib/routing/score.ts) continua com a
+// frase completa pro tooltip do mapa — aqui só removo o trecho "N chamados
+// em aberto" na exibição do card, sem mexer na lib de rota.
+function motivoSemTotal(motivo: string): string {
+  return motivo.replace(/,?\s*\d+ chamados? em aberto/, "").replace(/^,\s*/, "");
+}
 
 const ROTULO_INFO: Record<Candidata["rotulo"], { label: string; corTexto: string; corDot: string }> = {
   recomendada: { label: "⭐ Recomendada", corTexto: "font-semibold text-sla-dentro", corDot: "bg-sla-dentro" },
@@ -51,6 +67,7 @@ export function MontarRotaClient({
   nucleoInicial: Nucleo | null;
 }) {
   const [regiaoId, setRegiaoId] = useState("");
+  const [raioKm, setRaioKm] = useState(ROUTE_PROXIMITY_RADIUS_KM);
   const [rotaIds, setRotaIds] = useState<string[]>([]);
   const [candidatas, setCandidatas] = useState<Candidata[]>(candidatasIniciais);
   const [nucleo, setNucleo] = useState<Nucleo | null>(nucleoInicial);
@@ -61,6 +78,7 @@ export function MontarRotaClient({
   const [confirmarInstancia, setConfirmarInstancia] = useState(0);
   const [rotaConfirmada, setRotaConfirmada] = useState(false);
   const [buscaCandidata, setBuscaCandidata] = useState("");
+  const [raioModalAberto, setRaioModalAberto] = useState(false);
 
   const rtsPorId = useMemo(() => new Map(rts.map((r) => [r.id, r])), [rts]);
   const zonas = useMemo(() => [...new Set(regioes.map((r) => r.zonaNome))], [regioes]);
@@ -78,14 +96,14 @@ export function MontarRotaClient({
   }, [candidatas, buscaCandidata]);
 
   const buscarSugestao = useCallback(
-    async (referenciaRtId: string | null, regiao: string, jaSelecionadas: string[]) => {
+    async (referenciaRtId: string | null, regiao: string, jaSelecionadas: string[], raio: number) => {
       setCarregando(true);
       setErro(null);
       try {
         const resposta = await fetch("/api/rotas/sugestao", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ referenciaRtId, regiaoId: regiao || null, jaSelecionadas }),
+          body: JSON.stringify({ referenciaRtId, regiaoId: regiao || null, jaSelecionadas, raioKm: raio }),
         });
         const dados = await resposta.json();
         if (!resposta.ok) throw new Error(dados.error ?? "Erro ao buscar sugestão de rota.");
@@ -108,19 +126,27 @@ export function MontarRotaClient({
   // estado — não tem "buscar de novo sozinho" escondido.
   function handleTrocarRegiao(novaRegiaoId: string) {
     setRegiaoId(novaRegiaoId);
-    if (rotaIds.length === 0) buscarSugestao(null, novaRegiaoId, []);
+    if (rotaIds.length === 0) buscarSugestao(null, novaRegiaoId, [], raioKm);
+  }
+
+  // Diferente da região, o raio nunca filtra o pool de candidatas — só o
+  // rótulo "alto deslocamento" (lib/routing/intelligent-route.ts) — então
+  // recalcular funciona a qualquer momento, mesmo com RTs já escolhidas.
+  function handleTrocarRaio(novoRaioKm: number) {
+    setRaioKm(novoRaioKm);
+    buscarSugestao(rotaIds[rotaIds.length - 1] ?? null, regiaoId, rotaIds, novoRaioKm);
   }
 
   function adicionarRt(rtId: string) {
     const novaRota = [...rotaIds, rtId];
     setRotaIds(novaRota);
-    buscarSugestao(rtId, regiaoId, novaRota);
+    buscarSugestao(rtId, regiaoId, novaRota, raioKm);
   }
 
   function removerRt(rtId: string) {
     const novaRota = rotaIds.filter((id) => id !== rtId);
     setRotaIds(novaRota);
-    buscarSugestao(novaRota[novaRota.length - 1] ?? null, regiaoId, novaRota);
+    buscarSugestao(novaRota[novaRota.length - 1] ?? null, regiaoId, novaRota, raioKm);
   }
 
   function moverRt(indice: number, direcao: -1 | 1) {
@@ -135,7 +161,7 @@ export function MontarRotaClient({
 
   function limparRota() {
     setRotaIds([]);
-    buscarSugestao(null, regiaoId, []);
+    buscarSugestao(null, regiaoId, [], raioKm);
   }
 
   function aceitarForcaTarefa() {
@@ -143,7 +169,7 @@ export function MontarRotaClient({
     const novosIds = nucleo.rtIds.filter((id) => !rotaIds.includes(id));
     const novaRota = [...rotaIds, ...novosIds];
     setRotaIds(novaRota);
-    buscarSugestao(novaRota[novaRota.length - 1] ?? null, regiaoId, novaRota);
+    buscarSugestao(novaRota[novaRota.length - 1] ?? null, regiaoId, novaRota, raioKm);
   }
 
   return (
@@ -207,6 +233,31 @@ export function MontarRotaClient({
           </button>
         )}
       </div>
+
+      <div>
+        <RaioProximidadeButton raioKm={raioKm} onClick={() => setRaioModalAberto(true)} />
+      </div>
+
+      <Modal
+        open={raioModalAberto}
+        title="Raio de proximidade (km)"
+        onClose={() => setRaioModalAberto(false)}
+      >
+        <p className="mb-2 text-xs text-text-tertiary">
+          Acima disso, uma candidata vira &quot;alto deslocamento&quot; mesmo com boa pontuação — não filtra quem
+          aparece na lista, só o rótulo.
+        </p>
+        <RaioProximidadePicker value={raioKm} onChange={handleTrocarRaio} />
+        <div className="mt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setRaioModalAberto(false)}
+            className={`rounded-[var(--radius-sm)] border border-border px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-input ${FOCUS_RING} ${TAP_TARGET}`}
+          >
+            Fechar
+          </button>
+        </div>
+      </Modal>
 
       <div className="h-[420px]">
         <MontarRotaMapa rts={rts} rotaIds={rotaIds} candidatas={candidatasFiltradas} onSelecionar={adicionarRt} />
@@ -368,17 +419,27 @@ export function MontarRotaClient({
                           {info.label}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-sm text-text-primary">{c.endereco}</p>
-                      <p className="mt-1 text-xs text-text-tertiary">{c.motivo}</p>
+                      <p className="mt-0.5 text-sm text-text-primary">
+                        {c.endereco}{" "}
+                        <span
+                          className="font-semibold tabular-nums"
+                          style={{ color: "#ff1472", fontSize: "0.75rem" }}
+                        >
+                          {c.totalAbertos} chamado{c.totalAbertos === 1 ? "" : "s"} em aberto
+                        </span>
+                      </p>
+                      <p className="mt-1 text-xs text-text-tertiary">{motivoSemTotal(c.motivo)}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => adicionarRt(c.rtId)}
-                      aria-label={`Adicionar ${c.codigo} à rota`}
-                      className={`shrink-0 rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
-                    >
-                      + Adicionar
-                    </button>
+                    <div className="flex shrink-0 items-start">
+                      <button
+                        type="button"
+                        onClick={() => adicionarRt(c.rtId)}
+                        aria-label={`Adicionar ${c.codigo} à rota`}
+                        className={`rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+                      >
+                        + Adicionar
+                      </button>
+                    </div>
                   </li>
                 );
               })}
@@ -397,7 +458,7 @@ export function MontarRotaClient({
         onConfirmado={() => {
           setRotaConfirmada(true);
           setRotaIds([]);
-          buscarSugestao(null, regiaoId, []);
+          buscarSugestao(null, regiaoId, [], raioKm);
         }}
       />
     </div>

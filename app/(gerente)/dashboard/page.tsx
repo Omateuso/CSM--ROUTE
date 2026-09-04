@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { computeSlaStatus } from "@/lib/sla";
-import { StatCard } from "./stat-card";
 import { DashboardRealtime } from "./dashboard-realtime";
-import { FOCUS_RING } from "@/lib/ui/styles";
+import { RtsVolumeSection } from "./rts-volume-section";
+import { AtencaoAgoraCard } from "./atencao-agora-card";
+import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
 
 // Mesma situação de app/chamados/page.tsx: sem Database types gerados
 // ainda, embed aninhado (chamados.rts) fica ambíguo pro TypeScript (array
@@ -20,6 +20,37 @@ function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
 const STATUS_ABERTO = new Set(["aberto", "em_andamento"]);
 
 type BucketHoje = { pendente: number; emExecucao: number; concluido: number };
+
+// Auditoria de design (23/08/2026): rótulo pequeno padronizado acima de
+// todo número — parte da escala tipográfica nova (Etapa 4 do plano),
+// mais discreto que o `text-xs` genérico que existia antes.
+function Rotulo({ children }: { children: React.ReactNode }) {
+  return <p className="text-[11px] font-medium tracking-wide text-text-tertiary uppercase">{children}</p>;
+}
+
+
+function ContextoStat({
+  label,
+  value,
+  tom = "neutro",
+}: {
+  label: string;
+  value: number;
+  tom?: "neutro" | "emergencial" | "vencido";
+}) {
+  const cor =
+    tom === "emergencial"
+      ? "text-priority-emergencial"
+      : tom === "vencido"
+        ? "text-sla-vencido"
+        : "text-text-primary";
+  return (
+    <div>
+      <Rotulo>{label}</Rotulo>
+      <p className={`mt-1 text-lg font-semibold tabular-nums ${cor}`}>{value}</p>
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -155,11 +186,13 @@ export default async function DashboardPage() {
     (h) => (h.criado_em as string).slice(0, 10) === hoje,
   ).length;
 
-  const topRts = [...volumePorRt.values()].sort((a, b) => b.total - a.total).slice(0, 8);
-  const maxVolume = topRts[0]?.total ?? 1;
+  const rtsOrdenadas = [...volumePorRt.values()].sort((a, b) => b.total - a.total);
+  const maxVolume = rtsOrdenadas[0]?.total ?? 1;
 
   const regioesOrdenadas = [...porRegiaoHoje.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const tecnicosOrdenados = [...porTecnicoHoje.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+  const atencaoAgora = (aguardandoValidacaoCount ?? 0) + (travadosCount ?? 0);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
@@ -176,11 +209,25 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <StatCard label="Chamados abertos" value={totalAbertos} />
-        <StatCard label="Críticos" value={totalCriticos} tom="emergencial" />
-        <StatCard label="SLA vencido" value={totalSlaVencido} tom="vencido" />
-      </div>
+      {/* Atenção agora — foco único da tela: o que o gerente precisa
+          resolver antes de qualquer outra coisa. Só ganha o tratamento
+          animado (AtencaoAgoraCard) quando há algo pendente — "tudo em
+          dia" fica no card neutro simples, sem motivo pra chamar atenção. */}
+      {atencaoAgora > 0 ? (
+        <AtencaoAgoraCard
+          total={atencaoAgora}
+          aguardandoValidacao={aguardandoValidacaoCount ?? 0}
+          travados={travadosCount ?? 0}
+        />
+      ) : (
+        <div className="rounded-[var(--radius-md)] border border-border bg-surface p-6">
+          <Rotulo>Atenção agora</Rotulo>
+          <p className="mt-2 text-4xl font-bold tabular-nums text-sla-dentro">0</p>
+          <p className="mt-2 text-sm text-text-secondary">
+            Nada aguardando validação ou travado — operação em dia.
+          </p>
+        </div>
+      )}
 
       <section className="mt-10">
         <h2 className="text-sm font-semibold text-text-primary">Operação de hoje</h2>
@@ -188,35 +235,10 @@ export default async function DashboardPage() {
           Serviços das rotas confirmadas pra hoje, por status.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard label="Não iniciados" value={naoIniciadosHoje} />
-          <StatCard label="Em execução" value={emExecucaoHoje} />
-          <StatCard label="Concluídos hoje" value={totalConcluidosHoje} />
-          <StatCard label="Reagendados hoje" value={totalReagendadosHoje} />
-        </div>
-      </section>
-
-      <section className="mt-10">
-        <h2 className="text-sm font-semibold text-text-primary">Gargalos</h2>
-        <p className="mt-1 text-xs text-text-tertiary">
-          Onde a operação está parada — ação fica na tela de Validação.
-        </p>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Link
-            href="/validacao"
-            className={`rounded-[var(--radius-md)] border border-border bg-surface p-5 transition-colors hover:border-border-strong ${FOCUS_RING}`}
-          >
-            <p className="text-xs font-medium text-text-tertiary">Aguardando validação →</p>
-            <p className="mt-2 text-3xl font-semibold tabular-nums text-text-primary">
-              {aguardandoValidacaoCount ?? 0}
-            </p>
-          </Link>
-          <Link
-            href="/validacao"
-            className={`rounded-[var(--radius-md)] border border-border bg-surface p-5 transition-colors hover:border-border-strong ${FOCUS_RING}`}
-          >
-            <p className="text-xs font-medium text-text-tertiary">Travados em rota já passada →</p>
-            <p className="mt-2 text-3xl font-semibold tabular-nums text-text-primary">{travadosCount ?? 0}</p>
-          </Link>
+          <OperacaoHojeCard label="Não iniciados" value={naoIniciadosHoje} />
+          <OperacaoHojeCard label="Em execução" value={emExecucaoHoje} />
+          <OperacaoHojeCard label="Concluídos" value={totalConcluidosHoje} />
+          <OperacaoHojeCard label="Reagendados" value={totalReagendadosHoje} />
         </div>
       </section>
 
@@ -299,35 +321,23 @@ export default async function DashboardPage() {
         </p>
 
         <div className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface">
-          {topRts.length === 0 ? (
+          {rtsOrdenadas.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-text-tertiary">
               Nenhum chamado em aberto no momento.
             </p>
           ) : (
-            <ul className="divide-y divide-border">
-              {topRts.map((rt) => (
-                <li key={rt.codigo} className="flex items-center gap-4 px-4 py-3">
-                  <div className="w-24 shrink-0">
-                    <p className="font-mono text-xs tabular-nums text-text-secondary">
-                      {rt.codigo}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-text-tertiary" title={rt.nome}>
-                      {rt.nome}
-                    </p>
-                  </div>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-input">
-                    <div
-                      className="h-full rounded-full bg-accent"
-                      style={{ width: `${(rt.total / maxVolume) * 100}%` }}
-                    />
-                  </div>
-                  <p className="w-6 shrink-0 text-right text-sm font-medium tabular-nums text-text-primary">
-                    {rt.total}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            <div className="p-4">
+              <RtsVolumeSection rts={rtsOrdenadas} maxVolume={maxVolume} />
+            </div>
           )}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <div className="flex flex-wrap gap-x-10 gap-y-4 rounded-[var(--radius-md)] border border-border bg-surface-input px-5 py-4">
+          <ContextoStat label="Chamados abertos" value={totalAbertos} />
+          <ContextoStat label="Críticos" value={totalCriticos} tom="emergencial" />
+          <ContextoStat label="SLA vencido" value={totalSlaVencido} tom="vencido" />
         </div>
       </section>
     </div>

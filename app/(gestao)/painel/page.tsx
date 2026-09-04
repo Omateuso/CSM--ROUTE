@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { computeSlaStatus } from "@/lib/sla";
-import { StatCard } from "@/app/(gerente)/dashboard/stat-card";
+import { StatCard } from "@/lib/ui/stat-card";
+import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
 import { RegiaoSection } from "./regiao-section";
 import { RtsSection } from "./rts-section";
 
@@ -180,11 +181,11 @@ export default async function PainelGestaoPage() {
           gerente.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard label="Não iniciados hoje" value={naoIniciadosHoje} />
-          <StatCard label="Em execução hoje" value={emExecucaoHoje} />
-          <StatCard label="Concluídos hoje" value={concluidosHoje} />
-          <StatCard label="Aguardando validação" value={aguardandoValidacaoCount ?? 0} />
-          <StatCard label="Travados em rota passada" value={travadosCount ?? 0} tom="vencido" />
+          <OperacaoHojeCard label="Não iniciados hoje" value={naoIniciadosHoje} />
+          <OperacaoHojeCard label="Em execução hoje" value={emExecucaoHoje} />
+          <OperacaoHojeCard label="Concluídos hoje" value={concluidosHoje} />
+          <OperacaoHojeCard label="Aguardando validação" value={aguardandoValidacaoCount ?? 0} />
+          <OperacaoHojeCard label="Travados em rota passada" value={travadosCount ?? 0} />
         </div>
       </section>
 

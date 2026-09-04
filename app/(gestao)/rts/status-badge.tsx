@@ -1,11 +1,8 @@
+import { StatusDot } from "@/lib/ui/status-dot";
+
 export function StatusBadge({ ativo }: { ativo: boolean }) {
   if (ativo) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary">
-        <span className="h-1.5 w-1.5 rounded-full bg-text-tertiary" aria-hidden="true" />
-        Ativa
-      </span>
-    );
+    return <StatusDot label="Ativa" dotClassName="bg-text-tertiary" textClassName="text-text-tertiary" />;
   }
 
   return (

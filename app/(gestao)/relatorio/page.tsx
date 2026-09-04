@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { RelatorioManager, type LinhaRelatorio } from "./relatorio-manager";
+import { GerarRelatorioButton } from "./gerador-modal";
 
 export default async function RelatorioPage() {
   const supabase = await createClient();
@@ -50,12 +51,15 @@ export default async function RelatorioPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-12">
-      <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Visão geral</p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary">Relatório diário</h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Operação do dia por região, a partir das rotas confirmadas.
-        </p>
+      <header className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Visão geral</p>
+          <h1 className="mt-1 text-2xl font-semibold text-text-primary">Relatório diário</h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            Operação do dia por região, a partir das rotas confirmadas.
+          </p>
+        </div>
+        <GerarRelatorioButton />
       </header>
 
       <RelatorioManager linhas={linhas} />

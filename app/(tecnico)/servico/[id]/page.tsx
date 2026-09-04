@@ -4,8 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badge";
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { StatusServicoBadge, type StatusServico } from "../../status-servico-badge";
-import { IniciarServicoButton } from "./iniciar-servico-button";
+import { IniciarServicoForm } from "./iniciar-servico-form";
 import { ConcluirServicoForm } from "./concluir-servico-form";
+import { PendenciaForm } from "./pendencia-form";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
 
@@ -20,6 +21,8 @@ const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
   hour: "2-digit",
   minute: "2-digit",
 });
+
+const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" });
 
 export default async function ServicoPage({ params }: PageProps<"/servico/[id]">) {
   const { id } = await params;
@@ -45,7 +48,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
   const { data: servicoRaw } = await supabase
     .from("servicos")
     .select(
-      "id, status, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco)",
+      "id, status, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco)",
     )
     .eq("id", id)
     .eq("tecnico_id", user.id)
@@ -69,7 +72,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
   // ao anterior fora do `historico`).
   const { data: historicoRaw } = await supabase
     .from("historico")
-    .select("id, evento, descricao, criado_em, criado_por:criado_por(nome)")
+    .select("id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
     .eq("chamado_id", servicoRaw.chamado_id as string)
     .order("criado_em", { ascending: true });
 
@@ -77,6 +80,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
     id: h.id as string,
     evento: h.evento as string,
     descricao: h.descricao as string | null,
+    categoria: (h.categoria as string | null) ?? null,
     criadoEm: h.criado_em as string,
     criadoPorNome: unwrapOne(h.criado_por)?.nome ?? null,
   }));
@@ -100,6 +104,11 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
           <span className="font-mono text-xs text-text-secondary">{rt?.codigo}</span>
           {chamado?.tomticket_id && (
             <span className="font-mono text-xs text-text-tertiary">#{chamado.tomticket_id}</span>
+          )}
+          {chamado?.criado_em && (
+            <span className="text-xs text-text-tertiary">
+              criado em {formatoDataCurta.format(new Date(chamado.criado_em as string))}
+            </span>
           )}
           <StatusServicoBadge status={status} />
         </div>
@@ -129,9 +138,27 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
         )}
 
         <div className="mt-5">
-          {status === "planejado" && <IniciarServicoButton servicoId={servicoRaw.id as string} />}
+          {status === "planejado" && <IniciarServicoForm servicoId={servicoRaw.id as string} />}
 
-          {status === "em_execucao" && <ConcluirServicoForm servicoId={servicoRaw.id as string} />}
+          {status === "em_execucao" && (
+            <div className="flex flex-col gap-4">
+              <ConcluirServicoForm servicoId={servicoRaw.id as string} />
+              <details className="group rounded-[var(--radius-md)] border-2 border-priority-alta/40 bg-priority-alta/5 p-4">
+                <summary
+                  className={`flex cursor-pointer items-center gap-2 text-sm font-semibold text-priority-alta ${FOCUS_RING}`}
+                >
+                  <span aria-hidden="true">⚠️</span>
+                  Não consegui concluir o atendimento
+                  <span className="ml-auto text-xs font-normal text-priority-alta/80 group-open:hidden">
+                    toque pra abrir
+                  </span>
+                </summary>
+                <div className="mt-4">
+                  <PendenciaForm servicoId={servicoRaw.id as string} />
+                </div>
+              </details>
+            </div>
+          )}
 
           {(status === "concluido_tecnico" || status === "aguardando_validacao" || status === "validado") && (
             <p className="rounded-[var(--radius-md)] border border-sla-dentro/30 bg-sla-dentro/5 p-4 text-sm text-text-primary">
@@ -140,6 +167,12 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
                 ? ` em ${formatoDataHora.format(new Date(servicoRaw.concluido_em as string))}`
                 : ""}{" "}
               — aguardando validação do gerente.
+            </p>
+          )}
+
+          {status === "cancelado" && (
+            <p className="rounded-[var(--radius-md)] border border-border bg-surface-input p-4 text-sm text-text-secondary">
+              Atendimento cancelado — o chamado voltou a ficar disponível pra uma próxima rota.
             </p>
           )}
         </div>

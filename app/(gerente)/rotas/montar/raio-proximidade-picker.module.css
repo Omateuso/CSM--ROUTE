@@ -1,0 +1,127 @@
+/* CSS fornecido pelo usuário (27/08/2026), cores/efeitos mantidos
+   exatamente como vieram — mesma convenção já usada pro botão de
+   Pendências e "Iniciar atendimento". Adaptado de 3 pra 5 opções (raio de
+   proximidade: 5/10/15/20/25 km) — só as alturas mudaram (ver comentário
+   em .radio-input/.glass), nada de cor foi alterado. */
+.radioInput {
+  display: flex;
+  /* Recalculado (era 350px — folga quase 3x maior que o original, sobrava
+     ~40px de espaço morto acima/abaixo da coluna de opções, lido pelo
+     usuário como uma "tela em branco" extra dentro do fieldset). Mesma
+     proporção do original de 3 opções (radioInput/conteúdo ≈ 1.1475):
+     conteúdo de 5 linhas = 5*(41px + 2*7px margem) = 275px; 275*1.1475 ≈
+     315px. */
+  height: 230px;
+  align-items: center;
+  /* O glass (110% da altura deste container) estoura ~16px pra cima e pra
+     baixo por design (efeito "peek" do vidro, igual ao original de 3
+     opções) — sem essa margem, o estouro de cima sobrepõe o parágrafo de
+     explicação que fica logo acima no fieldset. */
+  margin-top: 20px;
+}
+
+.glass {
+  z-index: 2;
+  height: 110%;
+  width: 76px;
+  margin-right: 25px;
+  padding: 8px;
+  background-color: rgba(190, 189, 189, 0.5);
+  border-radius: 35px;
+  box-shadow:
+    rgba(50, 50, 93, 0.2) 0px 25px 50px -10px,
+    rgba(0, 0, 0, 0.25) 0px 10px 30px -15px,
+    rgba(10, 37, 64, 0.26) 0px -2px 6px 0px inset;
+  backdrop-filter: blur(8px);
+}
+
+.glassInner {
+  width: 100%;
+  height: 100%;
+  border-color: rgba(245, 245, 245, 0.45);
+  border-width: 9px;
+  border-style: solid;
+  border-radius: 30px;
+}
+
+.selector {
+  display: flex;
+  flex-direction: column;
+}
+
+.choice {
+  /* original: margin 10px 0, 3 linhas de 41px = 183px de conteúdo pra um
+     glass de 231px (110% de 210px). 5 linhas = 305px de conteúdo — reduzi
+     um pouco a margem (10px → 7px) pra não esticar demais o card na
+     tela, e o .radioInput/.glass acima já foram recalculados pra caber
+     as 5 linhas com a mesma folga proporcional do original. */
+  margin: 5px 0;
+  display: flex;
+  align-items: center;
+}
+
+.choice > div {
+  position: relative;
+  width: 33px;
+  height: 33px;
+  margin-right: 15px;
+  z-index: 0;
+}
+
+.choiceCircle {
+  appearance: none;
+  height: 100%;
+  width: 100%;
+  border-radius: 100%;
+  border-width: 9px;
+  border-style: solid;
+  border-color: rgba(245, 245, 245, 0.45);
+  cursor: pointer;
+  box-shadow:
+    0px 0px 20px -13px gray,
+    0px 0px 20px -14px gray inset;
+}
+
+.ball {
+  z-index: 1;
+  position: absolute;
+  inset: 0px;
+  transform: translateX(-95px);
+  box-shadow:
+    rgba(0, 0, 0, 0.17) 0px -10px 10px 0px inset,
+    rgba(0, 0, 0, 0.15) 0px -15px 15px 0px inset,
+    rgba(0, 0, 0, 0.1) 0px -40px 20px 0px inset,
+    rgba(0, 0, 0, 0.06) 0px 2px 1px,
+    rgba(0, 0, 0, 0.09) 0px 4px 2px,
+    rgba(0, 0, 0, 0.09) 0px 8px 4px,
+    rgba(0, 0, 0, 0.09) 0px 16px 8px,
+    rgba(0, 0, 0, 0.09) 0px 32px 16px,
+    0px -1px 15px -8px rgba(0, 0, 0, 0.09);
+  border-radius: 100%;
+  transition: transform 800ms cubic-bezier(1, -0.4, 0, 1.4);
+  background-color: rgb(232, 232, 232, 1);
+  /* Adição pontual (não estava no CSS original): a bolinha visível fica
+     sobreposta ao próprio <input> radio dela (mesmo espaço, .ball tem
+     z-index maior). Sem isso, clicar de novo na opção já marcada não
+     alcançaria o input embaixo — pointer-events:none não muda nada
+     visualmente, só deixa o clique atravessar pro input. */
+  pointer-events: none;
+}
+
+.choiceCircle:checked + .ball {
+  transform: translateX(0px);
+}
+
+.choiceName {
+  color: rgb(177, 176, 176);
+  font-size: 20px;
+  font-weight: 900;
+  font-family: monospace;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ball {
+    transition: none;
+  }
+}

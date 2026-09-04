@@ -1,0 +1,110 @@
+/* Card "Atenção agora" — pedido do usuário (23/08/2026), mesmo mecanismo
+   de hover-reveal e gradiente do botão de Pendências (cores mantidas
+   como fornecidas). Diferente do exemplo original: o número precisa
+   continuar sempre visível (é o dado crítico), só o detalhe/link ficam
+   atrás do hover — por isso a "frente" não fica vazia como no "Hover me"
+   de referência. */
+.card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 11rem;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+
+.front {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--priority-alta);
+  border-radius: inherit;
+  transition:
+    transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ff0f7b;
+}
+
+.valor {
+  margin-top: 0.375rem;
+  font-size: 2.5rem;
+  line-height: 1;
+  font-weight: 700;
+  background: linear-gradient(-45deg, #f89b29 0%, #ff0f7b 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dica {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.verso {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 1.5rem;
+  border-radius: inherit;
+  background: linear-gradient(-45deg, #f89b29 0%, #ff0f7b 100%);
+  color: #fff;
+  transform: translateY(-96%);
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.versoTitulo {
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.versoDetalhe {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.versoLink {
+  margin-top: 0.125rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.card:hover .front,
+.card:focus-visible .front {
+  transform: translateY(30%);
+  opacity: 0;
+}
+
+.card:hover .verso,
+.card:focus-visible .verso {
+  transform: translateY(0);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .front,
+  .verso {
+    transition: none;
+  }
+}

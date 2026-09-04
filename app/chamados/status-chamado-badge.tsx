@@ -1,3 +1,5 @@
+import { StatusDot } from "@/lib/ui/status-dot";
+
 export type StatusChamado = "aberto" | "em_andamento" | "finalizado" | "cancelado";
 
 export const STATUS_OPTIONS: { value: StatusChamado; label: string }[] = [
@@ -21,14 +23,10 @@ const LABELS: Record<StatusChamado, string> = {
 export function StatusChamadoBadge({ status }: { status: StatusChamado }) {
   const resolvido = status === "finalizado" || status === "cancelado";
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-xs ${resolvido ? "text-text-tertiary" : "text-text-secondary"}`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${resolvido ? "border border-text-tertiary" : "bg-text-tertiary"}`}
-        aria-hidden="true"
-      />
-      {LABELS[status]}
-    </span>
+    <StatusDot
+      label={LABELS[status]}
+      dotClassName={resolvido ? "border border-text-tertiary" : "bg-text-tertiary"}
+      textClassName={resolvido ? "text-text-tertiary" : "text-text-secondary"}
+    />
   );
 }

@@ -5,10 +5,13 @@
 // reagendamento ficava gravado no banco sem aparecer em lugar nenhum.
 // A linha do tempo completa (filtros, busca por chamado avulso) continua
 // pra Parte E; isso aqui só lê e mostra os eventos de um chamado.
+import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "./pendencia-categoria";
+
 export type HistoricoEvento = {
   id: string;
   evento: string;
   descricao: string | null;
+  categoria: string | null;
   criadoEm: string;
   criadoPorNome: string | null;
 };
@@ -19,6 +22,20 @@ const EVENTO_LABEL: Record<string, string> = {
   servico_concluido_tecnico: "Concluído pelo técnico",
   servico_reagendado: "Reagendado",
   servico_validado: "Validado pelo gerente",
+  rota_data_corrigida: "Data da rota corrigida",
+  servico_recusado: "Recusado pelo gerente",
+  servico_pendente_material: "Pendência de material", // nome antigo (0025) — mantido pra dado de teste já gravado
+  servico_pendente: "Pendência reportada",
+  // Central de Urgências (0027) — eventos gravados por urgencia_id antes do
+  // chamado existir, e por chamado_id (também) a partir da decisão de
+  // atendimento — a mesma timeline combina os dois.
+  urgencia_registrada: "Urgência registrada",
+  urgencia_em_analise: "Urgência em análise",
+  urgencia_validada: "Urgência validada",
+  urgencia_nao_validada: "Urgência não validada",
+  urgencia_cancelada: "Urgência cancelada",
+  urgencia_atendimento_decidido: "Atendimento decidido",
+  urgencia_vinculada_tomticket: "Vinculado ao TomTicket",
 };
 
 const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
@@ -39,6 +56,11 @@ export function HistoricoChamado({ eventos }: { eventos: HistoricoEvento[] }) {
           <li key={e.id} className="text-xs">
             <div className="flex flex-wrap items-baseline gap-x-2">
               <span className="font-medium text-text-primary">{EVENTO_LABEL[e.evento] ?? e.evento}</span>
+              {e.categoria && (
+                <span className="text-text-secondary">
+                  ({PENDENCIA_CATEGORIA_LABEL[e.categoria as PendenciaCategoria] ?? e.categoria})
+                </span>
+              )}
               <span className="text-text-tertiary">{formatoDataHora.format(new Date(e.criadoEm))}</span>
               {e.criadoPorNome && <span className="text-text-tertiary">· {e.criadoPorNome}</span>}
             </div>

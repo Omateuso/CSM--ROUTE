@@ -1,0 +1,261 @@
+/* Estilos do documento impresso (26/08/2026) — tokens locais, não entram em
+   app/globals.css: só esta página usa a paleta institucional da IGEDES
+   (mesmo padrão de isolamento já usado em app-nav.module.css e
+   login.module.css). Cores tiradas por amostragem de pixel direto do
+   timbrado real (copia.docx → word/media/image1.png), não de memória —
+   o teal bateu exato com o que o usuário citou (#008A83), o vermelho real
+   é #D22B1C (o prompt original citava #D04020, ligeiramente diferente).
+
+   Cabeçalho/rodapé/marca-d'água repetindo em toda página impressa usam
+   `<table><thead>/<tfoot>` — NÃO `position:fixed`. Testado empiricamente
+   com PDFs reais (page.pdf() do Playwright, não só preview de tela):
+   `position:fixed` neste Chromium fica posicionado de um jeito
+   inconsistente/imprevisível quando a página pagina (cabeçalho e rodapé
+   saíam trocados de lugar entre páginas em vários valores testados);
+   `background-image` no body também falha — só aparece na primeira
+   página. `<thead>`/`<tfoot>` de tabela é o único mecanismo que se
+   comportou de forma confiável em todas as páginas testadas (nativo do
+   motor de paginação de impressão, não um hack) — a marca d'água entra
+   como elemento posicionado dentro do `<thead>` (que repete), não solta. */
+.shell {
+  --teal: #008a83;
+  --red: #d22b1c;
+  --tinta: #1c1917;
+  --tinta-suave: #57534e;
+  --linha: #e2ded9;
+
+  min-height: 100dvh;
+  background: #6b6864;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  background: #57534e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.paginaScreen {
+  padding: 24px 0 48px;
+}
+
+.folha {
+  width: 210mm;
+  margin: 0 auto;
+  border-collapse: collapse;
+  background: #fff;
+  color: var(--tinta);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+/* Só na tela: a marca d'água (dentro do thead, ver comentário no topo)
+   precisa poder "vazar" pra baixo do cabeçalho pra alcançar o centro de
+   CADA página impressa de verdade — mas na prévia de tela não existe
+   página 2, então num relatório curto ela acaba sobrando visível abaixo
+   da folha inteira, solta no fundo cinza. `overflow:hidden` só em tela
+   resolve isso sem afetar a impressão real (onde `.folha` já vira `width:
+   auto` e a paginação de verdade cuida de tudo). */
+@media screen {
+  .folha {
+    overflow: hidden;
+  }
+}
+
+.cabecalhoCelula {
+  position: relative;
+  /* z-index explícito (não só position:relative) é o que faz esta célula
+     abrir seu PRÓPRIO contexto de empilhamento — sem isso, o z-index da
+     marca d'água "escapa" pra fora dela e passa a competir direto com o
+     fundo branco de .folha (é exatamente o que deu errado na primeira
+     tentativa de corrigir isso, com z-index:-1 direto na marca d'água:
+     ela sumiu, escondida atrás do branco da folha, em vez de só atrás do
+     texto). Com o contexto próprio, a marca d'água some atrás do TEXTO
+     (.mioloCelula/.rodapeCelula, z-index:1 mais abaixo) mas continua
+     visível por cima do fundo branco da página. */
+  z-index: 0;
+  padding: 10mm 18mm 6mm;
+}
+.cabecalho {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo {
+  height: 11mm;
+  width: auto;
+}
+.tituloDocumento {
+  text-align: right;
+}
+.tituloDocumento h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--teal);
+}
+.tituloDocumento p {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  color: var(--tinta-suave);
+}
+
+.marcaDagua {
+  position: absolute;
+  top: 125mm;
+  left: 50%;
+  width: 130mm;
+  transform: translate(-50%, 0);
+  opacity: 0.35;
+  pointer-events: none;
+  /* Achado do usuário, 27/08/2026: num relatório curto (poucos blocos), a
+     marca d'água aparecia visualmente POR CIMA do texto, não atrás — não
+     era só questão de opacidade. Elemento `position:absolute` pinta acima
+     de conteúdo normal (não posicionado) mesmo com z-index:0/auto, regra
+     de empilhamento do CSS, independente da ordem no HTML — por isso não
+     apareceu nos testes anteriores (relatório de teste tinha 9 blocos,
+     texto suficiente pra nunca coincidir com a posição fixa da marca
+     d'água). Fica em z-index:0 dentro do contexto próprio de
+     .cabecalhoCelula (ver comentário lá) — abaixo do texto real
+     (.mioloCelula/.rodapeCelula, z-index:1), mas ainda visível por cima do
+     fundo branco da página.  */
+  z-index: 0;
+}
+
+.rodapeCelula {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+}
+.rodapeBarra {
+  background: var(--teal);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 18mm;
+}
+.rodapeTexto {
+  padding: 5px 18mm 8px;
+  font-size: 9px;
+  color: var(--tinta-suave);
+  line-height: 1.5;
+}
+
+.mioloCelula {
+  position: relative;
+  z-index: 1;
+  padding: 4mm 18mm 8mm;
+}
+
+.resumoExecutivo {
+  margin: 0 0 8mm;
+  padding: 4mm 5mm;
+  border-left: 3px solid var(--teal);
+  background: #f4faf9;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--tinta);
+}
+.resumoExecutivo strong {
+  color: var(--teal);
+}
+
+.secao {
+  margin-bottom: 8mm;
+  break-inside: avoid;
+}
+.secaoTitulo {
+  margin: 0 0 1mm;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta);
+  border-bottom: 1.5px solid var(--teal);
+  padding-bottom: 1.5mm;
+}
+.secaoSubtitulo {
+  margin: 1.5mm 0 3mm;
+  font-size: 10px;
+  color: var(--tinta-suave);
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr));
+  gap: 4mm;
+  margin-bottom: 4mm;
+}
+.stat {
+  border: 1px solid var(--linha);
+  border-radius: 3px;
+  padding: 3mm;
+}
+.statDestaque {
+  border-color: var(--red);
+}
+.statLabel {
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+.statValor {
+  margin-top: 1mm;
+  font-size: 16px;
+  font-weight: 700;
+}
+.statDestaque .statValor {
+  color: var(--red);
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+.tabela th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--tinta-suave);
+  border-bottom: 1px solid var(--tinta);
+  padding: 1.5mm 2mm;
+}
+.tabela td {
+  padding: 1.5mm 2mm;
+  border-bottom: 1px solid var(--linha);
+  vertical-align: top;
+}
+.tabela tr:last-child td {
+  border-bottom: none;
+}
+
+.semDados {
+  font-size: 10px;
+  color: var(--tinta-suave);
+  font-style: italic;
+}
+
+@media print {
+  .shell {
+    background: none;
+  }
+  .toolbar {
+    display: none;
+  }
+  .paginaScreen {
+    padding: 0;
+  }
+  .folha {
+    width: auto;
+    margin: 0;
+    box-shadow: none;
+  }
+  @page {
+    size: A4;
+    margin: 10mm 0;
+  }
+}
