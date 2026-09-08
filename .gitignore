@@ -49,3 +49,6 @@ supabase/migrations/Import_chamados_final.sql
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# saída do scripts/verificar-telas.mjs
+.screenshots/

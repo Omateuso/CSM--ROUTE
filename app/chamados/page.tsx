@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ChamadosManager, type ChamadoRow } from "./chamados-manager";
 import { type HistoricoEvento } from "@/lib/ui/historico-chamado";
+import { SyncTomticketButton, type SyncInfo } from "./sync-tomticket-button";
+import { tomticketConfigurado } from "@/lib/tomticket/config";
 
 // Mesma situação do app/(gestao)/rts/page.tsx: sem Database types gerados
 // ainda, embeds aninhados (chamados.rts / rts.regioes / regioes.zonas)
@@ -140,17 +142,38 @@ export default async function ChamadosPage() {
     };
   });
 
+  // Estado da coleta (0030). Sem isto, a sync pode morrer e a tela seguir
+  // mostrando a última foto sem ninguém perceber.
+  const [{ data: estadoSync }, { count: naoImportados }] = await Promise.all([
+    supabase.from("sync_estado").select("ultima_leitura, ultima_execucao, ultimo_erro").eq("id", true).maybeSingle(),
+    supabase.from("sync_nao_importados").select("tomticket_id", { count: "exact", head: true }),
+  ]);
+
+  const syncInfo: SyncInfo = {
+    ultimaLeitura: (estadoSync?.ultima_leitura as string | null) ?? null,
+    ultimaExecucao: (estadoSync?.ultima_execucao as string | null) ?? null,
+    ultimoErro: (estadoSync?.ultimo_erro as string | null) ?? null,
+    naoImportados: naoImportados ?? 0,
+  };
+
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
-      <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">
-          Cadastro
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary">Chamados</h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Entrada manual de chamados — origem TomTicket, com prioridade, SLA e
-          RT vinculada. A sincronização automática fica para a Fase 5.
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        {/* max-w no texto: sem isso a descrição ocupa a linha inteira e empurra
+            o botão de sincronizar pra baixo, desalinhado. */}
+        <div className="max-w-xl">
+          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">
+            Cadastro
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold text-text-primary">Chamados</h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            Espelho dos chamados do TomTicket, com prioridade, SLA e RT vinculada.
+            Sincronizar traz os chamados novos e atualiza o status dos que já estão aqui.
+          </p>
+        </div>
+        {role === "gerente" && (
+          <SyncTomticketButton info={syncInfo} ativo={tomticketConfigurado()} />
+        )}
       </header>
 
       <ChamadosManager chamados={chamados} rts={rts} podeCriar={podeCriar} />

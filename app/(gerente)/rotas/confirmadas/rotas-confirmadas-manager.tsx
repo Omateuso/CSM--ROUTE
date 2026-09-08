@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Modal } from "@/lib/ui/modal";
 import { CorrigirDataDialog } from "./corrigir-data-dialog";
+import { CancelarRotaDialog } from "./cancelar-rota-dialog";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 import { StatusDot } from "@/lib/ui/status-dot";
 
@@ -54,6 +55,8 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
   const [rotaSelecionada, setRotaSelecionada] = useState<RotaRow | null>(null);
   const [rotaCorrigindo, setRotaCorrigindo] = useState<RotaRow | null>(null);
   const [corrigirInstancia, setCorrigirInstancia] = useState(0);
+  const [rotaCancelando, setRotaCancelando] = useState<RotaRow | null>(null);
+  const [cancelarInstancia, setCancelarInstancia] = useState(0);
 
   const equipesDisponiveis = useMemo(
     () => [...new Set(rotas.map((r) => r.equipeNome))].sort(),
@@ -191,6 +194,19 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
                         Corrigir data
                       </button>
                     )}
+                    {r.podeCorrigirData && r.status !== "cancelada" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCancelarInstancia((n) => n + 1);
+                          setRotaCancelando(r);
+                        }}
+                        aria-label={`Cancelar a rota de ${formatoData.format(new Date(`${r.data}T00:00:00`))}`}
+                        className={`text-xs font-medium text-text-tertiary transition-colors hover:text-danger ${FOCUS_RING} ${TAP_TARGET}`}
+                      >
+                        Cancelar rota
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setRotaSelecionada(r)}
@@ -284,6 +300,16 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
           </div>
         )}
       </Modal>
+      <CancelarRotaDialog
+        key={`cancelar-${cancelarInstancia}`}
+        open={rotaCancelando !== null}
+        rotaId={rotaCancelando?.id ?? null}
+        descricao={
+          rotaCancelando ? formatoData.format(new Date(`${rotaCancelando.data}T00:00:00`)) : ""
+        }
+        quantidadeRts={rotaCancelando?.rts.length ?? 0}
+        onClose={() => setRotaCancelando(null)}
+      />
 
       <CorrigirDataDialog
         key={corrigirInstancia}

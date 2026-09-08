@@ -26,6 +26,9 @@ const EVENTO_LABEL: Record<string, string> = {
   servico_recusado: "Recusado pelo gerente",
   servico_pendente_material: "Pendência de material", // nome antigo (0025) — mantido pra dado de teste já gravado
   servico_pendente: "Pendência reportada",
+  // Resposta enviada ao chamado no TomTicket, com os anexos (0028). A
+  // `descricao` guarda o texto exato que o cliente recebeu.
+  tomticket_respondido: "Respondido no TomTicket",
   // Central de Urgências (0027) — eventos gravados por urgencia_id antes do
   // chamado existir, e por chamado_id (também) a partir da decisão de
   // atendimento — a mesma timeline combina os dois.

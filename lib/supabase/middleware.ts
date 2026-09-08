@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login"];
+// A rota de sincronização com o TomTicket autentica sozinha (segredo do
+// agendador OU sessão de gerente) — ver app/api/tomticket/sync/route.ts. Sem
+// isso, um cron sem cookie levaria um 307 pro /login em vez de rodar.
+const PUBLIC_PATHS = ["/login", "/api/tomticket/sync"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

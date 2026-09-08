@@ -6,16 +6,25 @@ import { confirmarRota, type ActionState } from "./actions";
 import { Modal } from "@/lib/ui/modal";
 import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
 import { FOCUS_RING, FIELD_INPUT, FIELD_LABEL } from "@/lib/ui/styles";
+import { PrioridadeBadge } from "@/app/chamados/prioridade-badge";
 
 type Equipe = { id: string; nome: string };
 type RtResumo = { id: string; codigo: string; endereco: string };
 type Tecnico = { id: string; nome: string; equipeId: string | null; ativo: boolean };
+
+export type ChamadoDaRt = {
+  id: string;
+  assunto: string;
+  protocolo: string | null;
+  prioridade: "emergencial" | "alta" | "normal" | "baixa";
+};
 
 const hoje = new Date().toISOString().slice(0, 10);
 
 export function ConfirmarRotaDialog({
   open,
   rtsNaRota,
+  chamadosPorRt,
   equipes,
   tecnicos,
   onClose,
@@ -23,6 +32,7 @@ export function ConfirmarRotaDialog({
 }: {
   open: boolean;
   rtsNaRota: RtResumo[];
+  chamadosPorRt: Record<string, ChamadoDaRt[]>;
   equipes: Equipe[];
   tecnicos: Tecnico[];
   onClose: () => void;
@@ -35,6 +45,42 @@ export function ConfirmarRotaDialog({
     onConfirmado();
     onClose();
   });
+
+  // Tudo marcado por padrão: o comportamento de sempre era levar todos os
+  // chamados da RT, então desmarcar é a exceção, não a regra.
+  const [desmarcados, setDesmarcados] = useState<Set<string>>(new Set());
+  // Conjunto, não uma só: cada RT abre e fecha por conta própria. Com uma
+  // variável única, abrir a segunda RT fechava a primeira — que é o que o
+  // usuário viu como "não está funcionando".
+  const [rtsAbertas, setRtsAbertas] = useState<Set<string>>(new Set());
+
+  function alternarRt(rtId: string) {
+    setRtsAbertas((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(rtId)) proximo.delete(rtId);
+      else proximo.add(rtId);
+      return proximo;
+    });
+  }
+
+  const chamadosSelecionados = useMemo(() => {
+    const ids: string[] = [];
+    for (const rt of rtsNaRota) {
+      for (const c of chamadosPorRt[rt.id] ?? []) {
+        if (!desmarcados.has(c.id)) ids.push(c.id);
+      }
+    }
+    return ids;
+  }, [rtsNaRota, chamadosPorRt, desmarcados]);
+
+  function alternar(chamadoId: string) {
+    setDesmarcados((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(chamadoId)) proximo.delete(chamadoId);
+      else proximo.add(chamadoId);
+      return proximo;
+    });
+  }
 
   const uid = useId();
   const idData = `${uid}-data`;
@@ -76,6 +122,12 @@ export function ConfirmarRotaDialog({
       ) : (
         <form action={formAction} className="flex flex-col gap-4">
           <input type="hidden" name="rtIds" value={JSON.stringify(rtsNaRota.map((rt) => rt.id))} />
+          {/* A escolha do gerente. Ausente = todos os elegíveis (0033). */}
+          <input
+            type="hidden"
+            name="chamadoIds"
+            value={JSON.stringify(chamadosSelecionados)}
+          />
           <input
             type="hidden"
             name="tecnicoIds"
@@ -131,22 +183,44 @@ export function ConfirmarRotaDialog({
                 </Link>
               </div>
             ) : (
-              <ol className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+              <ol className="flex flex-col gap-2">
                 {rtsNaRota.map((rt, indice) => {
                   const idTecnico = `${uid}-tecnico-${rt.id}`;
+                  const chamados = chamadosPorRt[rt.id] ?? [];
+                  const marcadosNaRt = chamados.filter((c) => !desmarcados.has(c.id)).length;
+                  const aberta = rtsAbertas.has(rt.id);
                   return (
                     <li
                       key={rt.id}
-                      className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-border p-2"
+                      className="rounded-[var(--radius-sm)] border border-border"
                     >
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-white">
-                        {indice + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs">
-                          <span className="font-mono text-text-secondary">{rt.codigo}</span>{" "}
+                      {/* O PRÓPRIO código da RT é o que abre e fecha a lista
+                          de chamados (pedido do usuário): clicou em "SRT 50",
+                          expande; clicou de novo, volta a ser só "SRT 50". */}
+                      <button
+                        type="button"
+                        onClick={() => alternarRt(rt.id)}
+                        aria-expanded={aberta}
+                        className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] p-2 text-left transition-colors hover:bg-surface-input ${FOCUS_RING}`}
+                      >
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-white">
+                          {indice + 1}
+                        </span>
+                        <span aria-hidden="true" className="text-xs text-text-tertiary">
+                          {aberta ? "▾" : "▸"}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-xs">
+                          <span className="font-mono font-semibold text-text-primary">{rt.codigo}</span>{" "}
                           <span className="text-text-tertiary">{rt.endereco}</span>
-                        </p>
+                        </span>
+                        <span className="shrink-0 text-xs text-text-tertiary">
+                          {chamados.length === 0
+                            ? "sem chamado"
+                            : `${marcadosNaRt}/${chamados.length}`}
+                        </span>
+                      </button>
+
+                      <div className="px-2 pb-2">
                         <label htmlFor={idTecnico} className="sr-only">
                           Técnico responsável por {rt.codigo}
                         </label>
@@ -158,7 +232,7 @@ export function ConfirmarRotaDialog({
                           }
                           disabled={!equipeId}
                           required
-                          className={`${FIELD_INPUT} mt-1`}
+                          className={FIELD_INPUT}
                         >
                           <option value="" disabled>
                             {equipeId ? "Técnico responsável..." : "Selecione a equipe primeiro"}
@@ -169,6 +243,40 @@ export function ConfirmarRotaDialog({
                             </option>
                           ))}
                         </select>
+
+                        {aberta &&
+                          (chamados.length === 0 ? (
+                            <p className="mt-2 text-xs text-text-tertiary">
+                              Sem chamado em aberto nessa RT.
+                            </p>
+                          ) : (
+                            <ul className="mt-2 flex flex-col gap-1">
+                              {chamados.map((c) => {
+                                const idCheck = `${uid}-ch-${c.id}`;
+                                return (
+                                  <li key={c.id} className="flex items-start gap-2">
+                                    <input
+                                      id={idCheck}
+                                      type="checkbox"
+                                      checked={!desmarcados.has(c.id)}
+                                      onChange={() => alternar(c.id)}
+                                      className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
+                                    />
+                                    <label
+                                      htmlFor={idCheck}
+                                      className="min-w-0 flex-1 cursor-pointer text-xs"
+                                    >
+                                      {c.protocolo && (
+                                        <span className="font-mono text-text-tertiary">#{c.protocolo} </span>
+                                      )}
+                                      <span className="text-text-primary">{c.assunto}</span>
+                                    </label>
+                                    <PrioridadeBadge prioridade={c.prioridade} />
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ))}
                       </div>
                     </li>
                   );
