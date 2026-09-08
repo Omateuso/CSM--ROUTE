@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { tomticketSearchUrl } from "@/lib/tomticket";
+import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
+import { ResponderTomticket } from "../responder-tomticket";
+import { mensagemPendencia } from "@/lib/tomticket/mensagens";
+import { tomticketConfigurado } from "@/lib/tomticket/config";
 
 // Página própria desde 22/08/2026 (pedido do usuário) — antes era um modal
 // dentro de /validacao. Mesma consulta que vivia lá: `historico` com
@@ -62,7 +65,7 @@ export default async function PendenciasPage() {
   const { data: pendenciasRaw } = await supabase
     .from("historico")
     .select(
-      "id, chamado_id, categoria, descricao, criado_em, criado_por:criado_por(nome), chamados(assunto, tomticket_id, rts(codigo, nome)), servicos(evidencias(tipo, momento, storage_path))",
+      "id, chamado_id, servico_id, categoria, descricao, criado_em, criado_por:criado_por(nome), chamados(assunto, tomticket_id, rts(codigo, nome)), servicos(id, tomticket_resposta_id, evidencias(tipo, momento, storage_path))",
     )
     .eq("evento", "servico_pendente")
     .order("criado_em", { ascending: false });
@@ -93,15 +96,39 @@ export default async function PendenciasPage() {
     }
   }
 
+  // Quando cada serviço foi respondido no TomTicket (migration 0028). O recibo
+  // em `servicos.tomticket_resposta_id` diz QUE foi; o histórico diz QUANDO.
+  const servicoIdsPendencia = pendenciasFiltradas
+    .map((p) => p.servico_id as string | null)
+    .filter((id): id is string => Boolean(id));
+  const respondidoEmPorServico = new Map<string, string>();
+  if (servicoIdsPendencia.length > 0) {
+    const { data: respostasRaw } = await supabase
+      .from("historico")
+      .select("servico_id, criado_em")
+      .eq("evento", "tomticket_respondido")
+      .in("servico_id", servicoIdsPendencia);
+    for (const r of respostasRaw ?? []) {
+      respondidoEmPorServico.set(r.servico_id as string, r.criado_em as string);
+    }
+  }
+
+  const integracaoAtiva = tomticketConfigurado();
+
   const pendencias = pendenciasFiltradas.map((p) => {
     const chamado = unwrapOne(p.chamados);
     const rt = chamado ? unwrapOne(chamado.rts) : null;
-    const evidenciasServico = unwrapMany(unwrapOne(p.servicos)?.evidencias);
+    const servico = unwrapOne(p.servicos);
+    const evidenciasServico = unwrapMany(servico?.evidencias);
     const fotoParcial = evidenciasServico.find((e) => e.tipo === "foto" && e.momento === "parcial");
     const os = evidenciasServico.find((e) => e.tipo === "os");
+    const categoria = (p.categoria as PendenciaCategoria | null) ?? null;
+    const servicoId = (p.servico_id as string | null) ?? null;
+
     return {
       historicoId: p.id as string,
-      categoria: (p.categoria as string | null) ?? null,
+      servicoId,
+      categoria,
       descricao: p.descricao as string | null,
       criadoEm: p.criado_em as string,
       tecnicoNome: unwrapOne(p.criado_por)?.nome ?? "—",
@@ -111,6 +138,17 @@ export default async function PendenciasPage() {
       tomticketId: (chamado?.tomticket_id as string | null) ?? null,
       fotoParcialUrl: fotoParcial ? (urlPorCaminho.get(fotoParcial.storage_path as string) ?? null) : null,
       osUrl: os ? (urlPorCaminho.get(os.storage_path as string) ?? null) : null,
+      tomticketRespostaId: (servico?.tomticket_resposta_id as string | null) ?? null,
+      respondidoEm: servicoId ? (respondidoEmPorServico.get(servicoId) ?? null) : null,
+      // Texto por categoria, não um só: `aguardando_gestao` é um PEDIDO à
+      // iGEDES (o chamado fica parado esperando decisão deles), enquanto os
+      // outros quatro são "voltaremos". Ver lib/tomticket/mensagens.ts.
+      // Montado no servidor por causa da saudação, que depende da hora.
+      mensagemPadrao: categoria ? mensagemPendencia(categoria, p.descricao as string | null) : null,
+      anexos: [
+        ...(fotoParcial ? ["Foto do parcial"] : []),
+        ...(os ? ["OS"] : []),
+      ],
     };
   });
 
@@ -175,6 +213,27 @@ export default async function PendenciasPage() {
                   <EvidenciaThumb url={p.osUrl} label="OS" />
                 </div>
               </div>
+
+              {/* Responder a pendência no chamado: a equipe esteve lá e não
+                  concluiu, e alguma hora isso tem que ser feito — o cliente
+                  precisa saber disso e, no caso de `aguardando_gestao`, agir. */}
+              {/* `integracaoAtiva` na condição: sem token o botão não renderiza,
+                  e sem isto sobraria uma faixa com borda e nada dentro. */}
+              {(integracaoAtiva || p.tomticketRespostaId) && p.tomticketId && p.servicoId && p.mensagemPadrao && (
+                <div className="mt-3 flex justify-end border-t border-border pt-3">
+                  <ResponderTomticket
+                    servicoId={p.servicoId}
+                    tipo="pendencia"
+                    mensagemPadrao={p.mensagemPadrao}
+                    anexos={p.anexos}
+                    rotuloBotao="Responder pendência no TomTicket"
+                    tituloModal="Responder a pendência no TomTicket"
+                    respondido={p.tomticketRespostaId !== null}
+                    respondidoEm={p.respondidoEm}
+                    integracaoAtiva={integracaoAtiva}
+                  />
+                </div>
+              )}
             </article>
           ))}
         </div>

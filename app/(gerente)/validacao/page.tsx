@@ -7,6 +7,8 @@ import { PendenciasLinkButton } from "./pendencias-link-button";
 import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
 import { type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { detectarHashesDuplicados, avaliarIntegridadeOs, type OsIntegridadeInfo } from "./integridade";
+import { mensagemConclusao } from "@/lib/tomticket/mensagens";
+import { tomticketConfigurado } from "@/lib/tomticket/config";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -62,7 +64,7 @@ export default async function ValidacaoPage() {
     supabase
       .from("validacoes")
       .select(
-        "id, validado_em, servicos(id, chamado_id, concluido_em, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco, latitude, longitude), conclusoes(observacao), evidencias(tipo, momento, storage_path, latitude, longitude, hash_arquivo))",
+        "id, validado_em, servicos(id, chamado_id, concluido_em, tomticket_resposta_id, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco, latitude, longitude), conclusoes(observacao), evidencias(tipo, momento, storage_path, latitude, longitude, hash_arquivo))",
       )
       .order("validado_em", { ascending: false })
       .limit(20),
@@ -92,14 +94,25 @@ export default async function ValidacaoPage() {
     ),
   ];
   const historicoPorChamado = new Map<string, HistoricoEvento[]>();
+  const respondidoEmPorServico = new Map<string, string>();
   if (todosChamadoIds.length > 0) {
     const { data: historicoRaw } = await supabase
       .from("historico")
-      .select("id, chamado_id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
+      .select(
+        "id, chamado_id, servico_id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)",
+      )
       .in("chamado_id", todosChamadoIds)
       .order("criado_em", { ascending: true });
 
     for (const h of historicoRaw ?? []) {
+      // Quando o serviço foi respondido no TomTicket. O recibo em
+      // `servicos.tomticket_resposta_id` diz QUE foi, o histórico diz QUANDO —
+      // um chamado pode ter mais de um serviço respondido ao longo do tempo,
+      // por isso a chave é o serviço, não o chamado.
+      if (h.evento === "tomticket_respondido" && h.servico_id) {
+        respondidoEmPorServico.set(h.servico_id as string, h.criado_em as string);
+      }
+
       const chave = h.chamado_id as string;
       const lista = historicoPorChamado.get(chave) ?? [];
       lista.push({
@@ -252,6 +265,11 @@ export default async function ValidacaoPage() {
       : [];
     return {
       validacaoId: v.id as string,
+      servicoId: (servico?.id as string | undefined) ?? "",
+      // Recibo do envio ao TomTicket (migration 0028) — preenchido vira estado
+      // "Respondido", some o botão.
+      tomticketRespostaId: (servico?.tomticket_resposta_id as string | null) ?? null,
+      respondidoEm: servico ? (respondidoEmPorServico.get(servico.id as string) ?? null) : null,
       validadoEm: v.validado_em as string,
       concluidoEm: (servico?.concluido_em as string | null) ?? null,
       tecnicoNome: servico ? (unwrapOne(servico.tecnico)?.nome ?? "—") : "—",
@@ -298,7 +316,14 @@ export default async function ValidacaoPage() {
         <OperacaoHojeCard label="Travados em rota já passada" value={travados.length} href="#travados" />
       </div>
 
-      <ValidadosRecentes validados={validados} id="validados-recentemente" />
+      <ValidadosRecentes
+        validados={validados}
+        id="validados-recentemente"
+        // Texto montado no servidor: a saudação depende da hora, e gerar dos
+        // dois lados abriria descasamento de hidratação.
+        mensagemPadrao={mensagemConclusao()}
+        integracaoAtiva={tomticketConfigurado()}
+      />
 
       <section id="aguardando-validacao" className="mt-10 scroll-mt-24">
         <h2 className="text-sm font-semibold text-text-primary">

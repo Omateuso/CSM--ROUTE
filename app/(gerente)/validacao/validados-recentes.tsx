@@ -2,15 +2,20 @@
 
 import { useMemo, useState } from "react";
 import { FOCUS_RING } from "@/lib/ui/styles";
-import { tomticketSearchUrl } from "@/lib/tomticket";
+import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badge";
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { IntegridadeBadge } from "./integridade-badge";
+import { ResponderTomticket } from "../responder-tomticket";
 import { avaliarLocalizacaoConclusao, type EvidenciaComGeo, type OsIntegridadeInfo } from "./integridade";
 
 export type ValidadoRow = {
   validacaoId: string;
+  servicoId: string;
+  /** Recibo do envio ao TomTicket (migration 0028). Preenchido = já respondido. */
+  tomticketRespostaId: string | null;
+  respondidoEm: string | null;
   validadoEm: string;
   concluidoEm: string | null;
   tecnicoNome: string;
@@ -46,11 +51,25 @@ const LABEL_EVIDENCIA: Record<string, string> = { foto: "Foto", os: "OS", docume
 // validado, o texto do técnico e os anexos (OS/foto) somem de qualquer
 // outra tela; o gerente precisa deles aqui pra copiar o texto e anexar a
 // OS de volta no TomTicket (pedido do usuário, 19/08/2026).
-function ValidadoCard({ servico }: { servico: ValidadoRow }) {
+function ValidadoCard({
+  servico,
+  mensagemPadrao,
+  integracaoAtiva,
+}: {
+  servico: ValidadoRow;
+  mensagemPadrao: string;
+  integracaoAtiva: boolean;
+}) {
   const statusLocalizacao = avaliarLocalizacaoConclusao(servico.evidencias, {
     latitude: servico.rtLatitude,
     longitude: servico.rtLongitude,
   });
+
+  // Os mesmos arquivos que o server action vai anexar (conclusão = antes,
+  // depois e OS) — listados no diálogo pra o gerente ver o que vai junto.
+  const anexos = servico.evidencias
+    .filter((e) => e.tipo === "os" || e.momento === "antes" || e.momento === "depois")
+    .map((e) => (e.tipo === "os" ? "OS" : e.momento === "antes" ? "Foto antes" : "Foto depois"));
 
   return (
     <article className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
@@ -144,19 +163,35 @@ function ValidadoCard({ servico }: { servico: ValidadoRow }) {
         </details>
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
         <p className="text-xs text-text-tertiary">
           Validado em {formatoDataHora.format(new Date(servico.validadoEm))}
         </p>
         {servico.tomticketId ? (
-          <a
-            href={tomticketSearchUrl(servico.tomticketId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`rounded-[var(--radius-sm)] border border-border px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent hover:text-accent ${FOCUS_RING}`}
-          >
-            Ir para o TomTicket →
-          </a>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* O link continua: é por onde o gerente confere no TomTicket o
+                que foi enviado. */}
+            <a
+              href={tomticketSearchUrl(servico.tomticketId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`text-xs font-medium text-text-tertiary transition-colors hover:text-accent ${FOCUS_RING}`}
+            >
+              Ir para o TomTicket →
+            </a>
+            <ResponderTomticket
+              servicoId={servico.servicoId}
+              tipo="conclusao"
+              mensagemPadrao={mensagemPadrao}
+              anexos={anexos}
+              rotuloBotao="Confirmar conclusão do chamado"
+              tituloModal="Responder o chamado no TomTicket"
+              respondido={servico.tomticketRespostaId !== null}
+              respondidoEm={servico.respondidoEm}
+              localizacaoDivergente={statusLocalizacao === "fora_do_limite"}
+              integracaoAtiva={integracaoAtiva}
+            />
+          </div>
         ) : (
           <span className="text-xs text-text-tertiary">Sem protocolo do TomTicket</span>
         )}
@@ -165,7 +200,17 @@ function ValidadoCard({ servico }: { servico: ValidadoRow }) {
   );
 }
 
-export function ValidadosRecentes({ validados, id }: { validados: ValidadoRow[]; id?: string }) {
+export function ValidadosRecentes({
+  validados,
+  id,
+  mensagemPadrao,
+  integracaoAtiva,
+}: {
+  validados: ValidadoRow[];
+  id?: string;
+  mensagemPadrao: string;
+  integracaoAtiva: boolean;
+}) {
   const [busca, setBusca] = useState("");
 
   const filtrados = useMemo(() => {
@@ -186,7 +231,8 @@ export function ValidadosRecentes({ validados, id }: { validados: ValidadoRow[];
         Validados recentemente <span className="font-normal text-text-tertiary">({validados.length})</span>
       </h2>
       <p className="mt-1 text-xs text-text-tertiary">
-        Os últimos serviços fechados por você — copie o texto do técnico e a OS pra responder no TomTicket.
+        Os últimos serviços fechados por você — confira a evidência e responda o chamado no TomTicket,
+        com os anexos, sem sair daqui.
       </p>
 
       {validados.length > 0 && (
@@ -216,7 +262,12 @@ export function ValidadosRecentes({ validados, id }: { validados: ValidadoRow[];
       ) : (
         <div className="mt-3 flex flex-col gap-3">
           {filtrados.map((v) => (
-            <ValidadoCard key={v.validacaoId} servico={v} />
+            <ValidadoCard
+              key={v.validacaoId}
+              servico={v}
+              mensagemPadrao={mensagemPadrao}
+              integracaoAtiva={integracaoAtiva}
+            />
           ))}
         </div>
       )}

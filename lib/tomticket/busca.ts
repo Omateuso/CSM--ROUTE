@@ -5,6 +5,9 @@
 // filtrada pelo protocolo — leva pra uma tela com o chamado como único
 // resultado, e o usuário clica nele pra abrir de verdade. Padrão de URL
 // confirmado pelo usuário testando ao vivo em 19/08/2026.
+//
+// Continua útil mesmo depois da integração da API (migration 0028): o
+// gerente usa esse link pra CONFERIR no TomTicket o que o sistema enviou.
 const TOMTICKET_SEARCH_URL = "https://console.tomticket.com/dashboard/general-search";
 
 export function tomticketSearchUrl(protocolo: string): string {

@@ -22,7 +22,14 @@ const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
   minute: "2-digit",
 });
 
-const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" });
+// Com ano: sem ele, um chamado de 2025 e um de 2026 aparecem como "08/09" e
+// "12/11" e o técnico lê fora de ordem, sem ter como perceber (achado do
+// usuário, 08/09/2026).
+const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
 
 export default async function ServicoPage({ params }: PageProps<"/servico/[id]">) {
   const { id } = await params;

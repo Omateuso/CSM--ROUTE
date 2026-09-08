@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PrioridadeBadge } from "@/app/chamados/prioridade-badge";
 import { UrgenciaStatusBadge } from "./urgencia-status-badge";
-import { tomticketSearchUrl } from "@/lib/tomticket";
+import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import type { UrgenciaRow } from "./types";
 
