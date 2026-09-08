@@ -16,6 +16,7 @@ export const NAV_LINKS: Record<"gerente" | "gestao", NavLink[]> = {
     { href: "/rotas/confirmadas", label: "Rotas confirmadas", icon: "check" },
     { href: "/validacao", label: "Validação", icon: "clip" },
     { href: "/pendencias", label: "Pendências", icon: "alert" },
+    { href: "/relatorios/mensal-csm", label: "Relatório mensal", icon: "report" },
     { href: "/equipes", label: "Equipes", icon: "users" },
     { href: "/chamados", label: "Chamados", icon: "head" },
     { href: "/zonas", label: "Zonas e regiões", icon: "map" },

@@ -90,4 +90,13 @@ export const NavIcons = {
       <path d="M12 8V5.5M8.6 9.4 7 7.8M15.4 9.4 17 7.8" />
     </svg>
   ),
+  // Novo (Relatório mensal CSM, 08/09/2026) — folha com dobra + linhas de
+  // texto. Distinto de `clip` (prancheta, Validação) e `head` (Chamados).
+  report: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 12h6M9 16h6" />
+    </svg>
+  ),
 } satisfies Record<string, ReactNode>;
