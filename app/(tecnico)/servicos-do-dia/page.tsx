@@ -46,7 +46,7 @@ export default async function ServicosDoDiaPage() {
   const { data: servicosRaw, error: servicosError } = await supabase
     .from("servicos")
     .select(
-      "id, status, rota_id, rt_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco)",
+      "id, status, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco)",
     )
     .eq("tecnico_id", user.id)
     // Hoje EM DIANTE (não só hoje): o técnico precisa enxergar a rota de
@@ -85,6 +85,20 @@ export default async function ServicosDoDiaPage() {
     (rotaRtsRaw ?? []).map((r) => [`${r.rota_id}-${r.rt_id}`, r.ordem as number]),
   );
 
+  // Chamado que já teve um serviço CANCELADO antes (pendência ou
+  // reagendamento) e agora está de volta = reexecução. O técnico precisa
+  // saber que não é a primeira visita.
+  const chamadoIds = [...new Set((servicosRaw ?? []).map((s) => s.chamado_id as string))];
+  const chamadosComTentativaAnterior = new Set<string>();
+  if (chamadoIds.length > 0) {
+    const { data: canceladosRaw } = await supabase
+      .from("servicos")
+      .select("chamado_id")
+      .in("chamado_id", chamadoIds)
+      .eq("status", "cancelado");
+    for (const s of canceladosRaw ?? []) chamadosComTentativaAnterior.add(s.chamado_id as string);
+  }
+
   const servicos = (servicosRaw ?? [])
     .map((s) => {
       const chamado = unwrapOne(s.chamados);
@@ -92,6 +106,7 @@ export default async function ServicosDoDiaPage() {
       return {
         id: s.id as string,
         status: s.status as StatusServico,
+        reexecucao: chamadosComTentativaAnterior.has(s.chamado_id as string),
         ordem: ordemPorParada.get(`${s.rota_id}-${s.rt_id}`) ?? 999,
         rotaData: unwrapOne(s.rotas)?.data as string,
         rtCodigo: rt?.codigo as string,
@@ -181,6 +196,11 @@ export default async function ServicosDoDiaPage() {
                     {s.criadoEm && (
                       <span className="text-xs text-text-tertiary">
                         criado em {formatoDataCurta.format(new Date(s.criadoEm))}
+                      </span>
+                    )}
+                    {s.reexecucao && (
+                      <span className="rounded-full bg-priority-alta/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-priority-alta uppercase">
+                        ↩ Retorno
                       </span>
                     )}
                     <span className="ml-auto">

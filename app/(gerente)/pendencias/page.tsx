@@ -4,6 +4,7 @@ import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 import { ResponderTomticket } from "../responder-tomticket";
+import { ProgramarReexecucao, type RotaParaReexecucao } from "./programar-reexecucao";
 import { mensagemPendencia } from "@/lib/tomticket/mensagens";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
 
@@ -62,13 +63,44 @@ export default async function PendenciasPage() {
     );
   }
 
-  const { data: pendenciasRaw } = await supabase
-    .from("historico")
-    .select(
-      "id, chamado_id, servico_id, categoria, descricao, criado_em, criado_por:criado_por(nome), chamados(assunto, tomticket_id, rts(codigo, nome)), servicos(id, tomticket_resposta_id, evidencias(tipo, momento, storage_path))",
-    )
-    .eq("evento", "servico_pendente")
-    .order("criado_em", { ascending: false });
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  const [{ data: pendenciasRaw }, { data: rotasRaw }, { data: tecnicosRaw }] = await Promise.all([
+    supabase
+      .from("historico")
+      .select(
+        "id, chamado_id, servico_id, categoria, descricao, criado_em, criado_por:criado_por(nome), chamados(assunto, tomticket_id, rts(codigo, nome)), servicos(id, tomticket_resposta_id, evidencias(tipo, momento, storage_path))",
+      )
+      .eq("evento", "servico_pendente")
+      .order("criado_em", { ascending: false }),
+    // Rotas confirmadas de hoje em diante — a nova execução é anexada a uma
+    // delas (fn_programar_reexecucao não cria rota).
+    supabase
+      .from("rotas")
+      .select("id, data, equipe_id, equipes(nome), regioes(nome)")
+      .eq("status", "confirmada")
+      .gte("data", hoje)
+      .order("data", { ascending: true }),
+    supabase
+      .from("profiles")
+      .select("id, nome, equipe_id")
+      .eq("role", "tecnico")
+      .eq("ativo", true)
+      .order("nome", { ascending: true }),
+  ]);
+
+  const rotasReexec: RotaParaReexecucao[] = (rotasRaw ?? []).map((r) => ({
+    id: r.id as string,
+    data: r.data as string,
+    equipeId: r.equipe_id as string,
+    equipeNome: unwrapOne(r.equipes)?.nome ?? "—",
+    regiaoNome: unwrapOne(r.regioes)?.nome ?? "—",
+  }));
+  const tecnicosReexec = (tecnicosRaw ?? []).map((t) => ({
+    id: t.id as string,
+    nome: t.nome as string,
+    equipeId: (t.equipe_id as string | null) ?? null,
+  }));
 
   const chamadoIdsPendencia = [...new Set((pendenciasRaw ?? []).map((p) => p.chamado_id as string))];
   const chamadosJaRecapturados = new Set<string>();
@@ -213,6 +245,18 @@ export default async function PendenciasPage() {
                   <EvidenciaThumb url={p.osUrl} label="OS" />
                 </div>
               </div>
+
+              {p.servicoId && (
+                <div className="mt-3 flex justify-end">
+                  <ProgramarReexecucao
+                    servicoId={p.servicoId}
+                    rtCodigo={p.rtCodigo}
+                    chamadoAssunto={p.chamadoAssunto}
+                    rotas={rotasReexec}
+                    tecnicos={tecnicosReexec}
+                  />
+                </div>
+              )}
 
               {/* Responder a pendência no chamado: a equipe esteve lá e não
                   concluiu, e alguma hora isso tem que ser feito — o cliente

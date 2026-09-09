@@ -9,11 +9,19 @@ import { ConcluirServicoForm } from "./concluir-servico-form";
 import { PendenciaForm } from "./pendencia-form";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
+import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
 }
+
+function unwrapMany<T>(value: T | T[] | null | undefined): T[] {
+  if (Array.isArray(value)) return value;
+  return value ? [value] : [];
+}
+
+const MOMENTO_LABEL: Record<string, string> = { antes: "Foto antes", parcial: "Foto parcial", depois: "Foto depois" };
 
 const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -92,6 +100,58 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
     criadoPorNome: unwrapOne(h.criado_por)?.nome ?? null,
   }));
 
+  // Tentativa anterior: se este chamado já teve um serviço CANCELADO (pendência
+  // ou reagendamento), o técnico precisa do contexto do que já foi feito — sem
+  // ter que reconstruir tudo. Herda do serviço anterior, não pede de novo
+  // (princípio de UX da evolução operacional).
+  const { data: anteriorRaw } = await supabase
+    .from("servicos")
+    .select("id, criado_em, tecnico:tecnico_id(nome), evidencias(tipo, momento, storage_path)")
+    .eq("chamado_id", servicoRaw.chamado_id as string)
+    .eq("status", "cancelado")
+    .neq("id", servicoRaw.id as string)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const anteriorEvidencias = anteriorRaw ? unwrapMany(anteriorRaw.evidencias) : [];
+  const urlPorCaminhoAnterior = new Map<string, string>();
+  if (anteriorEvidencias.length > 0) {
+    const { data: assinadas } = await supabase.storage
+      .from("evidencias")
+      .createSignedUrls(anteriorEvidencias.map((e) => e.storage_path as string), 3600);
+    for (const item of assinadas ?? []) {
+      if (item.signedUrl) urlPorCaminhoAnterior.set(item.path ?? "", item.signedUrl);
+    }
+  }
+
+  const motivoAnterior = [...historico]
+    .reverse()
+    .find((e) => e.evento === "servico_pendente" || e.evento === "servico_reagendado");
+
+  const tentativaAnterior = anteriorRaw
+    ? {
+        tecnicoNome: unwrapOne(anteriorRaw.tecnico)?.nome ?? "outro técnico",
+        criadoEm: anteriorRaw.criado_em as string,
+        motivoRotulo: motivoAnterior?.categoria
+          ? (PENDENCIA_CATEGORIA_LABEL[motivoAnterior.categoria as PendenciaCategoria] ??
+            motivoAnterior.categoria)
+          : motivoAnterior?.evento === "servico_reagendado"
+            ? "Reagendado"
+            : "Motivo",
+        motivoTexto: motivoAnterior?.descricao ?? null,
+        anexos: anteriorEvidencias
+          .map((e) => ({
+            rotulo:
+              e.tipo === "os"
+                ? "OS"
+                : (MOMENTO_LABEL[(e.momento as string | null) ?? ""] ?? "Foto"),
+            url: urlPorCaminhoAnterior.get(e.storage_path as string) ?? null,
+          }))
+          .filter((a): a is { rotulo: string; url: string } => Boolean(a.url)),
+      }
+    : null;
+
   const chamado = unwrapOne(servicoRaw.chamados);
   const rt = unwrapOne(servicoRaw.rts);
   const status = servicoRaw.status as StatusServico;
@@ -117,6 +177,11 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
               criado em {formatoDataCurta.format(new Date(chamado.criado_em as string))}
             </span>
           )}
+          {tentativaAnterior && (
+            <span className="rounded-full bg-priority-alta/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-priority-alta uppercase">
+              ↩ Retorno
+            </span>
+          )}
           <StatusServicoBadge status={status} />
         </div>
         <h1 className="mt-1 text-lg font-semibold text-text-primary">{rt?.nome}</h1>
@@ -137,6 +202,45 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
             <p className="mt-3 text-xs text-text-tertiary">Prazo: {formatoDataHora.format(new Date(slaPrazo))}</p>
           )}
         </section>
+
+        {tentativaAnterior && (
+          <section className="mt-4 rounded-[var(--radius-md)] border-2 border-priority-alta/40 bg-priority-alta/5 p-4">
+            <p className="text-xs font-semibold tracking-wide text-priority-alta uppercase">
+              ↩ Tentativa anterior
+            </p>
+            <p className="mt-1 text-sm text-text-primary">
+              {tentativaAnterior.tecnicoNome} ·{" "}
+              {formatoDataCurta.format(new Date(tentativaAnterior.criadoEm))}
+            </p>
+            {tentativaAnterior.motivoTexto && (
+              <p className="mt-1 text-sm text-text-secondary">
+                <span className="font-medium text-text-primary">{tentativaAnterior.motivoRotulo}:</span>{" "}
+                {tentativaAnterior.motivoTexto}
+              </p>
+            )}
+            {tentativaAnterior.anexos.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-3">
+                {tentativaAnterior.anexos.map((a) => (
+                  <a
+                    key={a.url}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex flex-col items-start gap-1 ${FOCUS_RING}`}
+                  >
+                    <span className="text-xs font-medium text-text-secondary">{a.rotulo}</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do Storage */}
+                    <img
+                      src={a.url}
+                      alt={a.rotulo}
+                      className="h-24 w-24 rounded-[var(--radius-sm)] border border-border object-cover transition-opacity hover:opacity-80"
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {historico.length > 0 && (
           <section className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface p-4">
