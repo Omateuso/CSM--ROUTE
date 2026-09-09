@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { computeSlaStatus } from "@/lib/sla";
 import { sugerirProximasRts, type RtParaRoteirizacao } from "@/lib/routing/intelligent-route";
 import { MontarRotaClient } from "./montar-rota-client";
-import type { ChamadoDaRt } from "./confirmar-rota-dialog";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -38,7 +37,6 @@ export default async function MontarRotaPage() {
     { data: regioesRaw, error: regioesError },
     { data: rtsRaw, error: rtsError },
     { data: chamadosRaw, error: chamadosError },
-    { data: servicosAtivosRaw },
     { data: equipesRaw, error: equipesError },
     { data: tecnicosRaw, error: tecnicosError },
   ] = await Promise.all([
@@ -47,10 +45,10 @@ export default async function MontarRotaPage() {
       .from("rts")
       .select("id, codigo, nome, endereco, latitude, longitude, regiao_id, ativo")
       .eq("ativo", true),
-    // id/protocolo/assunto entram pro gerente poder escolher, um a um, quais
-    // chamados o técnico vai cumprir (migration 0033).
-    supabase.from("chamados").select("id, rt_id, prioridade, status, sla_prazo, assunto, tomticket_id"),
-    supabase.from("servicos").select("chamado_id").neq("status", "cancelado"),
+    // Só o que alimenta o resumo por RT (volume/prioridade/SLA no card de
+    // candidata). A escolha manual de chamados por técnico (0033) foi removida
+    // em 09/09/2026 — o técnico recebe todos os chamados em aberto da RT.
+    supabase.from("chamados").select("id, rt_id, prioridade, status, sla_prazo"),
     supabase.from("equipes").select("id, nome").eq("ativo", true).order("nome", { ascending: true }),
     supabase
       .from("profiles")
@@ -141,24 +139,6 @@ export default async function MontarRotaPage() {
     jaSelecionadas: [],
   });
 
-  // Chamados que o gerente pode marcar por RT. Só os que podem virar serviço:
-  // não fechados no TomTicket e sem serviço ativo — mesma regra da
-  // fn_confirmar_rota, porque a tela não pode oferecer o que a função vai
-  // descartar depois.
-  const chamadosComServico = new Set((servicosAtivosRaw ?? []).map((s) => s.chamado_id as string));
-  const chamadosPorRt: Record<string, ChamadoDaRt[]> = {};
-  for (const c of chamadosRaw ?? []) {
-    if (c.status === "finalizado" || c.status === "cancelado") continue;
-    if (chamadosComServico.has(c.id as string)) continue;
-    const chave = c.rt_id as string;
-    (chamadosPorRt[chave] ??= []).push({
-      id: c.id as string,
-      assunto: (c.assunto as string) ?? "(sem assunto)",
-      protocolo: (c.tomticket_id as string | null) ?? null,
-      prioridade: (c.prioridade as ChamadoDaRt["prioridade"]) ?? "normal",
-    });
-  }
-
   return (
     <div className="flex flex-1 flex-col">
       <header className="mx-auto w-full max-w-6xl px-6 pt-12 pb-6">
@@ -178,7 +158,6 @@ export default async function MontarRotaPage() {
           tecnicos={tecnicos}
           candidatasIniciais={sugestaoInicial.candidatas}
           nucleoInicial={sugestaoInicial.nucleo}
-          chamadosPorRt={chamadosPorRt}
         />
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { MontarRotaMapa } from "./montar-rota-mapa";
-import { ConfirmarRotaDialog, type ChamadoDaRt } from "./confirmar-rota-dialog";
+import { ConfirmarRotaDialog } from "./confirmar-rota-dialog";
 import { RaioProximidadePicker } from "./raio-proximidade-picker";
 import { RaioProximidadeButton } from "./raio-proximidade-button";
 import { Modal } from "@/lib/ui/modal";
@@ -58,7 +58,6 @@ export function MontarRotaClient({
   tecnicos,
   candidatasIniciais,
   nucleoInicial,
-  chamadosPorRt,
 }: {
   regioes: Regiao[];
   rts: RtParaRota[];
@@ -66,7 +65,6 @@ export function MontarRotaClient({
   tecnicos: Tecnico[];
   candidatasIniciais: Candidata[];
   nucleoInicial: Nucleo | null;
-  chamadosPorRt: Record<string, ChamadoDaRt[]>;
 }) {
   const [regiaoId, setRegiaoId] = useState("");
   const [raioKm, setRaioKm] = useState(ROUTE_PROXIMITY_RADIUS_KM);
@@ -451,7 +449,6 @@ export function MontarRotaClient({
       </div>
 
       <ConfirmarRotaDialog
-        chamadosPorRt={chamadosPorRt}
         key={confirmarInstancia}
         open={confirmarAberto}
         rtsNaRota={rotaIds.map((id) => rtsPorId.get(id)).filter((rt): rt is RtParaRota => Boolean(rt))}
