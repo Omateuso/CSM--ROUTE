@@ -27,7 +27,8 @@ export const CLIENTE = {
   descricao: "Residências Terapêuticas · SRT",
 } as const;
 
-// Paleta extraída do canvas "Relatório Mensal CSM" (capa_ralatorio.zip) — hex
+// Paleta extraída do canvas "Relatório Mensal CSM"
+// (docs/referencias/capa-relatorio-design.zip) — hex
 // SEM "#" (formato que o docx/exceljs usam). Não são as "cores operacionais"
 // do CLAUDE.md (prioridade/SLA) — é a identidade da CSM, restrita a este
 // documento.
