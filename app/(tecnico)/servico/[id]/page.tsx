@@ -7,6 +7,7 @@ import { StatusServicoBadge, type StatusServico } from "../../status-servico-bad
 import { IniciarServicoForm } from "./iniciar-servico-form";
 import { ConcluirServicoForm } from "./concluir-servico-form";
 import { PendenciaForm } from "./pendencia-form";
+import { AvaliarServicoForm } from "./avaliar-servico-form";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
@@ -87,7 +88,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
   // ao anterior fora do `historico`).
   const { data: historicoRaw } = await supabase
     .from("historico")
-    .select("id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
+    .select("id, evento, descricao, categoria, servico_id, criado_em, criado_por:criado_por(nome)")
     .eq("chamado_id", servicoRaw.chamado_id as string)
     .order("criado_em", { ascending: true });
 
@@ -148,6 +149,13 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
       if (item.signedUrl) urlPorCaminhoAnterior.set(item.path ?? "", item.signedUrl);
     }
   }
+
+  // Fase 4 (seção 7): o técnico já apontou um problema neste serviço? A
+  // trava real é no fn_avaliar_servico; aqui é só pra a UI mostrar "já
+  // enviado" em vez de oferecer o formulário de novo.
+  const apontamentoDesteServico = (historicoRaw ?? []).find(
+    (h) => h.evento === "servico_avaliado" && (h.servico_id as string | null) === (servicoRaw.id as string),
+  );
 
   const motivoAnterior = [...historico]
     .reverse()
@@ -308,7 +316,31 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
         )}
 
         <div className="mt-5">
-          {status === "planejado" && <IniciarServicoForm servicoId={servicoRaw.id as string} />}
+          {status === "planejado" && (
+            <div className="flex flex-col gap-4">
+              <IniciarServicoForm servicoId={servicoRaw.id as string} />
+
+              {apontamentoDesteServico ? (
+                <p className="rounded-[var(--radius-md)] border border-border bg-surface-input p-3 text-xs text-text-secondary">
+                  ⚠ Você apontou um problema neste serviço em{" "}
+                  {formatoDataCurta.format(new Date(apontamentoDesteServico.criado_em as string))} — o
+                  gerente foi avisado.
+                </p>
+              ) : (
+                <details className="group rounded-[var(--radius-md)] border border-border p-3">
+                  <summary
+                    className={`flex cursor-pointer items-center gap-2 text-xs font-medium text-text-tertiary ${FOCUS_RING}`}
+                  >
+                    Este serviço tem um problema
+                    <span className="ml-auto font-normal group-open:hidden">toque pra abrir</span>
+                  </summary>
+                  <div className="mt-3">
+                    <AvaliarServicoForm servicoId={servicoRaw.id as string} />
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
 
           {status === "em_execucao" && (
             <div className="flex flex-col gap-4">

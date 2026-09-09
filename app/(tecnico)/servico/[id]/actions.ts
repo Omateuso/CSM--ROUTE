@@ -221,3 +221,57 @@ export async function reportarPendencia(_prev: ActionState, formData: FormData):
   revalidatePath("/servicos-do-dia");
   return { error: null };
 }
+
+// Fase 4 (seção 7, migration 0037): "avaliação do serviço antes de executar"
+// — o técnico aponta que o serviço em si tem um problema (chamado já
+// resolvido, RT errada, escopo diferente, etc.) ANTES de iniciar. O serviço
+// CONTINUA planejado — isto só grava um evento no histórico pro gerente ver.
+// Foto obrigatória (carimbada, prova de presença), mesmo padrão sequencial
+// das outras actions: sobe a evidência primeiro, só then chama a função,
+// que revalida no servidor se a foto existe.
+export async function avaliarServico(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const servicoId = String(formData.get("servicoId") ?? "");
+  const descricao = String(formData.get("descricao") ?? "").trim();
+  if (!servicoId) return { error: "Serviço inválido." };
+  if (!descricao) return { error: "Descreva o problema que você encontrou." };
+
+  const fotoEntry = formData.get("fotoAvaliacao");
+  const foto = fotoEntry instanceof File && fotoEntry.size > 0 ? fotoEntry : null;
+  if (!foto) return { error: "Tire uma foto do problema." };
+
+  const latitude = parseCoord(formData.get("fotoAvaliacaoLat"));
+  const longitude = parseCoord(formData.get("fotoAvaliacaoLng"));
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sessão expirada — faça login de novo." };
+
+  const path = `${servicoId}/foto-avaliacao-${Date.now()}-${sanitizeFileName(foto.name)}`;
+  const { error: uploadError } = await supabase.storage.from("evidencias").upload(path, foto);
+  if (uploadError) return { error: `Falha ao enviar a foto (${uploadError.message}).` };
+
+  const { error: insertError } = await supabase.from("evidencias").insert({
+    servico_id: servicoId,
+    tipo: "foto",
+    momento: "avaliacao",
+    storage_path: path,
+    latitude,
+    longitude,
+    hash_arquivo: await hashArquivo(foto),
+    criado_por: user.id,
+  });
+  if (insertError) return { error: `Falha ao registrar a foto (${insertError.message}).` };
+
+  const { error } = await supabase.rpc("fn_avaliar_servico", {
+    p_servico_id: servicoId,
+    p_descricao: descricao,
+  });
+  if (error) return { error: traduzErro(error) };
+
+  revalidatePath(`/servico/${servicoId}`);
+  revalidatePath("/servicos-do-dia");
+  revalidatePath("/validacao");
+  return { error: null };
+}

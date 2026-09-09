@@ -29,6 +29,9 @@ const EVENTO_LABEL: Record<string, string> = {
   servico_recusado: "Recusado pelo gerente",
   servico_pendente_material: "Pendência de material", // nome antigo (0025) — mantido pra dado de teste já gravado
   servico_pendente: "Pendência reportada",
+  // Fase 4 (seção 7, 0037) — técnico apontou um problema no serviço antes de
+  // iniciar. O serviço continua planejado; é só um aviso pro gerente.
+  servico_avaliado: "Problema apontado pelo técnico",
   // Resposta enviada ao chamado no TomTicket, com os anexos (0028). A
   // `descricao` guarda o texto exato que o cliente recebeu.
   tomticket_respondido: "Respondido no TomTicket",
