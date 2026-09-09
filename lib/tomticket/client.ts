@@ -1,5 +1,5 @@
 import { TOMTICKET_API_BASE, tomticketToken } from "./config";
-import { formatarDataTomTicket } from "./datas";
+import { formatarDataTomTicket, pararDataTomTicket } from "./datas";
 import { textoDeHtml } from "./html";
 import { aguardarVez } from "./limitador";
 
@@ -44,6 +44,22 @@ export type ReplyTomTicket = {
   // 'A' = atendente (agente), 'C' = cliente.
   senderType: string;
   date: string;
+};
+
+// Anexo de um chamado ou de uma resposta — `/ticket/detail` devolve
+// {name, url, size}. A `url` é S3 público sem assinatura (o hash no path é a
+// credencial); a sync BAIXA cada arquivo pro bucket privado `respostas-cliente`.
+export type AnexoTomTicket = { nome: string; url: string; tamanho: number | null };
+
+// Uma resposta do chamado, já normalizada — o que a Fase 3 grava em
+// `chamado_respostas`. `replyId` é o hex estável (`reply.id`), chave de dedup.
+export type RespostaTomTicket = {
+  replyId: string;
+  tipo: "cliente" | "atendente";
+  remetente: string;
+  mensagem: string;
+  respondidoEm: string | null;
+  anexos: AnexoTomTicket[];
 };
 
 // Por que vale insistir — ou null quando não vale.
@@ -206,6 +222,10 @@ export type ChamadoTomTicket = {
   /** Valor do campo personalizado "RT" (ex.: "RT 09"). É ELE que amarra o
    *  chamado à RT cadastrada aqui — `customer` é o CAPS, não a residência. */
   rtCampo: string;
+  /** Fotos/anexos que o cliente juntou AO ABRIR o chamado (`ticket.attachments`). */
+  anexosAbertura: AnexoTomTicket[];
+  /** Toda a conversa do chamado (cliente e atendente), pra Fase 3. */
+  respostas: RespostaTomTicket[];
 };
 
 function numeroOuNulo(valor: unknown): number | null {
@@ -228,6 +248,15 @@ function normalizarChamado(bruto: Record<string, unknown>): ChamadoTomTicket {
     (f) => String(f?.label ?? "").trim().toUpperCase() === "RT",
   );
 
+  const paraAnexos = (valor: unknown): AnexoTomTicket[] =>
+    comoLista(valor)
+      .map((a) => ({
+        nome: String(a.name ?? "").trim(),
+        url: String(a.url ?? "").trim(),
+        tamanho: numeroOuNulo(a.size),
+      }))
+      .filter((a) => a.url);
+
   return {
     protocolo: String(bruto.protocol ?? ""),
     ticketId: String(bruto.id ?? ""),
@@ -241,6 +270,19 @@ function normalizarChamado(bruto: Record<string, unknown>): ChamadoTomTicket {
     clienteId: String(cliente.internal_id ?? ""),
     criadoEm: String(bruto.creation_date ?? ""),
     rtCampo: String(campoRt?.value ?? ""),
+    anexosAbertura: paraAnexos(bruto.attachments),
+    respostas: comoLista(bruto.replies)
+      .map((r) => ({
+        replyId: String(r.id ?? "").trim(),
+        tipo: (String(r.sender_type ?? "").toUpperCase() === "C" ? "cliente" : "atendente") as
+          | "cliente"
+          | "atendente",
+        remetente: String(r.sender ?? "").trim(),
+        mensagem: textoDeHtml(String(r.message ?? "")),
+        respondidoEm: pararDataTomTicket(String(r.date ?? "")),
+        anexos: paraAnexos(r.attachments),
+      }))
+      .filter((r) => r.replyId),
   };
 }
 

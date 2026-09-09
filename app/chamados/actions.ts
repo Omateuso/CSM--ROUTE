@@ -60,19 +60,47 @@ export type DetalheChamado = {
     criadoEm: string;
     criadoPorNome: string | null;
   }[];
+  // Fase 3 — conversa do chamado no TomTicket e anexos do cliente (0036).
+  respostas: {
+    id: string;
+    tipo: "cliente" | "atendente";
+    remetente: string | null;
+    mensagem: string | null;
+    respondidoEm: string | null;
+  }[];
+  anexosCliente: { id: string; nome: string; origem: "abertura" | "resposta"; url: string | null }[];
 };
 
 export async function buscarDetalheChamado(chamadoId: string): Promise<DetalheChamado> {
   const supabase = await createClient();
 
-  const [{ data: chamado }, { data: eventos }] = await Promise.all([
+  const [{ data: chamado }, { data: eventos }, { data: respostasRaw }, { data: anexosRaw }] = await Promise.all([
     supabase.from("chamados").select("descricao").eq("id", chamadoId).maybeSingle(),
     supabase
       .from("historico")
       .select("id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
       .eq("chamado_id", chamadoId)
       .order("criado_em", { ascending: true }),
+    supabase
+      .from("chamado_respostas")
+      .select("id, tipo, remetente, mensagem, respondido_em")
+      .eq("chamado_id", chamadoId)
+      .order("respondido_em", { ascending: true, nullsFirst: true }),
+    supabase
+      .from("chamado_anexos_cliente")
+      .select("id, nome, origem, storage_path")
+      .eq("chamado_id", chamadoId)
+      .order("criado_em", { ascending: true }),
   ]);
+
+  const caminhos = (anexosRaw ?? []).map((a) => a.storage_path as string);
+  const urlPorCaminho = new Map<string, string>();
+  if (caminhos.length > 0) {
+    const { data: assinadas } = await supabase.storage.from("respostas-cliente").createSignedUrls(caminhos, 3600);
+    for (const item of assinadas ?? []) {
+      if (item.signedUrl) urlPorCaminho.set(item.path ?? "", item.signedUrl);
+    }
+  }
 
   return {
     descricao: (chamado?.descricao as string | null) ?? null,
@@ -87,5 +115,27 @@ export async function buscarDetalheChamado(chamadoId: string): Promise<DetalheCh
         criadoPorNome: autor?.nome ?? null,
       };
     }),
+    respostas: (respostasRaw ?? []).map((r) => ({
+      id: r.id as string,
+      tipo: r.tipo as "cliente" | "atendente",
+      remetente: (r.remetente as string | null) ?? null,
+      mensagem: (r.mensagem as string | null) ?? null,
+      respondidoEm: (r.respondido_em as string | null) ?? null,
+    })),
+    anexosCliente: (anexosRaw ?? []).map((a) => ({
+      id: a.id as string,
+      nome: a.nome as string,
+      origem: a.origem as "abertura" | "resposta",
+      url: urlPorCaminho.get(a.storage_path as string) ?? null,
+    })),
   };
+}
+
+// Marca as respostas do cliente de um chamado como vistas — some do sino.
+// Disparada quando o gerente/gestão abre o modal de detalhe.
+export async function marcarRespostasVistas(chamadoId: string): Promise<void> {
+  const supabase = await createClient();
+  await supabase.rpc("fn_marcar_respostas_vistas", { p_chamado_id: chamadoId });
+  revalidatePath("/chamados");
+  revalidatePath("/", "layout"); // atualiza o contador do sino no menu
 }

@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -42,10 +43,12 @@ function pillContent(link: NavLink) {
 export function AppNav({
   role,
   nome,
+  respostasNaoVistas,
   children,
 }: {
   role: "gerente" | "gestao";
   nome: string;
+  respostasNaoVistas: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -138,6 +141,43 @@ export function AppNav({
     router.refresh();
   }
 
+  // Sino de respostas do cliente (0036) — Realtime em `chamado_respostas`.
+  // Qualquer INSERT/UPDATE (a sync grava, o gerente marca como visto) refaz o
+  // fetch do layout, que recalcula o contador. Mesmo padrão + fix de
+  // setAuth do dashboard-realtime.tsx (a assinatura chega a SUBSCRIBED mas a
+  // RLS falha calada sem o token no socket).
+  useEffect(() => {
+    const supabase = createClient();
+    let canal: ReturnType<typeof supabase.channel> | null = null;
+    let cancelado = false;
+
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) await supabase.realtime.setAuth(session.access_token);
+      if (cancelado) return;
+      canal = supabase
+        .channel("app-nav-respostas")
+        .on("postgres_changes", { event: "*", schema: "public", table: "chamado_respostas" }, () => {
+          router.refresh();
+        })
+        .subscribe();
+    })();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) supabase.realtime.setAuth(session.access_token);
+    });
+
+    return () => {
+      cancelado = true;
+      subscription.unsubscribe();
+      if (canal) supabase.removeChannel(canal);
+    };
+  }, [router]);
+
   // Setas ←/→ trocam de aba (mesmo padrão do arquivo) — aqui "trocar de
   // aba" é navegação de verdade (router.push), não troca de painel em
   // memória. Handler fica só nos elementos da pasta (tab + pílulas), nunca
@@ -184,6 +224,16 @@ export function AppNav({
               ))}
           </div>
           <div className={styles.user} aria-label={nome}>
+            {respostasNaoVistas > 0 && (
+              <Link
+                href="/chamados"
+                className={`${styles.sino} ${styles.sinoAtivo}`}
+                aria-label={`${respostasNaoVistas} chamado(s) com resposta nova do cliente`}
+              >
+                <span aria-hidden="true">🔔</span>
+                <span className={styles.sinoBadge}>{respostasNaoVistas}</span>
+              </Link>
+            )}
             <button type="button" onClick={handleLogout} className={styles.logout}>
               Sair
             </button>

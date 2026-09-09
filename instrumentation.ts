@@ -57,6 +57,8 @@ export async function register() {
       console.log(
         `[sync] ${r.lidos} lidos, ${r.novos} novos, ${r.atualizados} atualizados` +
           `, ${r.servicosCriados} serviço(s) em rota confirmada` +
+          (r.respostasNovas ? `, ${r.respostasNovas} resposta(s) de cliente` : "") +
+          (r.anexosBaixados ? `, ${r.anexosBaixados} anexo(s) baixado(s)` : "") +
           (r.ignorados ? `, ${r.ignorados} sem RT` : ""),
       );
     } catch (erro) {

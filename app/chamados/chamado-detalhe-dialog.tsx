@@ -72,6 +72,68 @@ export function ChamadoDetalheDialog({
             </p>
           </div>
 
+          {detalhe !== null && detalhe.anexosCliente.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs text-text-tertiary">Evidências do cliente</p>
+              <div className="flex flex-wrap gap-3 rounded-[var(--radius-sm)] border border-border p-3">
+                {detalhe.anexosCliente.map((a) =>
+                  a.url ? (
+                    <a
+                      key={a.id}
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex flex-col items-start gap-1 ${FOCUS_RING}`}
+                    >
+                      <span className="text-[11px] text-text-tertiary">
+                        {a.origem === "abertura" ? "Da abertura" : "De uma resposta"}
+                      </span>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do bucket privado */}
+                      <img
+                        src={a.url}
+                        alt={a.nome}
+                        className="h-24 w-24 rounded-[var(--radius-sm)] border border-border object-cover transition-opacity hover:opacity-80"
+                      />
+                    </a>
+                  ) : (
+                    <span key={a.id} className="text-xs text-text-tertiary">
+                      {a.nome} (indisponível)
+                    </span>
+                  ),
+                )}
+              </div>
+            </div>
+          )}
+
+          {detalhe !== null && detalhe.respostas.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs text-text-tertiary">Conversa do chamado</p>
+              <ol className="flex max-h-72 flex-col gap-2 overflow-y-auto rounded-[var(--radius-sm)] border border-border p-3">
+                {detalhe.respostas.map((r) => (
+                  <li
+                    key={r.id}
+                    className={`rounded-[var(--radius-sm)] border p-2 text-sm ${
+                      r.tipo === "cliente"
+                        ? "border-accent/40 bg-accent/5"
+                        : "border-border bg-surface-input"
+                    }`}
+                  >
+                    <p className="text-xs text-text-tertiary">
+                      <span className="font-medium text-text-secondary">
+                        {r.tipo === "cliente" ? "Cliente" : "Atendente"}
+                        {r.remetente ? ` · ${r.remetente}` : ""}
+                      </span>
+                      {r.respondidoEm ? ` · ${formatoData.format(new Date(r.respondidoEm))}` : ""}
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-text-primary">
+                      {r.mensagem || "(sem texto)"}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
           {detalhe !== null && detalhe.historico.length > 0 && (
             <div className="max-h-64 overflow-y-auto rounded-[var(--radius-sm)] border border-border p-3">
               <HistoricoChamado eventos={detalhe.historico} />

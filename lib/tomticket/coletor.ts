@@ -90,7 +90,127 @@ export type ResultadoSync = {
   cortou: boolean;
   /** Serviços criados em rotas JÁ confirmadas, pros chamados que chegaram agora. */
   servicosCriados: number;
+  /** Respostas de CLIENTE novas gravadas nesta passada (alimentam o sino). */
+  respostasNovas: number;
+  /** Anexos do cliente baixados pro bucket nesta passada. */
+  anexosBaixados: number;
 };
+
+// Nome de arquivo seguro pro path do Storage: sem acento, sem espaço, sem
+// caractere que o bucket recuse, e não gigante.
+function nomeSeguro(nome: string): string {
+  const base = (nome || "arquivo")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return (base || "arquivo").slice(0, 120);
+}
+
+// Grava as respostas (cliente + atendente) e baixa os anexos de UM chamado.
+// `/ticket/detail` já trouxe tudo isso na mesma requisição da sync — aqui não
+// há chamada de API a mais, só o download dos arquivos (uma vez cada, dedup
+// por URL). Falhar aqui NÃO aborta a sync: o chamado já entrou, e o que não
+// gravou volta na próxima passada.
+async function sincronizarRespostasEAnexos(
+  supabase: SupabaseClient,
+  chamadoId: string,
+  chamado: ChamadoTomTicket,
+  marcarNaoVistoDesde: Date,
+): Promise<{ respostasNovas: number; anexosBaixados: number }> {
+  let respostasNovas = 0;
+  let anexosBaixados = 0;
+
+  // Respostas já conhecidas -> id da linha (pra amarrar anexo de resposta).
+  const { data: existentesRaw } = await supabase
+    .from("chamado_respostas")
+    .select("id, tomticket_reply_id")
+    .eq("chamado_id", chamadoId);
+  const idPorReply = new Map<string, string>(
+    (existentesRaw ?? []).map((r) => [r.tomticket_reply_id as string, r.id as string]),
+  );
+
+  for (const resp of chamado.respostas) {
+    if (idPorReply.has(resp.replyId)) continue;
+
+    const naoVisto =
+      resp.tipo === "cliente" &&
+      resp.respondidoEm !== null &&
+      new Date(resp.respondidoEm) >= marcarNaoVistoDesde;
+
+    const { data: inserida, error } = await supabase
+      .from("chamado_respostas")
+      .insert({
+        chamado_id: chamadoId,
+        tomticket_reply_id: resp.replyId,
+        tipo: resp.tipo,
+        remetente: resp.remetente || null,
+        mensagem: resp.mensagem || null,
+        respondido_em: resp.respondidoEm,
+        visto_em: naoVisto ? null : new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (error || !inserida) continue; // corrida com outra passada, ou erro — tenta de novo depois
+    idPorReply.set(resp.replyId, inserida.id as string);
+    if (naoVisto) respostasNovas++;
+  }
+
+  // Anexos já baixados -> não baixa de novo.
+  const { data: anexosRaw } = await supabase
+    .from("chamado_anexos_cliente")
+    .select("tomticket_url")
+    .eq("chamado_id", chamadoId);
+  const urlsBaixadas = new Set((anexosRaw ?? []).map((a) => a.tomticket_url as string));
+
+  type Pendente = { url: string; nome: string; tamanho: number | null; origem: "abertura" | "resposta"; replyId: string | null };
+  const pendentes: Pendente[] = [
+    ...chamado.anexosAbertura.map((a) => ({ ...a, origem: "abertura" as const, replyId: null })),
+    ...chamado.respostas.flatMap((r) =>
+      r.anexos.map((a) => ({ ...a, origem: "resposta" as const, replyId: r.replyId })),
+    ),
+  ];
+
+  for (const [i, anexo] of pendentes.entries()) {
+    if (urlsBaixadas.has(anexo.url)) continue;
+
+    let bytes: ArrayBuffer;
+    let contentType = "application/octet-stream";
+    try {
+      const r = await fetch(anexo.url, { cache: "no-store" });
+      if (!r.ok) continue;
+      bytes = await r.arrayBuffer();
+      contentType = r.headers.get("content-type") ?? contentType;
+    } catch {
+      continue;
+    }
+
+    const chave = anexo.origem === "resposta" ? (anexo.replyId ?? "resposta") : "abertura";
+    const path = `${chamadoId}/${anexo.origem}-${chave}-${i}-${nomeSeguro(anexo.nome)}`;
+
+    const { error: upErr } = await supabase.storage
+      .from("respostas-cliente")
+      .upload(path, new Uint8Array(bytes), { contentType, upsert: false });
+    if (upErr && !upErr.message.toLowerCase().includes("exists")) continue;
+
+    const { error: insErr } = await supabase.from("chamado_anexos_cliente").insert({
+      chamado_id: chamadoId,
+      resposta_id: anexo.replyId ? (idPorReply.get(anexo.replyId) ?? null) : null,
+      origem: anexo.origem,
+      nome: anexo.nome || "arquivo",
+      tamanho: anexo.tamanho,
+      storage_path: path,
+      tomticket_url: anexo.url,
+    });
+    if (!insErr) {
+      urlsBaixadas.add(anexo.url);
+      anexosBaixados++;
+    }
+  }
+
+  return { respostasNovas, anexosBaixados };
+}
 
 // Folga da janela: cada leitura pergunta a partir de um instante um pouco
 // anterior ao fim da anterior. Relógios de servidores diferentes não batem no
@@ -227,11 +347,20 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     resolvidos.push(chamado.protocolo);
   }
 
+  // protocolo -> chamado_id (uuid), pra Fase 3 amarrar as respostas. Começa
+  // com os que já existiam; ganha os recém-inseridos abaixo.
+  const idPorProtocolo = new Map<string, string>(
+    [...existentes.entries()].map(([proto, dados]) => [proto, dados.id]),
+  );
+
   let novos = 0;
   for (let i = 0; i < paraInserir.length; i += 200) {
     const bloco = paraInserir.slice(i, i + 200);
-    const { data, error } = await supabase.from("chamados").insert(bloco).select("id");
-    if (!error) novos += data?.length ?? 0;
+    const { data, error } = await supabase.from("chamados").insert(bloco).select("id, tomticket_id");
+    if (!error) {
+      novos += data?.length ?? 0;
+      for (const c of data ?? []) idPorProtocolo.set(c.tomticket_id as string, c.id as string);
+    }
   }
 
   if (naoImportados.length > 0) {
@@ -241,6 +370,29 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
   // depois, ou o nome foi corrigido no TomTicket).
   for (let i = 0; i < resolvidos.length; i += 200) {
     await supabase.from("sync_nao_importados").delete().in("tomticket_id", resolvidos.slice(i, i + 200));
+  }
+
+  // Fase 3: respostas e anexos do cliente. `/ticket/detail` já trouxe replies
+  // e attachments na MESMA requisição que a sync já fez — sem chamada de API a
+  // mais aqui, só o download dos arquivos (uma vez cada). Uma resposta de
+  // cliente só entra como "não vista" (alimenta o sino) se chegou DEPOIS da
+  // última leitura — no primeiro povoamento, o histórico entra já marcado
+  // como visto pra não afogar o contador.
+  const marcarNaoVistoDesde = estado?.ultima_leitura
+    ? new Date(estado.ultima_leitura as string)
+    : inicioDaLeitura;
+  let respostasNovas = 0;
+  let anexosBaixados = 0;
+  for (const chamado of lidos) {
+    const chamadoId = chamado.protocolo ? idPorProtocolo.get(chamado.protocolo) : undefined;
+    if (!chamadoId) continue;
+    try {
+      const r = await sincronizarRespostasEAnexos(supabase, chamadoId, chamado, marcarNaoVistoDesde);
+      respostasNovas += r.respostasNovas;
+      anexosBaixados += r.anexosBaixados;
+    } catch {
+      // uma falha aqui não invalida a coleta — o chamado já entrou.
+    }
   }
 
   // Chamado novo não alcança o técnico sozinho: `fn_confirmar_rota` só olha os
@@ -286,5 +438,7 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     lidos: lidos.length,
     cortou,
     servicosCriados,
+    respostasNovas,
+    anexosBaixados,
   };
 }

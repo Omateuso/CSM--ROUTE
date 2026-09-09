@@ -26,6 +26,19 @@ function offsetSaoPaulo(data: Date): string {
   return bruto === "" ? "+0000" : bruto;
 }
 
+// Sentido inverso: a data que a API DEVOLVE (em `replies[].date`,
+// `creation_date`, etc.) vem como "YYYY-MM-DD HH:MM:SS-03" — espaço no lugar do
+// "T" e offset de 2 dígitos que o `new Date()` não engole. Normaliza pra ISO.
+export function pararDataTomTicket(bruto: string): string | null {
+  const limpo = (bruto ?? "").trim();
+  if (!limpo) return null;
+  const iso = limpo
+    .replace(" ", "T")
+    .replace(/([+-]\d{2})(\d{2})?$/, (_, horas, minutos) => `${horas}:${minutos ?? "00"}`);
+  const data = new Date(iso);
+  return Number.isNaN(data.getTime()) ? null : data.toISOString();
+}
+
 export function formatarDataTomTicket(data: Date): string {
   const partes = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",

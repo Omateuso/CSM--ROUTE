@@ -51,6 +51,7 @@ export default async function ChamadosPage() {
   const [
     { data: chamadosRaw, error: chamadosError },
     { data: rtsRaw, error: rtsError },
+    { data: respostasNovasRaw },
   ] = await Promise.all([
     supabase
       .from("chamados")
@@ -62,7 +63,11 @@ export default async function ChamadosPage() {
       .from("rts")
       .select("id, codigo, endereco, regioes(nome, zonas(nome))")
       .order("codigo", { ascending: true }),
+    // Fase 3 — chamados com resposta de cliente ainda não vista (0036).
+    supabase.from("chamado_respostas").select("chamado_id").eq("tipo", "cliente").is("visto_em", null),
   ]);
+
+  const comRespostaNova = new Set((respostasNovasRaw ?? []).map((r) => r.chamado_id as string));
 
   if (chamadosError || rtsError) {
     return (
@@ -110,10 +115,13 @@ export default async function ChamadosPage() {
       rtNome: rt?.nome ?? "—",
       regiaoNome: regiao?.nome ?? "—",
       zonaNome: unwrapOne(regiao?.zonas)?.nome ?? "—",
-      assunto: c.assunto as string,      prioridade: c.prioridade as ChamadoRow["prioridade"],
+      assunto: c.assunto as string,
+      prioridade: c.prioridade as ChamadoRow["prioridade"],
       status: c.status as ChamadoRow["status"],
       slaPrazo: c.sla_prazo as string | null,
-      criadoEm: c.criado_em as string,    };
+      criadoEm: c.criado_em as string,
+      temRespostaNova: comRespostaNova.has(c.id as string),
+    };
   });
 
   // Estado da coleta (0030). Sem isto, a sync pode morrer e a tela seguir

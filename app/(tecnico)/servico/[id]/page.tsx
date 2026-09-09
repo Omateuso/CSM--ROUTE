@@ -100,6 +100,30 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
     criadoPorNome: unwrapOne(h.criado_por)?.nome ?? null,
   }));
 
+  // Evidências do cliente (Fase 3, 0036) — fotos que o cliente anexou no
+  // TomTicket (na abertura ou numa resposta). O técnico vê antes de ir.
+  const { data: anexosClienteRaw } = await supabase
+    .from("chamado_anexos_cliente")
+    .select("id, nome, origem, storage_path")
+    .eq("chamado_id", servicoRaw.chamado_id as string)
+    .order("criado_em", { ascending: true });
+
+  const anexosCliente: { id: string; nome: string; origem: string; url: string | null }[] = [];
+  if ((anexosClienteRaw ?? []).length > 0) {
+    const { data: assinadas } = await supabase.storage
+      .from("respostas-cliente")
+      .createSignedUrls((anexosClienteRaw ?? []).map((a) => a.storage_path as string), 3600);
+    const urlPor = new Map((assinadas ?? []).map((i) => [i.path ?? "", i.signedUrl]));
+    for (const a of anexosClienteRaw ?? []) {
+      anexosCliente.push({
+        id: a.id as string,
+        nome: a.nome as string,
+        origem: a.origem as string,
+        url: urlPor.get(a.storage_path as string) ?? null,
+      });
+    }
+  }
+
   // Tentativa anterior: se este chamado já teve um serviço CANCELADO (pendência
   // ou reagendamento), o técnico precisa do contexto do que já foi feito — sem
   // ter que reconstruir tudo. Herda do serviço anterior, não pede de novo
@@ -202,6 +226,41 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
             <p className="mt-3 text-xs text-text-tertiary">Prazo: {formatoDataHora.format(new Date(slaPrazo))}</p>
           )}
         </section>
+
+        {anexosCliente.length > 0 && (
+          <section className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface p-4">
+            <p className="text-xs font-semibold tracking-wide text-text-tertiary uppercase">
+              Evidências do cliente
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {anexosCliente.map((a) =>
+                a.url ? (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex flex-col items-start gap-1 ${FOCUS_RING}`}
+                  >
+                    <span className="text-[11px] text-text-tertiary">
+                      {a.origem === "abertura" ? "Da abertura" : "De uma resposta"}
+                    </span>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do bucket privado */}
+                    <img
+                      src={a.url}
+                      alt={a.nome}
+                      className="h-24 w-24 rounded-[var(--radius-sm)] border border-border object-cover transition-opacity hover:opacity-80"
+                    />
+                  </a>
+                ) : (
+                  <span key={a.id} className="text-xs text-text-tertiary">
+                    {a.nome}
+                  </span>
+                ),
+              )}
+            </div>
+          </section>
+        )}
 
         {tentativaAnterior && (
           <section className="mt-4 rounded-[var(--radius-md)] border-2 border-priority-alta/40 bg-priority-alta/5 p-4">
