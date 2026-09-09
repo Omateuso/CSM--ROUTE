@@ -368,23 +368,15 @@ export default async function ValidacaoPage() {
       </header>
 
       {/* Resumo clicável (25/08/2026) — mesmo layout dos cards de "Operação
-          de hoje" do Dashboard, mas cada um navega (âncora) pra listagem
-          correspondente logo abaixo, na ordem em que elas aparecem na página. */}
+          de hoje" do Dashboard, cada um é âncora pra seção logo abaixo. A
+          ordem segue a prioridade de AÇÃO (Fase 6): o que precisa de decisão
+          primeiro, o arquivo de "Validados recentemente" por último. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <OperacaoHojeCard label="Validados recentemente" value={validados.length} href="#validados-recentemente" />
         <OperacaoHojeCard label="Aguardando validação" value={concluidos.length} href="#aguardando-validacao" />
         <OperacaoHojeCard label="Apontados pelo técnico" value={apontamentos.length} href="#apontados" />
         <OperacaoHojeCard label="Travados em rota já passada" value={travados.length} href="#travados" />
+        <OperacaoHojeCard label="Validados recentemente" value={validados.length} href="#validados-recentemente" />
       </div>
-
-      <ValidadosRecentes
-        validados={validados}
-        id="validados-recentemente"
-        // Texto montado no servidor: a saudação depende da hora, e gerar dos
-        // dois lados abriria descasamento de hidratação.
-        mensagemPadrao={mensagemConclusao()}
-        integracaoAtiva={tomticketConfigurado()}
-      />
 
       <section id="aguardando-validacao" className="mt-10 scroll-mt-24">
         <h2 className="text-sm font-semibold text-text-primary">
@@ -441,6 +433,18 @@ export default async function ValidacaoPage() {
           </div>
         )}
       </section>
+
+      {/* Arquivo do que já foi fechado — fica por último (Fase 6): não é
+          decisão pendente, é consulta pra copiar/anexar de volta no
+          TomTicket. Os cards de resumo acima levam direto aqui. */}
+      <ValidadosRecentes
+        validados={validados}
+        id="validados-recentemente"
+        // Texto montado no servidor: a saudação depende da hora, e gerar dos
+        // dois lados abriria descasamento de hidratação.
+        mensagemPadrao={mensagemConclusao()}
+        integracaoAtiva={tomticketConfigurado()}
+      />
     </div>
   );
 }

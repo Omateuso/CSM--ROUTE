@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useId, useState } from "react";
-import { validarServico, recusarServico, type ActionState } from "./actions";
+import { validarServico, solicitarCorrecao, type ActionState } from "./actions";
 import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badge";
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { Modal } from "@/lib/ui/modal";
 import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
 import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
+import { EvidenciaThumbs, rotuloEvidencia } from "@/lib/ui/evidencia-thumbs";
 import { IntegridadeBadge } from "./integridade-badge";
 import { avaliarLocalizacaoConclusao, type EvidenciaComGeo, type OsIntegridadeInfo } from "./integridade";
 
@@ -41,13 +42,11 @@ const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
 
 const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" });
 
-const LABEL_EVIDENCIA: Record<string, string> = { foto: "Foto", os: "OS", documento: "Documento" };
-
 export function ValidacaoCard({ servico }: { servico: ServicoConcluidoRow }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(validarServico, {
     error: null,
   });
-  const [recusarAberto, setRecusarAberto] = useState(false);
+  const [correcaoAberto, setCorrecaoAberto] = useState(false);
 
   const statusLocalizacao = avaliarLocalizacaoConclusao(servico.evidencias, {
     latitude: servico.rtLatitude,
@@ -90,20 +89,12 @@ export function ValidacaoCard({ servico }: { servico: ServicoConcluidoRow }) {
         </p>
 
         {servico.evidencias.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-3">
-            {servico.evidencias.map((e, i) =>
-              e.url ? (
-                <a
-                  key={i}
-                  href={e.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`text-xs font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}
-                >
-                  {LABEL_EVIDENCIA[e.tipo] ?? e.tipo} →
-                </a>
-              ) : null,
-            )}
+          <div className="mt-2">
+            <EvidenciaThumbs
+              itens={servico.evidencias
+                .filter((e) => e.url)
+                .map((e) => ({ url: e.url, label: rotuloEvidencia(e) }))}
+            />
           </div>
         )}
 
@@ -155,10 +146,10 @@ export function ValidacaoCard({ servico }: { servico: ServicoConcluidoRow }) {
       <div className="mt-4 flex items-center justify-end gap-3">
         <button
           type="button"
-          onClick={() => setRecusarAberto(true)}
-          className={`rounded-[var(--radius-sm)] border border-border px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-danger hover:text-danger ${FOCUS_RING}`}
+          onClick={() => setCorrecaoAberto(true)}
+          className={`rounded-[var(--radius-sm)] border border-border px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent hover:text-accent ${FOCUS_RING}`}
         >
-          Recusar
+          Solicitar correção
         </button>
         <form action={formAction}>
           <input type="hidden" name="servicoId" value={servico.servicoId} />
@@ -172,22 +163,22 @@ export function ValidacaoCard({ servico }: { servico: ServicoConcluidoRow }) {
         </form>
       </div>
 
-      <RecusarDialog
-        open={recusarAberto}
+      <CorrecaoDialog
+        open={correcaoAberto}
         servicoId={servico.servicoId}
-        onClose={() => setRecusarAberto(false)}
+        onClose={() => setCorrecaoAberto(false)}
       />
     </article>
   );
 }
 
-// Diferente de "Reagendar" (serviço nunca atendido), "Recusar" é pra quando
-// o gerente não confia na evidência de um serviço JÁ concluído — ex.: viu
-// um selo de integridade suspeito e, depois de conferir com o técnico por
-// fora do sistema, decidiu que precisa voltar. Mesmo efeito de banco do
-// reagendamento (cancela, chamado libera pra próxima rota), evento de
-// histórico próprio (migration 0025).
-function RecusarDialog({
+// "Solicitar correção" (antes "Recusar", 0025/0039) — o gerente vê um
+// problema na evidência de um serviço JÁ concluído e precisa que volte.
+// Mesmo efeito de banco do reagendamento (cancela, chamado libera pra
+// próxima rota e reentra como "↩ Retorno" na Fase 1), evento de histórico
+// próprio (`servico_correcao_solicitada`). É reframe, não punição — daí a
+// linguagem e o botão neutro (accent), não vermelho.
+function CorrecaoDialog({
   open,
   servicoId,
   onClose,
@@ -196,7 +187,7 @@ function RecusarDialog({
   servicoId: string;
   onClose: () => void;
 }) {
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(recusarServico, {
+  const [state, formAction, isPending] = useActionState<ActionState, FormData>(solicitarCorrecao, {
     error: null,
   });
   useCloseOnSuccess(isPending, state.error, onClose);
@@ -204,26 +195,26 @@ function RecusarDialog({
   const idMotivo = useId();
 
   return (
-    <Modal open={open} title="Recusar serviço" onClose={onClose}>
+    <Modal open={open} title="Solicitar correção" onClose={onClose}>
       <form action={formAction} className="flex flex-col gap-4">
         <input type="hidden" name="servicoId" value={servicoId} />
 
         <p className="text-sm text-text-secondary">
-          O serviço deixa de contar como concluído e o chamado volta a ficar disponível pra próxima
-          rota. Use quando não confiar na evidência anexada — a foto/OS/observação continuam
-          registradas na linha do tempo do chamado.
+          O serviço volta pra fila e o chamado entra de novo numa próxima rota, aparecendo pro técnico
+          como retorno — com o que já foi feito registrado na linha do tempo. Diga o que precisa ser
+          ajustado.
         </p>
 
         <div className="flex flex-col gap-1">
           <label htmlFor={idMotivo} className={FIELD_LABEL}>
-            Motivo da recusa
+            O que precisa ser corrigido?
           </label>
           <textarea
             id={idMotivo}
             name="motivo"
             required
             rows={3}
-            placeholder="Ex.: localização não confere e o técnico não soube explicar..."
+            placeholder="Ex.: a foto de depois não mostra o serviço concluído; refazer com foto do ponto reparado."
             className={`${FIELD_INPUT} resize-none`}
           />
         </div>
@@ -246,9 +237,9 @@ function RecusarDialog({
           <button
             type="submit"
             disabled={isPending}
-            className={`rounded-[var(--radius-sm)] bg-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-danger-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
-            {isPending ? "Recusando..." : "Confirmar recusa"}
+            {isPending ? "Enviando..." : "Enviar solicitação"}
           </button>
         </div>
       </form>

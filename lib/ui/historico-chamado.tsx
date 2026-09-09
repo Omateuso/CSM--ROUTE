@@ -26,7 +26,8 @@ const EVENTO_LABEL: Record<string, string> = {
   rota_data_corrigida: "Data da rota corrigida",
   rota_cancelada: "Rota cancelada",
   tecnico_trocado: "Técnico trocado",
-  servico_recusado: "Recusado pelo gerente",
+  servico_recusado: "Recusado pelo gerente", // nome antigo (0025) — mantido pros registros já gravados
+  servico_correcao_solicitada: "Correção solicitada", // 0039 — "Recusar" virou "Solicitar correção"
   servico_pendente_material: "Pendência de material", // nome antigo (0025) — mantido pra dado de teste já gravado
   servico_pendente: "Pendência reportada",
   // Fase 4 (seção 7, 0037) — técnico apontou um problema no serviço antes de

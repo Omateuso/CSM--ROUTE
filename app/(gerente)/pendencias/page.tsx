@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { FOCUS_RING } from "@/lib/ui/styles";
+import { EvidenciaThumbs } from "@/lib/ui/evidencia-thumbs";
 import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 import { ResponderTomticket } from "../responder-tomticket";
 import { ProgramarReexecucao, type RotaParaReexecucao } from "./programar-reexecucao";
@@ -28,23 +29,6 @@ const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
   hour: "2-digit",
   minute: "2-digit",
 });
-
-function EvidenciaThumb({ url, label }: { url: string | null; label: string }) {
-  if (!url) {
-    return <p className="text-xs text-text-tertiary">{label}: não anexada.</p>;
-  }
-  return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className={`flex flex-col items-start gap-1 ${FOCUS_RING}`}>
-      <span className="text-xs font-medium text-text-secondary">{label}</span>
-      {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do Storage, não é imagem otimizável estaticamente */}
-      <img
-        src={url}
-        alt={label}
-        className="h-28 w-28 rounded-[var(--radius-sm)] border border-border object-cover transition-opacity hover:opacity-80"
-      />
-    </a>
-  );
-}
 
 export default async function PendenciasPage() {
   const supabase = await createClient();
@@ -240,9 +224,13 @@ export default async function PendenciasPage() {
                   {p.descricao || "Sem descrição registrada."}
                 </p>
 
-                <div className="mt-3 flex flex-wrap gap-4">
-                  <EvidenciaThumb url={p.fotoParcialUrl} label="Foto do parcial" />
-                  <EvidenciaThumb url={p.osUrl} label="OS" />
+                <div className="mt-3">
+                  <EvidenciaThumbs
+                    itens={[
+                      { url: p.fotoParcialUrl, label: "Foto do parcial" },
+                      { url: p.osUrl, label: "OS" },
+                    ]}
+                  />
                 </div>
               </div>
 

@@ -48,19 +48,20 @@ export async function reagendarServico(_prev: ActionState, formData: FormData): 
   return { error: null };
 }
 
-// Migration 0025 (achado de uso real, 21/08/2026): diferente de reagendar
-// (serviço nunca atendido), recusar é pra quando o gerente não confia na
-// evidência de um serviço JÁ concluído pelo técnico — cancela e libera o
-// chamado pra próxima rota, mesmo efeito de banco do reagendamento, mas
-// evento de histórico próprio (`servico_recusado`).
-export async function recusarServico(_prev: ActionState, formData: FormData): Promise<ActionState> {
+// Migration 0025/0039: diferente de reagendar (serviço nunca atendido),
+// "solicitar correção" (antes "recusar") é pra quando o gerente vê um
+// problema na evidência de um serviço JÁ concluído pelo técnico e precisa
+// que volte. Mesmo efeito de banco do reagendamento (cancela, chamado
+// libera pra próxima rota), evento de histórico próprio
+// (`servico_correcao_solicitada`).
+export async function solicitarCorrecao(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const servicoId = String(formData.get("servicoId") ?? "");
   const motivo = String(formData.get("motivo") ?? "").trim();
   if (!servicoId) return { error: "Serviço inválido." };
-  if (!motivo) return { error: "Informe o motivo da recusa." };
+  if (!motivo) return { error: "Descreva o que precisa ser corrigido." };
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_recusar_servico", {
+  const { error } = await supabase.rpc("fn_solicitar_correcao", {
     p_servico_id: servicoId,
     p_motivo: motivo,
   });
