@@ -55,16 +55,21 @@ function ContextoStat({
 export default async function DashboardPage() {
   const supabase = await createClient();
 
+  // Sessão lida do cookie, sem ida à rede. O proxy.ts (middleware) roda o
+  // getUser() autoritativo + refresh do token em TODA requisição desta rota e
+  // redireciona quem não está logado — aqui só é preciso o id pra buscar a
+  // role, e a RLS é o backstop real por linha. Trocar getUser() (rede) por
+  // getSession() (local) corta ~200-400 ms de cada navegação.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/login");
+  if (!session) redirect("/login");
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", session.user.id)
     .single();
 
   if (profile?.role !== "gerente") {
@@ -78,27 +83,46 @@ export default async function DashboardPage() {
   }
 
   const hoje = new Date().toISOString().slice(0, 10);
+  // Janela "hoje" em UTC — mesma semântica do antigo `.slice(0, 10) === hoje`,
+  // agora aplicada no banco em vez de filtrar linha por linha em JS.
+  const inicioDoDia = `${hoje}T00:00:00.000Z`;
+  const fimDoDia = `${hoje}T23:59:59.999Z`;
 
   const [
     { data: chamadosRaw, error },
     { data: servicosHojeRaw, error: servicosHojeError },
-    { data: concluidosRaw, error: concluidosError },
-    { data: reagendadosRaw, error: reagendadosError },
+    { count: concluidosHojeCount, error: concluidosError },
+    { count: reagendadosHojeCount, error: reagendadosError },
     { count: aguardandoValidacaoCount, error: aguardandoValidacaoError },
     { count: travadosCount, error: travadosError },
   ] = await Promise.all([
-    supabase.from("chamados").select("id, prioridade, status, sla_prazo, rt_id, rts(codigo, nome)"),
+    // Só os chamados que entram nas métricas de volume — o loop abaixo já
+    // descartava finalizado/cancelado em JS. Filtrar no banco evita trazer as
+    // centenas de chamados fechados que a sincronização do TomTicket acumula.
+    supabase
+      .from("chamados")
+      .select("id, prioridade, status, sla_prazo, rt_id, rts(codigo, nome)")
+      .in("status", ["aberto", "em_andamento"]),
     // "Operação de hoje" — escopado pela rota do dia (planejamento de hoje),
     // não pelo status corrente sem filtro nenhum como era antes.
     supabase
       .from("servicos")
       .select("status, tecnico:tecnico_id(nome), rotas!inner(data, regioes(nome))")
       .eq("rotas.data", hoje),
-    // "Concluídos hoje" olha a DATA da conclusão, não a data da rota — um
-    // serviço de rota de ontem concluído hoje ainda conta como trabalho de
-    // hoje. Mesmo critério que o dashboard já usava antes da Parte B.
-    supabase.from("servicos").select("concluido_em").not("concluido_em", "is", null),
-    supabase.from("historico").select("criado_em").eq("evento", "servico_reagendado"),
+    // "Concluídos hoje" / "Reagendados hoje" — contagem direta no banco pela
+    // data do evento (era: trazer TODOS os serviços concluídos e TODOS os
+    // eventos de reagendamento, sem limite, e filtrar o dia em JS).
+    supabase
+      .from("servicos")
+      .select("id", { count: "exact", head: true })
+      .gte("concluido_em", inicioDoDia)
+      .lte("concluido_em", fimDoDia),
+    supabase
+      .from("historico")
+      .select("id", { count: "exact", head: true })
+      .eq("evento", "servico_reagendado")
+      .gte("criado_em", inicioDoDia)
+      .lte("criado_em", fimDoDia),
     supabase.from("servicos").select("id", { count: "exact", head: true }).eq("status", "concluido_tecnico"),
     supabase
       .from("servicos")
@@ -179,12 +203,8 @@ export default async function DashboardPage() {
     porTecnicoHoje.set(tecnicoNome, atualTecnico);
   }
 
-  const totalConcluidosHoje = (concluidosRaw ?? []).filter(
-    (s) => (s.concluido_em as string | null)?.slice(0, 10) === hoje,
-  ).length;
-  const totalReagendadosHoje = (reagendadosRaw ?? []).filter(
-    (h) => (h.criado_em as string).slice(0, 10) === hoje,
-  ).length;
+  const totalConcluidosHoje = concluidosHojeCount ?? 0;
+  const totalReagendadosHoje = reagendadosHojeCount ?? 0;
 
   const rtsOrdenadas = [...volumePorRt.values()].sort((a, b) => b.total - a.total);
   const maxVolume = rtsOrdenadas[0]?.total ?? 1;

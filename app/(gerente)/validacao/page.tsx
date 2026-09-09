@@ -27,12 +27,16 @@ function unwrapMany<T>(value: T | T[] | null | undefined): T[] {
 export default async function ValidacaoPage() {
   const supabase = await createClient();
 
+  // Sessão do cookie, sem ida à rede — o proxy.ts (middleware) já fez o
+  // getUser() autoritativo + refresh do token nesta requisição e redireciona
+  // quem não está logado. Aqui só precisa do id pra buscar a role; RLS é o
+  // backstop por linha.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) redirect("/login");
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.user.id).single();
   if (profile?.role !== "gerente") {
     return (
       <div className="flex flex-1 items-center justify-center px-4">
