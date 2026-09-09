@@ -6,6 +6,7 @@ import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badge";
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
+import { EvidenciaThumbs, rotuloEvidencia } from "@/lib/ui/evidencia-thumbs";
 import { IntegridadeBadge } from "./integridade-badge";
 import { ResponderTomticket } from "../responder-tomticket";
 import { avaliarLocalizacaoConclusao, type EvidenciaComGeo, type OsIntegridadeInfo } from "./integridade";
@@ -44,8 +45,6 @@ const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
 });
 
 const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" });
-
-const LABEL_EVIDENCIA: Record<string, string> = { foto: "Foto", os: "OS", documento: "Documento" };
 
 // Mesmo layout de card do ValidacaoCard (Aguardando validação) — depois de
 // validado, o texto do técnico e os anexos (OS/foto) somem de qualquer
@@ -107,20 +106,12 @@ function ValidadoCard({
         </p>
 
         {servico.evidencias.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-3">
-            {servico.evidencias.map((e, i) =>
-              e.url ? (
-                <a
-                  key={i}
-                  href={e.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`text-xs font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}
-                >
-                  {LABEL_EVIDENCIA[e.tipo] ?? e.tipo} →
-                </a>
-              ) : null,
-            )}
+          <div className="mt-2">
+            <EvidenciaThumbs
+              itens={servico.evidencias
+                .filter((e) => e.url)
+                .map((e) => ({ url: e.url, label: rotuloEvidencia(e) }))}
+            />
           </div>
         )}
 

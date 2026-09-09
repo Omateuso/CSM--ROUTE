@@ -7,13 +7,22 @@ import { StatusServicoBadge, type StatusServico } from "../../status-servico-bad
 import { IniciarServicoForm } from "./iniciar-servico-form";
 import { ConcluirServicoForm } from "./concluir-servico-form";
 import { PendenciaForm } from "./pendencia-form";
+import { AvaliarServicoForm } from "./avaliar-servico-form";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
+import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
 }
+
+function unwrapMany<T>(value: T | T[] | null | undefined): T[] {
+  if (Array.isArray(value)) return value;
+  return value ? [value] : [];
+}
+
+const MOMENTO_LABEL: Record<string, string> = { antes: "Foto antes", parcial: "Foto parcial", depois: "Foto depois" };
 
 const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -79,7 +88,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
   // ao anterior fora do `historico`).
   const { data: historicoRaw } = await supabase
     .from("historico")
-    .select("id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
+    .select("id, evento, descricao, categoria, servico_id, criado_em, criado_por:criado_por(nome)")
     .eq("chamado_id", servicoRaw.chamado_id as string)
     .order("criado_em", { ascending: true });
 
@@ -91,6 +100,89 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
     criadoEm: h.criado_em as string,
     criadoPorNome: unwrapOne(h.criado_por)?.nome ?? null,
   }));
+
+  // Evidências do cliente (Fase 3, 0036) — fotos que o cliente anexou no
+  // TomTicket (na abertura ou numa resposta). O técnico vê antes de ir.
+  const { data: anexosClienteRaw } = await supabase
+    .from("chamado_anexos_cliente")
+    .select("id, nome, origem, storage_path")
+    .eq("chamado_id", servicoRaw.chamado_id as string)
+    .order("criado_em", { ascending: true });
+
+  const anexosCliente: { id: string; nome: string; origem: string; url: string | null }[] = [];
+  if ((anexosClienteRaw ?? []).length > 0) {
+    const { data: assinadas } = await supabase.storage
+      .from("respostas-cliente")
+      .createSignedUrls((anexosClienteRaw ?? []).map((a) => a.storage_path as string), 3600);
+    const urlPor = new Map((assinadas ?? []).map((i) => [i.path ?? "", i.signedUrl]));
+    for (const a of anexosClienteRaw ?? []) {
+      anexosCliente.push({
+        id: a.id as string,
+        nome: a.nome as string,
+        origem: a.origem as string,
+        url: urlPor.get(a.storage_path as string) ?? null,
+      });
+    }
+  }
+
+  // Tentativa anterior: se este chamado já teve um serviço CANCELADO (pendência
+  // ou reagendamento), o técnico precisa do contexto do que já foi feito — sem
+  // ter que reconstruir tudo. Herda do serviço anterior, não pede de novo
+  // (princípio de UX da evolução operacional).
+  const { data: anteriorRaw } = await supabase
+    .from("servicos")
+    .select("id, criado_em, tecnico:tecnico_id(nome), evidencias(tipo, momento, storage_path)")
+    .eq("chamado_id", servicoRaw.chamado_id as string)
+    .eq("status", "cancelado")
+    .neq("id", servicoRaw.id as string)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const anteriorEvidencias = anteriorRaw ? unwrapMany(anteriorRaw.evidencias) : [];
+  const urlPorCaminhoAnterior = new Map<string, string>();
+  if (anteriorEvidencias.length > 0) {
+    const { data: assinadas } = await supabase.storage
+      .from("evidencias")
+      .createSignedUrls(anteriorEvidencias.map((e) => e.storage_path as string), 3600);
+    for (const item of assinadas ?? []) {
+      if (item.signedUrl) urlPorCaminhoAnterior.set(item.path ?? "", item.signedUrl);
+    }
+  }
+
+  // Fase 4 (seção 7): o técnico já apontou um problema neste serviço? A
+  // trava real é no fn_avaliar_servico; aqui é só pra a UI mostrar "já
+  // enviado" em vez de oferecer o formulário de novo.
+  const apontamentoDesteServico = (historicoRaw ?? []).find(
+    (h) => h.evento === "servico_avaliado" && (h.servico_id as string | null) === (servicoRaw.id as string),
+  );
+
+  const motivoAnterior = [...historico]
+    .reverse()
+    .find((e) => e.evento === "servico_pendente" || e.evento === "servico_reagendado");
+
+  const tentativaAnterior = anteriorRaw
+    ? {
+        tecnicoNome: unwrapOne(anteriorRaw.tecnico)?.nome ?? "outro técnico",
+        criadoEm: anteriorRaw.criado_em as string,
+        motivoRotulo: motivoAnterior?.categoria
+          ? (PENDENCIA_CATEGORIA_LABEL[motivoAnterior.categoria as PendenciaCategoria] ??
+            motivoAnterior.categoria)
+          : motivoAnterior?.evento === "servico_reagendado"
+            ? "Reagendado"
+            : "Motivo",
+        motivoTexto: motivoAnterior?.descricao ?? null,
+        anexos: anteriorEvidencias
+          .map((e) => ({
+            rotulo:
+              e.tipo === "os"
+                ? "OS"
+                : (MOMENTO_LABEL[(e.momento as string | null) ?? ""] ?? "Foto"),
+            url: urlPorCaminhoAnterior.get(e.storage_path as string) ?? null,
+          }))
+          .filter((a): a is { rotulo: string; url: string } => Boolean(a.url)),
+      }
+    : null;
 
   const chamado = unwrapOne(servicoRaw.chamados);
   const rt = unwrapOne(servicoRaw.rts);
@@ -117,6 +209,11 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
               criado em {formatoDataCurta.format(new Date(chamado.criado_em as string))}
             </span>
           )}
+          {tentativaAnterior && (
+            <span className="rounded-full bg-priority-alta/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-priority-alta uppercase">
+              ↩ Retorno
+            </span>
+          )}
           <StatusServicoBadge status={status} />
         </div>
         <h1 className="mt-1 text-lg font-semibold text-text-primary">{rt?.nome}</h1>
@@ -138,6 +235,80 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
           )}
         </section>
 
+        {anexosCliente.length > 0 && (
+          <section className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface p-4">
+            <p className="text-xs font-semibold tracking-wide text-text-tertiary uppercase">
+              Evidências do cliente
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {anexosCliente.map((a) =>
+                a.url ? (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex flex-col items-start gap-1 ${FOCUS_RING}`}
+                  >
+                    <span className="text-[11px] text-text-tertiary">
+                      {a.origem === "abertura" ? "Da abertura" : "De uma resposta"}
+                    </span>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do bucket privado */}
+                    <img
+                      src={a.url}
+                      alt={a.nome}
+                      className="h-24 w-24 rounded-[var(--radius-sm)] border border-border object-cover transition-opacity hover:opacity-80"
+                    />
+                  </a>
+                ) : (
+                  <span key={a.id} className="text-xs text-text-tertiary">
+                    {a.nome}
+                  </span>
+                ),
+              )}
+            </div>
+          </section>
+        )}
+
+        {tentativaAnterior && (
+          <section className="mt-4 rounded-[var(--radius-md)] border-2 border-priority-alta/40 bg-priority-alta/5 p-4">
+            <p className="text-xs font-semibold tracking-wide text-priority-alta uppercase">
+              ↩ Tentativa anterior
+            </p>
+            <p className="mt-1 text-sm text-text-primary">
+              {tentativaAnterior.tecnicoNome} ·{" "}
+              {formatoDataCurta.format(new Date(tentativaAnterior.criadoEm))}
+            </p>
+            {tentativaAnterior.motivoTexto && (
+              <p className="mt-1 text-sm text-text-secondary">
+                <span className="font-medium text-text-primary">{tentativaAnterior.motivoRotulo}:</span>{" "}
+                {tentativaAnterior.motivoTexto}
+              </p>
+            )}
+            {tentativaAnterior.anexos.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-3">
+                {tentativaAnterior.anexos.map((a) => (
+                  <a
+                    key={a.url}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex flex-col items-start gap-1 ${FOCUS_RING}`}
+                  >
+                    <span className="text-xs font-medium text-text-secondary">{a.rotulo}</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- URL assinada do Storage */}
+                    <img
+                      src={a.url}
+                      alt={a.rotulo}
+                      className="h-24 w-24 rounded-[var(--radius-sm)] border border-border object-cover transition-opacity hover:opacity-80"
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         {historico.length > 0 && (
           <section className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface p-4">
             <HistoricoChamado eventos={historico} />
@@ -145,7 +316,31 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
         )}
 
         <div className="mt-5">
-          {status === "planejado" && <IniciarServicoForm servicoId={servicoRaw.id as string} />}
+          {status === "planejado" && (
+            <div className="flex flex-col gap-4">
+              <IniciarServicoForm servicoId={servicoRaw.id as string} />
+
+              {apontamentoDesteServico ? (
+                <p className="rounded-[var(--radius-md)] border border-border bg-surface-input p-3 text-xs text-text-secondary">
+                  ⚠ Você apontou um problema neste serviço em{" "}
+                  {formatoDataCurta.format(new Date(apontamentoDesteServico.criado_em as string))} — o
+                  gerente foi avisado.
+                </p>
+              ) : (
+                <details className="group rounded-[var(--radius-md)] border border-border p-3">
+                  <summary
+                    className={`flex cursor-pointer items-center gap-2 text-xs font-medium text-text-tertiary ${FOCUS_RING}`}
+                  >
+                    Este serviço tem um problema
+                    <span className="ml-auto font-normal group-open:hidden">toque pra abrir</span>
+                  </summary>
+                  <div className="mt-3">
+                    <AvaliarServicoForm servicoId={servicoRaw.id as string} />
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
 
           {status === "em_execucao" && (
             <div className="flex flex-col gap-4">

@@ -155,6 +155,46 @@
   background: var(--pill-hover);
 }
 
+/* sino de respostas novas do cliente (0036) */
+.sino {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--pill);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: background 160ms var(--ease);
+}
+.sino:hover {
+  background: var(--pill-hover);
+}
+.sinoAtivo {
+  background: #1e3a6e; /* --accent do app; fixo aqui pra não vazar token */
+  color: #fff;
+}
+.sinoAtivo:hover {
+  background: #16305a;
+}
+.sinoBadge {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 18px;
+}
+.sino:not(.sinoAtivo) .sinoBadge {
+  background: rgba(0, 0, 0, 0.12);
+}
+
 /* ---------- a pasta ---------- */
 .tab {
   position: absolute;

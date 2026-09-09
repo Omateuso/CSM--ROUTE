@@ -8,7 +8,9 @@ import { SlaBadge } from "./sla-badge";
 import { StatusChamadoBadge, type StatusChamado } from "./status-chamado-badge";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 import { computeSlaStatus, type SlaStatus } from "@/lib/sla";
-import { buscarDetalheChamado, type DetalheChamado } from "./actions";
+import { buscarDetalheChamado, marcarRespostasVistas, type DetalheChamado } from "./actions";
+
+const DETALHE_VAZIO: DetalheChamado = { descricao: null, historico: [], respostas: [], anexosCliente: [] };
 
 type Rt = { id: string; codigo: string; endereco: string; regiaoNome: string; zonaNome: string };
 
@@ -20,10 +22,13 @@ export type ChamadoRow = {
   rtNome: string;
   regiaoNome: string;
   zonaNome: string;
-  assunto: string;  prioridade: Prioridade;
+  assunto: string;
+  prioridade: Prioridade;
   status: StatusChamado;
   slaPrazo: string | null;
-  criadoEm: string;};
+  criadoEm: string;
+  temRespostaNova: boolean;
+};
 
 const SLA_OPTIONS: { value: SlaStatus; label: string }[] = [
   { value: "vencido", label: "SLA vencido" },
@@ -58,6 +63,8 @@ export function ChamadosManager({
   const [prioridadeFiltro, setPrioridadeFiltro] = useState("todas");
   const [regiaoFiltro, setRegiaoFiltro] = useState("todas");
   const [slaFiltro, setSlaFiltro] = useState("todos");
+  const [soRespostaNova, setSoRespostaNova] = useState(false);
+  const totalRespostaNova = useMemo(() => chamados.filter((c) => c.temRespostaNova).length, [chamados]);
   const [modoDialogo, setModoDialogo] = useState<ModoDialogo>("nenhum");
   const [chamadoSelecionado, setChamadoSelecionado] = useState<ChamadoRow | null>(null);
   // ver comentário equivalente em rts-manager.tsx: força os diálogos a
@@ -85,6 +92,7 @@ export function ChamadosManager({
   const linhasFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return chamados.filter((c) => {
+      if (soRespostaNova && !c.temRespostaNova) return false;
       if (prioridadeFiltro !== "todas" && c.prioridade !== prioridadeFiltro) return false;
       if (regiaoFiltro !== "todas" && c.regiaoNome !== regiaoFiltro) return false;
       if (slaFiltro !== "todos") {
@@ -101,7 +109,7 @@ export function ChamadosManager({
         (c.tomticketId ?? "").toLowerCase().includes(termo)
       );
     });
-  }, [chamados, busca, prioridadeFiltro, regiaoFiltro, slaFiltro]);
+  }, [chamados, busca, prioridadeFiltro, regiaoFiltro, slaFiltro, soRespostaNova]);
 
   // Renderizar a lista inteira de uma vez era o gargalo real da tela: com
   // ~300 chamados o HTML passava de 750kb, e cada linha ainda é serializada
@@ -127,7 +135,9 @@ export function ChamadosManager({
       setDetalhe(null);
       buscarDetalheChamado(chamado.id)
         .then(setDetalhe)
-        .catch(() => setDetalhe({ descricao: null, historico: [] }));
+        .catch(() => setDetalhe(DETALHE_VAZIO));
+      // Abrir o chamado = "li as respostas do cliente" — some do sino.
+      if (chamado.temRespostaNova) void marcarRespostasVistas(chamado.id);
     }
   }
 
@@ -204,6 +214,21 @@ export function ChamadosManager({
           ))}
         </select>
 
+        {totalRespostaNova > 0 && (
+          <button
+            type="button"
+            onClick={() => setSoRespostaNova((v) => !v)}
+            aria-pressed={soRespostaNova}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${FOCUS_RING} ${
+              soRespostaNova
+                ? "border-accent bg-accent text-white"
+                : "border-accent/40 bg-accent/10 text-accent hover:bg-accent/20"
+            }`}
+          >
+            🔔 {totalRespostaNova} com resposta nova
+          </button>
+        )}
+
         <div className="ml-auto flex flex-col items-end gap-1">
           <button
             type="button"
@@ -260,7 +285,18 @@ export function ChamadosManager({
                   <p className="mt-0.5 text-xs text-text-tertiary">{c.rtNome}</p>
                 </td>
                 <td className="px-4 py-2.5 align-top">
-                  <p className="text-text-primary">{c.assunto}</p>
+                  <p className="text-text-primary">
+                    {c.temRespostaNova && (
+                      <span
+                        className="mr-1.5 align-middle text-accent"
+                        title="Resposta nova do cliente no TomTicket"
+                        aria-label="Resposta nova do cliente"
+                      >
+                        🔔
+                      </span>
+                    )}
+                    {c.assunto}
+                  </p>
                   {c.tomticketId && (
                     <p className="mt-0.5 font-mono text-xs text-text-tertiary">
                       #{c.tomticketId}

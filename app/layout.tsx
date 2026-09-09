@@ -42,11 +42,20 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   let role: "gerente" | "gestao" | null = null;
   let nome = "";
+  let respostasNaoVistas = 0;
   if (user) {
     const { data: profile } = await supabase.from("profiles").select("nome, role").eq("id", user.id).single();
     if (profile?.role === "gerente" || profile?.role === "gestao") {
       role = profile.role;
       nome = profile.nome ?? user.email ?? "";
+      // Sino global: respostas de cliente ainda não vistas (0036). A RLS
+      // restringe a gerente/gestão, então a contagem já vem escopada.
+      const { count } = await supabase
+        .from("chamado_respostas")
+        .select("id", { count: "exact", head: true })
+        .eq("tipo", "cliente")
+        .is("visto_em", null);
+      respostasNaoVistas = count ?? 0;
     }
   }
 
@@ -56,7 +65,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {role ? <AppNav role={role} nome={nome}>{children}</AppNav> : children}
+        {role ? (
+          <AppNav role={role} nome={nome} respostasNaoVistas={respostasNaoVistas}>
+            {children}
+          </AppNav>
+        ) : (
+          children
+        )}
         <RegisterServiceWorker />
       </body>
     </html>

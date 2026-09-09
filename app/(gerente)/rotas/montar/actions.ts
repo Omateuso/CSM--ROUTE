@@ -28,8 +28,6 @@ export async function confirmarRota(_prev: ActionState, formData: FormData): Pro
   const equipeId = String(formData.get("equipeId") ?? "");
   const rtIdsRaw = String(formData.get("rtIds") ?? "");
   const tecnicoIdsRaw = String(formData.get("tecnicoIds") ?? "");
-  // Opcional: ausente = leva todos os elegíveis (comportamento de sempre).
-  const chamadoIdsRaw = String(formData.get("chamadoIds") ?? "");
 
   if (!data) return { error: "Selecione a data da rota." };
   if (!equipeId) return { error: "Selecione a equipe." };
@@ -59,28 +57,15 @@ export async function confirmarRota(_prev: ActionState, formData: FormData): Pro
   }
 
   const supabase = await createClient();
-  let chamadoIds: string[] | null = null;
-  if (chamadoIdsRaw) {
-    try {
-      const bruto = JSON.parse(chamadoIdsRaw);
-      if (!Array.isArray(bruto) || !bruto.every((v) => typeof v === "string")) {
-        return { error: "Seleção de chamados inválida." };
-      }
-      chamadoIds = bruto as string[];
-    } catch {
-      return { error: "Seleção de chamados inválida." };
-    }
-    if (chamadoIds.length === 0) {
-      return { error: "Selecione ao menos um chamado para a rota." };
-    }
-  }
 
+  // Sem `p_chamado_ids`: `fn_confirmar_rota` gera um serviço por chamado
+  // elegível de cada RT (o técnico recebe todos os chamados em aberto). A
+  // escolha manual por chamado (0033) foi removida em 09/09/2026.
   const { data: rotaId, error } = await supabase.rpc("fn_confirmar_rota", {
     p_data: data,
     p_equipe_id: equipeId,
     p_rt_ids: rtIds,
     p_tecnico_ids: tecnicoIds,
-    p_chamado_ids: chamadoIds,
   });
 
   if (error) return { error: traduzErro(error) };

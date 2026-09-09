@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ValidacaoCard, type ServicoConcluidoRow } from "./validacao-card";
 import { ReagendamentoCard, type ServicoTravadoRow } from "./reagendamento-card";
+import { ApontamentoCard, type ApontamentoRow } from "./apontamento-card";
 import { ValidadosRecentes, type ValidadoRow } from "./validados-recentes";
 import { PendenciasLinkButton } from "./pendencias-link-button";
 import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
@@ -27,12 +28,16 @@ function unwrapMany<T>(value: T | T[] | null | undefined): T[] {
 export default async function ValidacaoPage() {
   const supabase = await createClient();
 
+  // Sessão do cookie, sem ida à rede — o proxy.ts (middleware) já fez o
+  // getUser() autoritativo + refresh do token nesta requisição e redireciona
+  // quem não está logado. Aqui só precisa do id pra buscar a role; RLS é o
+  // backstop por linha.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) redirect("/login");
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.user.id).single();
   if (profile?.role !== "gerente") {
     return (
       <div className="flex flex-1 items-center justify-center px-4">
@@ -47,6 +52,7 @@ export default async function ValidacaoPage() {
     { data: concluidosRaw, error: concluidosError },
     { data: travadosRaw, error: travadosError },
     { data: validadosRaw, error: validadosError },
+    { data: apontamentosRaw, error: apontamentosError },
   ] = await Promise.all([
     supabase
       .from("servicos")
@@ -68,18 +74,40 @@ export default async function ValidacaoPage() {
       )
       .order("validado_em", { ascending: false })
       .limit(20),
+    // Fase 4 (seção 7, 0037) — apontamentos do técnico. O serviço fica
+    // `planejado`; o filtro pra "ainda aberto" é feito em JS (serviço saiu
+    // de `planejado` = o técnico iniciou ou o gerente reagendou = o
+    // apontamento deixou de ser pendência).
+    supabase
+      .from("historico")
+      .select(
+        "id, descricao, criado_em, servico_id, servicos(id, status, chamado_id, tecnico:tecnico_id(nome), chamados(assunto, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome), rotas(data), evidencias(tipo, momento, storage_path))",
+      )
+      .eq("evento", "servico_avaliado")
+      .order("criado_em", { ascending: false }),
   ]);
 
-  if (concluidosError || travadosError || validadosError) {
+  if (concluidosError || travadosError || validadosError || apontamentosError) {
     return (
       <div className="flex flex-1 items-center justify-center px-4">
         <p className="text-sm text-danger">
           Não foi possível carregar os dados (
-          {concluidosError?.message ?? travadosError?.message ?? validadosError?.message}).
+          {concluidosError?.message ??
+            travadosError?.message ??
+            validadosError?.message ??
+            apontamentosError?.message}
+          ).
         </p>
       </div>
     );
   }
+
+  // Só os apontamentos "abertos": serviço ainda `planejado`. Um chamado pode
+  // ter mais de um serviço avaliado ao longo do tempo — a linha do histórico
+  // carrega o `servico_id`, então dá pra casar sem ambiguidade.
+  const apontamentosAbertos = (apontamentosRaw ?? []).filter(
+    (h) => unwrapOne(h.servicos)?.status === "planejado",
+  );
 
   // Versão mínima da Parte E adiantada (ver lib/ui/historico-chamado.tsx) —
   // o gerente decidindo validar ou reagendar de novo precisa ver se aquele
@@ -90,6 +118,7 @@ export default async function ValidacaoPage() {
         ...(concluidosRaw ?? []).map((s) => s.chamado_id as string),
         ...(travadosRaw ?? []).map((s) => s.chamado_id as string),
         ...(validadosRaw ?? []).map((v) => unwrapOne(v.servicos)?.chamado_id as string).filter(Boolean),
+        ...apontamentosAbertos.map((h) => unwrapOne(h.servicos)?.chamado_id as string).filter(Boolean),
       ],
     ),
   ];
@@ -177,6 +206,11 @@ export default async function ValidacaoPage() {
     ...(concluidosRaw ?? []).flatMap((s) => unwrapMany(s.evidencias).map((e) => e.storage_path as string)),
     ...(validadosRaw ?? []).flatMap((v) =>
       unwrapMany(unwrapOne(v.servicos)?.evidencias).map((e) => e.storage_path as string),
+    ),
+    ...apontamentosAbertos.flatMap((h) =>
+      unwrapMany(unwrapOne(h.servicos)?.evidencias)
+        .filter((e) => e.momento === "avaliacao")
+        .map((e) => e.storage_path as string),
     ),
   ];
   const urlPorCaminho = new Map<string, string>();
@@ -293,6 +327,32 @@ export default async function ValidacaoPage() {
     };
   });
 
+  const apontamentos: ApontamentoRow[] = apontamentosAbertos.map((h) => {
+    const servico = unwrapOne(h.servicos);
+    const chamado = servico ? unwrapOne(servico.chamados) : null;
+    const rt = servico ? unwrapOne(servico.rts) : null;
+    const rota = servico ? unwrapOne(servico.rotas) : null;
+    const foto = servico
+      ? unwrapMany(servico.evidencias).find((e) => e.momento === "avaliacao")
+      : null;
+    return {
+      servicoId: (servico?.id as string | undefined) ?? "",
+      apontadoEm: h.criado_em as string,
+      descricao: (h.descricao as string | null) ?? "—",
+      fotoUrl: foto ? (urlPorCaminho.get(foto.storage_path as string) ?? null) : null,
+      tecnicoNome: servico ? (unwrapOne(servico.tecnico)?.nome ?? "—") : "—",
+      rtCodigo: rt?.codigo ?? "—",
+      rtNome: rt?.nome ?? "—",
+      chamadoAssunto: chamado?.assunto ?? "—",
+      prioridade: chamado?.prioridade ?? "normal",
+      slaPrazo: (chamado?.sla_prazo as string | null) ?? null,
+      chamadoStatus: chamado?.status ?? "aberto",
+      tomticketId: (chamado?.tomticket_id as string | null) ?? null,
+      rotaData: (rota?.data as string | null) ?? null,
+      historico: historicoPorChamado.get(servico?.chamado_id as string) ?? [],
+    };
+  });
+
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -308,22 +368,15 @@ export default async function ValidacaoPage() {
       </header>
 
       {/* Resumo clicável (25/08/2026) — mesmo layout dos cards de "Operação
-          de hoje" do Dashboard, mas cada um navega (âncora) pra listagem
-          correspondente logo abaixo, na ordem em que elas aparecem na página. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <OperacaoHojeCard label="Validados recentemente" value={validados.length} href="#validados-recentemente" />
+          de hoje" do Dashboard, cada um é âncora pra seção logo abaixo. A
+          ordem segue a prioridade de AÇÃO (Fase 6): o que precisa de decisão
+          primeiro, o arquivo de "Validados recentemente" por último. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <OperacaoHojeCard label="Aguardando validação" value={concluidos.length} href="#aguardando-validacao" />
+        <OperacaoHojeCard label="Apontados pelo técnico" value={apontamentos.length} href="#apontados" />
         <OperacaoHojeCard label="Travados em rota já passada" value={travados.length} href="#travados" />
+        <OperacaoHojeCard label="Validados recentemente" value={validados.length} href="#validados-recentemente" />
       </div>
-
-      <ValidadosRecentes
-        validados={validados}
-        id="validados-recentemente"
-        // Texto montado no servidor: a saudação depende da hora, e gerar dos
-        // dois lados abriria descasamento de hidratação.
-        mensagemPadrao={mensagemConclusao()}
-        integracaoAtiva={tomticketConfigurado()}
-      />
 
       <section id="aguardando-validacao" className="mt-10 scroll-mt-24">
         <h2 className="text-sm font-semibold text-text-primary">
@@ -337,6 +390,28 @@ export default async function ValidacaoPage() {
           <div className="mt-3 flex flex-col gap-3">
             {concluidos.map((s) => (
               <ValidacaoCard key={s.servicoId} servico={s} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section id="apontados" className="mt-10 scroll-mt-24">
+        <h2 className="text-sm font-semibold text-text-primary">
+          Apontados pelo técnico <span className="font-normal text-text-tertiary">({apontamentos.length})</span>
+        </h2>
+        <p className="mt-1 text-xs text-text-tertiary">
+          Serviços ainda não iniciados em que o técnico apontou um problema (chamado já resolvido, RT
+          errada, escopo diferente...). O serviço segue na rota — reagende pra liberar o chamado, ou
+          ignore se o técnico deve seguir mesmo assim.
+        </p>
+        {apontamentos.length === 0 ? (
+          <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+            Nenhum apontamento em aberto.
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3">
+            {apontamentos.map((s) => (
+              <ApontamentoCard key={s.servicoId} servico={s} />
             ))}
           </div>
         )}
@@ -358,6 +433,18 @@ export default async function ValidacaoPage() {
           </div>
         )}
       </section>
+
+      {/* Arquivo do que já foi fechado — fica por último (Fase 6): não é
+          decisão pendente, é consulta pra copiar/anexar de volta no
+          TomTicket. Os cards de resumo acima levam direto aqui. */}
+      <ValidadosRecentes
+        validados={validados}
+        id="validados-recentemente"
+        // Texto montado no servidor: a saudação depende da hora, e gerar dos
+        // dois lados abriria descasamento de hidratação.
+        mensagemPadrao={mensagemConclusao()}
+        integracaoAtiva={tomticketConfigurado()}
+      />
     </div>
   );
 }

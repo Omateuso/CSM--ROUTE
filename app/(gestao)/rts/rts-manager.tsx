@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { alternarAtivo } from "./actions";
 import { RtCreateDialog } from "./rt-create-dialog";
 import { RtEditDialog } from "./rt-edit-dialog";
@@ -145,8 +146,13 @@ export function RtsManager({
           <tbody className="divide-y divide-border">
             {linhasFiltradas.map((rt) => (
               <tr key={rt.id}>
-                <td className="px-4 py-2.5 align-top font-mono text-xs tabular-nums text-text-secondary">
-                  {rt.codigo}
+                <td className="px-4 py-2.5 align-top font-mono text-xs tabular-nums">
+                  <Link
+                    href={`/rts/${rt.id}`}
+                    className={`text-accent hover:text-accent-hover hover:underline ${FOCUS_RING}`}
+                  >
+                    {rt.codigo}
+                  </Link>
                 </td>
                 <td className="px-4 py-2.5 align-top">
                   <p className="text-text-primary">{rt.nome}</p>
