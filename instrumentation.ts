@@ -46,6 +46,22 @@ export async function register() {
   // um ciclo lento faria os seguintes empilharem e disputarem as mesmas linhas.
   let rodando = false;
 
+  // Expurgo das posições dos técnicos (Fase 5, 0038) — a trilha do dia é
+  // append-only e não pode crescer pra sempre; a política é 7 dias.
+  // Piggyback no ciclo do coletor (a cada ~5 min), mas só age de fato 1×/dia.
+  let ultimoExpurgo = 0;
+  async function expurgarPosicoes() {
+    if (Date.now() - ultimoExpurgo < 20 * 60 * 60 * 1000) return;
+    try {
+      const { data, error } = await supabase.rpc("fn_expurgar_posicoes", { p_dias: 7 });
+      if (error) throw error;
+      ultimoExpurgo = Date.now();
+      if (data) console.log(`[posicao] expurgo: ${data} ping(s) antigos apagados.`);
+    } catch (erro) {
+      console.error("[posicao] expurgo falhou:", erro instanceof Error ? erro.message : String(erro));
+    }
+  }
+
   async function rodar() {
     if (rodando) {
       console.log("[sync] passada anterior ainda rodando — pulei esta.");
@@ -74,6 +90,7 @@ export async function register() {
     } finally {
       rodando = false;
     }
+    await expurgarPosicoes();
   }
 
   console.log(`[sync] agendada a cada ${minutos} min.`);
