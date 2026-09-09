@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ChamadosManager, type ChamadoRow } from "./chamados-manager";
-import { type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { SyncTomticketButton, type SyncInfo } from "./sync-tomticket-button";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
 
@@ -41,7 +40,7 @@ export default async function ChamadosPage() {
   }
 
   // "+ Novo chamado" fica habilitado só pra gestão por enquanto (decisão
-  // de 16/08/2026, ver Atualizações_futuras.md): no fluxo real, quem cria
+  // de 16/08/2026, ver docs/atualizacoes-futuras.md): no fluxo real, quem cria
   // chamado é o cliente/CAPS no TomTicket — o gerente não deveria precisar
   // originar chamados manualmente. A exceção é a gestão em visita a uma RT,
   // que pode identificar um problema in loco e já registrar. O gerente
@@ -56,7 +55,7 @@ export default async function ChamadosPage() {
     supabase
       .from("chamados")
       .select(
-        "id, tomticket_id, rt_id, assunto, descricao, prioridade, status, sla_prazo, criado_em, rts(codigo, nome, regioes(nome, zonas(nome)))",
+        "id, tomticket_id, rt_id, assunto, prioridade, status, sla_prazo, criado_em, rts(codigo, nome, regioes(nome, zonas(nome)))",
       )
       .order("criado_em", { ascending: false }),
     supabase
@@ -75,31 +74,10 @@ export default async function ChamadosPage() {
     );
   }
 
-  // Parte E adiantada (ver lib/ui/historico-chamado.tsx): busca a tabela
-  // inteira em vez de filtrar por `in (chamado_id...)` — com ~1000
-  // chamados esse filtro viraria uma URL gigante (cada uuid ~36 chars);
-  // a tabela historico em si é bem menor (só chamado que entrou numa rota
-  // gera evento), então trazer tudo e agrupar em JS é mais simples e leve.
-  const { data: historicoRaw } = await supabase
-    .from("historico")
-    .select("id, chamado_id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
-    .order("criado_em", { ascending: true });
-
-  const historicoPorChamado = new Map<string, HistoricoEvento[]>();
-  for (const h of historicoRaw ?? []) {
-    const chave = h.chamado_id as string;
-    const lista = historicoPorChamado.get(chave) ?? [];
-    lista.push({
-      id: h.id as string,
-      evento: h.evento as string,
-      descricao: h.descricao as string | null,
-      categoria: (h.categoria as string | null) ?? null,
-      criadoEm: h.criado_em as string,
-      criadoPorNome: unwrapOne(h.criado_por)?.nome ?? null,
-    });
-    historicoPorChamado.set(chave, lista);
-  }
-
+  // A linha do tempo e a mensagem do chamado NÃO vêm mais aqui: eram lidas só
+  // dentro do modal, mas viajavam pros ~300 chamados de uma vez, inflando o
+  // HTML da tela e o payload de hidratação. Agora `buscarDetalheChamado`
+  // (actions.ts) busca as duas quando o modal abre, de um chamado só.
   const rts = (rtsRaw ?? [])
     .map((rt) => {
       const regiao = unwrapOne(rt.regioes);
@@ -132,14 +110,10 @@ export default async function ChamadosPage() {
       rtNome: rt?.nome ?? "—",
       regiaoNome: regiao?.nome ?? "—",
       zonaNome: unwrapOne(regiao?.zonas)?.nome ?? "—",
-      assunto: c.assunto as string,
-      descricao: c.descricao as string | null,
-      prioridade: c.prioridade as ChamadoRow["prioridade"],
+      assunto: c.assunto as string,      prioridade: c.prioridade as ChamadoRow["prioridade"],
       status: c.status as ChamadoRow["status"],
       slaPrazo: c.sla_prazo as string | null,
-      criadoEm: c.criado_em as string,
-      historico: historicoPorChamado.get(c.id as string) ?? [],
-    };
+      criadoEm: c.criado_em as string,    };
   });
 
   // Estado da coleta (0030). Sem isto, a sync pode morrer e a tela seguir

@@ -8,7 +8,7 @@ import { SlaBadge } from "./sla-badge";
 import { StatusChamadoBadge, type StatusChamado } from "./status-chamado-badge";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 import { computeSlaStatus, type SlaStatus } from "@/lib/sla";
-import { type HistoricoEvento } from "@/lib/ui/historico-chamado";
+import { buscarDetalheChamado, type DetalheChamado } from "./actions";
 
 type Rt = { id: string; codigo: string; endereco: string; regiaoNome: string; zonaNome: string };
 
@@ -20,14 +20,10 @@ export type ChamadoRow = {
   rtNome: string;
   regiaoNome: string;
   zonaNome: string;
-  assunto: string;
-  descricao: string | null;
-  prioridade: Prioridade;
+  assunto: string;  prioridade: Prioridade;
   status: StatusChamado;
   slaPrazo: string | null;
-  criadoEm: string;
-  historico: HistoricoEvento[];
-};
+  criadoEm: string;};
 
 const SLA_OPTIONS: { value: SlaStatus; label: string }[] = [
   { value: "vencido", label: "SLA vencido" },
@@ -44,6 +40,10 @@ const formatoData = new Intl.DateTimeFormat("pt-BR", {
   hour: "2-digit",
   minute: "2-digit",
 });
+
+// 50 por página: o suficiente pra rolar sem paginar toda hora, e pequeno o
+// bastante pra manter o HTML leve.
+const POR_PAGINA = 50;
 
 export function ChamadosManager({
   chamados,
@@ -63,6 +63,8 @@ export function ChamadosManager({
   // ver comentário equivalente em rts-manager.tsx: força os diálogos a
   // remontar do zero a cada abertura.
   const [dialogInstancia, setDialogInstancia] = useState(0);
+  const [pagina, setPagina] = useState(1);
+  const [detalhe, setDetalhe] = useState<DetalheChamado | null>(null);
 
   // Regiões agrupadas por zona (mesma fonte que o seletor de RT dos
   // diálogos) — todas as 98 RTs entram aqui, então o filtro sempre lista
@@ -101,10 +103,32 @@ export function ChamadosManager({
     });
   }, [chamados, busca, prioridadeFiltro, regiaoFiltro, slaFiltro]);
 
+  // Renderizar a lista inteira de uma vez era o gargalo real da tela: com
+  // ~300 chamados o HTML passava de 750kb, e cada linha ainda é serializada
+  // de novo no payload de hidratação. Os dados continuam TODOS em memória
+  // (a busca e os filtros seguem instantâneos, sem ida ao servidor) — só a
+  // renderização é paginada.
+  const totalPaginas = Math.max(1, Math.ceil(linhasFiltradas.length / POR_PAGINA));
+  // Filtrar pode encolher a lista abaixo da página atual; sem isto a tela
+  // ficaria vazia sem explicação.
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const inicio = (paginaAtual - 1) * POR_PAGINA;
+  const linhasVisiveis = linhasFiltradas.slice(inicio, inicio + POR_PAGINA);
+
   function abrir(modo: ModoDialogo, chamado: ChamadoRow | null = null) {
     setChamadoSelecionado(chamado);
     setModoDialogo(modo);
     setDialogInstancia((n) => n + 1);
+
+    // Mensagem e histórico não vêm na lista (inflavam o HTML de toda a tela
+    // pra serem lidos num chamado só). Busca aqui, no clique — evento, não
+    // efeito, então não esbarra na regra react-hooks/set-state-in-effect.
+    if (modo === "detalhes" && chamado) {
+      setDetalhe(null);
+      buscarDetalheChamado(chamado.id)
+        .then(setDetalhe)
+        .catch(() => setDetalhe({ descricao: null, historico: [] }));
+    }
   }
 
   function fechar() {
@@ -201,7 +225,10 @@ export function ChamadosManager({
       </div>
 
       <p className="mb-2 text-xs text-text-tertiary" role="status">
-        {linhasFiltradas.length} de {chamados.length} chamados
+        {linhasFiltradas.length === 0
+          ? "Nenhum chamado com esses filtros"
+          : `Mostrando ${inicio + 1}–${inicio + linhasVisiveis.length} de ${linhasFiltradas.length}`}
+        {linhasFiltradas.length !== chamados.length && ` (${chamados.length} no total)`}
       </p>
 
       <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
@@ -220,7 +247,7 @@ export function ChamadosManager({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {linhasFiltradas.map((c) => (
+            {linhasVisiveis.map((c) => (
               <tr
                 key={c.id}
                 onClick={() => abrir("detalhes", c)}
@@ -281,6 +308,30 @@ export function ChamadosManager({
         </table>
       </div>
 
+      {totalPaginas > 1 && (
+        <nav aria-label="Paginação dos chamados" className="mt-3 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setPagina(paginaAtual - 1)}
+            disabled={paginaAtual <= 1}
+            className={`rounded-[var(--radius-sm)] border border-border px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-text-primary ${FOCUS_RING}`}
+          >
+            ← Anterior
+          </button>
+          <span className="text-xs text-text-tertiary" aria-current="page">
+            Página {paginaAtual} de {totalPaginas}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPagina(paginaAtual + 1)}
+            disabled={paginaAtual >= totalPaginas}
+            className={`rounded-[var(--radius-sm)] border border-border px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-text-primary ${FOCUS_RING}`}
+          >
+            Próxima →
+          </button>
+        </nav>
+      )}
+
       <ChamadoCreateDialog
         key={`criar-${dialogInstancia}`}
         open={modoDialogo === "criar"}
@@ -291,6 +342,7 @@ export function ChamadosManager({
         key={`detalhes-${dialogInstancia}`}
         open={modoDialogo === "detalhes"}
         chamado={chamadoSelecionado}
+        detalhe={detalhe}
         onClose={fechar}
       />
     </div>

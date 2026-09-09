@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CSM ROUTE — Gestão Operacional de Manutenção das RTs
 
-## Getting Started
+Plataforma que organiza a manutenção predial das Residências Terapêuticas (RTs)
+administradas pela iGEDES e atendidas pela CSM.
 
-First, run the development server:
+**Não substitui o TomTicket** — é a camada operacional entre "chamado aberto" e
+"chamado respondido": planeja rotas, captura a execução em campo (foto, OS,
+observação, geolocalização) no momento em que ela acontece, e devolve o
+resultado ao TomTicket com os anexos.
+
+Três perfis, três interfaces:
+
+| Perfil | O que faz |
+|---|---|
+| **Gerente** | Monta e confirma rotas, acompanha a execução, valida os serviços |
+| **Técnico** | Tela mobile enxuta: vê os serviços do dia, inicia, conclui com evidência |
+| **Gestão** | Visão consolidada, indicadores, relatórios. Também é quem cadastra RTs |
+
+## Rodando localmente
 
 ```bash
+npm install
+cp .env.example .env.local   # preencha os valores
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` nunca vai pro git. O que cada variável faz está comentado no
+`.env.example` — as do Supabase são obrigatórias; sem o token do TomTicket o app
+sobe normalmente, só a integração fica indisponível.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Estrutura
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/            Rotas (App Router), agrupadas por persona
+  (gerente)/    Dashboard, montar/confirmar rota, validação, pendências
+  (tecnico)/    Serviços do dia e execução em campo
+  (gestao)/     Painel consolidado e relatórios
+  chamados/     Compartilhada gerente+gestão
+  api/          Route handlers (sugestão de rota, sync do TomTicket)
 
-## Learn More
+lib/            Lógica de negócio, sem UI
+  routing/      Pontuação e escolha de RT — decide a OPERAÇÃO
+  maps/google/  Integração Google Maps — fornece a GEOGRAFIA
+  tomticket/    Cliente da API v2.0, coleta e mensagens
+  relatorio/    Blocos do relatório (HTML e PDF)
+  supabase/     Clientes de browser, servidor e middleware
+  ui/           Componentes compartilhados
 
-To learn more about Next.js, take a look at the following resources:
+supabase/migrations/   Schema, numerado e sequencial
+scripts/               Utilitários de linha de comando
+docs/                  Plano de fases, guias e material de referência
+public/                Assets servidos
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`routing/` e `maps/` são separados de propósito: o Google diz distância e tempo,
+mas quem escolhe qual RT visitar é o nosso algoritmo.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Banco de dados
 
-## Deploy on Vercel
+Migrations rodam no SQL Editor do Supabase, **em ordem numérica**. Uma vez
+aplicada, uma migration nunca é editada — corrija criando a próxima.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Toda tabela tem RLS habilitado, e a policy nasce na mesma migration que cria a
+tabela. Permissão é sempre garantida na RLS, nunca só escondendo o botão na
+interface.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Scripts
+
+```bash
+npm run dev            # desenvolvimento
+npm run build          # build de produção (roda sempre que mexer em "use server")
+npm run lint
+
+node scripts/diagnostico-tomticket.mjs      # confere o token e o casamento RT (só leitura)
+node scripts/verificar-telas.mjs            # abre as telas num navegador e reporta erros
+node scripts/reset-dados-operacionais.mjs   # zera dados de teste (sem --confirmar, só simula)
+node scripts/seed-test-users.mjs            # cria os usuários de teste
+```
+
+## Documentação
+
+- [`docs/plano-de-fases.md`](docs/plano-de-fases.md) — o plano completo, fase a fase
+- [`docs/atualizacoes-futuras.md`](docs/atualizacoes-futuras.md) — ideias registradas, ainda não implementadas
+- [`docs/guia-skills-design.md`](docs/guia-skills-design.md) — quando usar cada skill de design
+- [`docs/referencias/`](docs/referencias/) — material de origem (timbrado, marca, códigos de referência)
+- `CLAUDE.md` — contexto e regras do projeto para assistentes de código
+
+## Sincronização com o TomTicket
+
+Os chamados chegam sozinhos, a cada 5 minutos, pela API v2.0 — o agendador vive
+em `instrumentation.ts` e roda dentro do processo do servidor, sem depender de
+ninguém estar logado. Em serverless (Vercel) quem assume é o cron do
+`vercel.json`, batendo em `POST /api/tomticket/sync`.
+
+Sincronizar traz **chamado**, não cria **rota**: quem gera serviço para o
+técnico é a confirmação de uma rota pelo gerente.

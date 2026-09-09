@@ -2,7 +2,7 @@
    app/globals.css: só esta página usa a paleta institucional da IGEDES
    (mesmo padrão de isolamento já usado em app-nav.module.css e
    login.module.css). Cores tiradas por amostragem de pixel direto do
-   timbrado real (copia.docx → word/media/image1.png), não de memória —
+   timbrado real (docs/referencias/timbrado-igedes.docx → word/media/image1.png), não de memória —
    o teal bateu exato com o que o usuário citou (#008A83), o vermelho real
    é #D22B1C (o prompt original citava #D04020, ligeiramente diferente).
 

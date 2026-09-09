@@ -7,6 +7,7 @@ import { SlaBadge } from "./sla-badge";
 import { StatusChamadoBadge } from "./status-chamado-badge";
 import { HistoricoChamado } from "@/lib/ui/historico-chamado";
 import type { ChamadoRow } from "./chamados-manager";
+import type { DetalheChamado } from "./actions";
 
 const formatoData = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -18,16 +19,19 @@ const formatoData = new Intl.DateTimeFormat("pt-BR", {
 
 // Só leitura de propósito — editar prioridade/status por aqui deixava de
 // fazer sentido depois que ficou claro que quem resolve o chamado de
-// verdade é o TomTicket, não este sistema (ver Atualizações_futuras.md,
+// verdade é o TomTicket, não este sistema (ver docs/atualizacoes-futuras.md,
 // item do botão "Abrir no TomTicket"). Essa tela é um espelho, não um
 // editor.
 export function ChamadoDetalheDialog({
   open,
   chamado,
+  detalhe,
   onClose,
 }: {
   open: boolean;
   chamado: ChamadoRow | null;
+  /** Mensagem e histórico, buscados quando o modal abre. `null` = carregando. */
+  detalhe: DetalheChamado | null;
   onClose: () => void;
 }) {
   return (
@@ -62,13 +66,15 @@ export function ChamadoDetalheDialog({
           <div>
             <p className="mb-1 text-xs text-text-tertiary">Mensagem</p>
             <p className="max-h-64 overflow-y-auto rounded-[var(--radius-sm)] border border-border bg-surface-input p-3 text-sm whitespace-pre-wrap text-text-primary">
-              {chamado.descricao || "Sem mensagem registrada."}
+              {detalhe === null
+                ? "Carregando..."
+                : detalhe.descricao || "Sem mensagem registrada."}
             </p>
           </div>
 
-          {chamado.historico.length > 0 && (
+          {detalhe !== null && detalhe.historico.length > 0 && (
             <div className="max-h-64 overflow-y-auto rounded-[var(--radius-sm)] border border-border p-3">
-              <HistoricoChamado eventos={chamado.historico} />
+              <HistoricoChamado eventos={detalhe.historico} />
             </div>
           )}
 

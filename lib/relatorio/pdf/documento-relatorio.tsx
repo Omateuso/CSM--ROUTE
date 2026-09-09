@@ -3,7 +3,7 @@ import path from "node:path";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import type { ReactNode } from "react";
 
-// Timbrado real (copia.docx → image1.png), mesmas cores por amostragem de
+// Timbrado real (docs/referencias/timbrado-igedes.docx → image1.png), mesmas cores por amostragem de
 // pixel já usadas no preview HTML (lib/relatorio/relatorio-print.module.css).
 // Cabeçalho/marca-d'água/rodapé usam a prop `fixed` do react-pdf — repete
 // em toda página automaticamente, sem os problemas de empilhamento que a

@@ -42,3 +42,50 @@ export async function criarChamado(_prev: ActionState, formData: FormData): Prom
   revalidatePath("/chamados");
   return { error: null };
 }
+
+
+// Mensagem e linha do tempo de UM chamado, buscadas quando o modal abre.
+//
+// Antes viajavam junto da lista, pros ~300 chamados de uma vez, mesmo sendo
+// usadas só aqui — inflava o HTML da tela e o payload de hidratação sem
+// ninguém ler. A lista continua trazendo tudo que ela própria mostra e filtra;
+// só o que é exclusivo do modal saiu de lá.
+export type DetalheChamado = {
+  descricao: string | null;
+  historico: {
+    id: string;
+    evento: string;
+    descricao: string | null;
+    categoria: string | null;
+    criadoEm: string;
+    criadoPorNome: string | null;
+  }[];
+};
+
+export async function buscarDetalheChamado(chamadoId: string): Promise<DetalheChamado> {
+  const supabase = await createClient();
+
+  const [{ data: chamado }, { data: eventos }] = await Promise.all([
+    supabase.from("chamados").select("descricao").eq("id", chamadoId).maybeSingle(),
+    supabase
+      .from("historico")
+      .select("id, evento, descricao, categoria, criado_em, criado_por:criado_por(nome)")
+      .eq("chamado_id", chamadoId)
+      .order("criado_em", { ascending: true }),
+  ]);
+
+  return {
+    descricao: (chamado?.descricao as string | null) ?? null,
+    historico: (eventos ?? []).map((h) => {
+      const autor = Array.isArray(h.criado_por) ? h.criado_por[0] : h.criado_por;
+      return {
+        id: h.id as string,
+        evento: h.evento as string,
+        descricao: (h.descricao as string | null) ?? null,
+        categoria: (h.categoria as string | null) ?? null,
+        criadoEm: h.criado_em as string,
+        criadoPorNome: autor?.nome ?? null,
+      };
+    }),
+  };
+}
