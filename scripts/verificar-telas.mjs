@@ -66,6 +66,21 @@ async function main() {
     });
     // Espera o conteúdo pintar (server component + hidratação).
     await page.locator("h1").first().waitFor({ timeout: TIMEOUT });
+    // Desde os loading.tsx (09/09/2026) o <h1> aparece JUNTO com o esqueleto
+    // de carregamento — é o ponto do desenho (título instantâneo), mas quer
+    // dizer que esperar por h1 não significa mais "tela pronta". Sem isto o
+    // screenshot sai cinza. querySelectorAll não fura shadow DOM, então não
+    // confunde com o overlay de dev do Next.
+    await page
+      .waitForFunction(
+        () =>
+          ![...document.querySelectorAll('[role="status"]')].some((n) =>
+            (n.textContent || "").includes("Carregando"),
+          ),
+        undefined,
+        { timeout: TIMEOUT },
+      )
+      .catch(() => {});
 
     const titulo = (await page.locator("h1").first().innerText()).trim();
     const arquivo = path.join(SAIDA, `${nome}.png`);

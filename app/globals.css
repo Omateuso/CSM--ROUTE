@@ -33,6 +33,13 @@
      localização da evidência confere com a RT (25/08/2026). */
   --success: #15803d;
 
+  /* Preenchimento dos esqueletos de carregamento (loading.tsx). Alpha, não
+     cor sólida, de propósito: o mesmo bloco precisa ler bem sobre o branco
+     do --surface (dentro de um card) e sobre o --paper do menu-pasta (o
+     corpo da pasta, ver app/app-nav.module.css). Uma cor sólida acertaria
+     um fundo e sumiria no outro. */
+  --skeleton: rgba(28, 25, 23, 0.09);
+
   /* Cores operacionais (ver CLAUDE.md, "Sistema de cores") — só usar nos
      badges de prioridade/SLA de chamados, nunca como accent genérico.
      Prioridade "baixa" fica sem cor (neutra) — não faz parte da tabela
@@ -69,6 +76,7 @@
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
   --color-success: var(--success);
+  --color-skeleton: var(--skeleton);
 
   --color-priority-emergencial: var(--priority-emergencial);
   --color-priority-alta: var(--priority-alta);
