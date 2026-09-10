@@ -16,6 +16,7 @@ import { formatarDataTomTicket } from "@/lib/tomticket/datas";
 import {
   mensagemConclusao,
   mensagemPendencia,
+  mensagemReagendamento,
   SAUDACOES,
   type Saudacao,
 } from "@/lib/tomticket/mensagens";
@@ -208,18 +209,23 @@ export async function responderChamadoTomticket(
   if (tipo === "conclusao") {
     padrao = ehTextoPadrao(mensagem, (s) => mensagemConclusao(s));
   } else {
+    // Pendência de verdade (`servico_pendente`, com categoria) ou reagendamento
+    // (`servico_reagendado`, sem categoria — texto genérico). Só define o rótulo
+    // "padrão vs. escrita pelo gerente" no histórico.
     const { data: evento } = await supabase
       .from("historico")
-      .select("categoria, descricao")
+      .select("evento, categoria, descricao")
       .eq("servico_id", servicoId)
-      .eq("evento", "servico_pendente")
+      .in("evento", ["servico_pendente", "servico_reagendado"])
       .order("criado_em", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (evento?.categoria) {
+    if (evento?.evento === "servico_pendente" && evento.categoria) {
       padrao = ehTextoPadrao(mensagem, (s) =>
         mensagemPendencia(evento.categoria as PendenciaCategoria, evento.descricao, s),
       );
+    } else if (evento?.evento === "servico_reagendado") {
+      padrao = ehTextoPadrao(mensagem, (s) => mensagemReagendamento(evento.descricao, s));
     }
   }
 

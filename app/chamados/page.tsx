@@ -47,6 +47,9 @@ export default async function ChamadosPage() {
   // mantém a permissão no banco (migration 0002) — só a UI fica pausada até
   // a gestão validar esse fluxo.
   const podeCriar = role === "gestao";
+  // Só o gerente responde o cliente pelo modal de detalhe (item 8, 10/09/2026)
+  // — mesma regra do fluxo de resposta na Validação/Pendências.
+  const podeResponder = role === "gerente";
 
   const [
     { data: chamadosRaw, error: chamadosError },
@@ -158,7 +161,12 @@ export default async function ChamadosPage() {
         )}
       </header>
 
-      <ChamadosManager chamados={chamados} rts={rts} podeCriar={podeCriar} />
+      <ChamadosManager
+        chamados={chamados}
+        rts={rts}
+        podeCriar={podeCriar}
+        podeResponder={podeResponder}
+      />
     </div>
   );
 }

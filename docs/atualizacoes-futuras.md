@@ -24,6 +24,8 @@ Não implementar nada disso agora — nem a tela de painel/relatório existe ain
 
 **Ainda não feito** (não pedido explicitamente ainda): o mesmo botão no modal de detalhes do chamado (`app/chamados/chamado-detalhe-dialog.tsx`), que era o local original imaginado aqui — reaproveitaria o mesmo helper `tomticketSearchUrl`, é barato de adicionar se o usuário quiser depois. Categoria/tipo de chamado da Busca Avançada continua não avaliado.
 
+**Parcialmente coberto (10/09/2026):** o modal de detalhes do chamado ganhou um compositor de **resposta ao cliente no TomTicket** (item 8 dos "8 ajustes de uso real" — ver CLAUDE.md), com anexos, sem finalizar. Não é o link "Ir para o TomTicket" (esse continua não estando no modal de detalhes), é uma ação de escrita — mas resolve na prática a necessidade que motivou o pedido. O link de conferência segue disponível na tela de Validação/Pendências.
+
 ### Técnico registrar problema resolvido sem chamado existente (2026-08-16)
 
 Cenário do usuário: o técnico, numa visita à RT, pode identificar um problema de manutenção que ainda não tem chamado nenhum aberto — e já resolver na hora. Hoje ele só teria como avisar o gerente informalmente (fora do sistema) pra alguém criar o chamado depois, retroativo.

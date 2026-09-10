@@ -1,20 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LogoutButton from "@/app/logout-button";
-import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badge";
-import { SlaBadge } from "@/app/chamados/sla-badge";
-import { RtGrupo } from "./rt-grupo";
-import { StatusServicoBadge, type StatusServico } from "../status-servico-badge";
-
-// Com ano: sem ele, um chamado de 2025 e um de 2026 aparecem como "08/09" e
-// "12/11" e o técnico lê fora de ordem, sem ter como perceber (achado do
-// usuário, 08/09/2026).
-const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
+import { ServicosDoDiaLista, type ServicoItem } from "./servicos-do-dia-lista";
+import type { Prioridade } from "@/app/chamados/prioridade-badge";
+import type { StatusServico } from "../status-servico-badge";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -58,15 +47,12 @@ export default async function ServicosDoDiaPage() {
     // escapado do cancelamento. Filtrar só por `servicos.status` fazia a
     // tela depender de os dois estados estarem sempre coerentes.
     .neq("rotas.status", "cancelada")
-    // Migration 0025: recusar/pendência de material podem cancelar um
-    // serviço de HOJE (diferente de reagendar, que só atuava em rota já
-    // passada) — cancelado não tem mais ação nenhuma pro técnico, não
-    // precisa aparecer na lista.
-    // `validado` é terminal: o gerente já fechou o ciclo, o técnico não tem
-    // mais nada a fazer ali. Deixar na lista só empilhava trabalho concluído
-    // no meio do que ainda falta. `concluido_tecnico` CONTINUA aparecendo —
-    // é a confirmação, pro técnico, de que o envio dele chegou.
-    .not("status", "in", "(cancelado,validado)");
+    // `cancelado`/`validado` são terminais pro técnico. `concluido_tecnico`
+    // também sai da lista (decisão do usuário, 10/09/2026): assim que o
+    // técnico conclui, a responsabilidade passa 100% pro gerente ("Aguardando
+    // validação") — deixar o card aqui só empilhava trabalho pronto no meio
+    // do que ainda falta.
+    .not("status", "in", "(cancelado,validado,concluido_tecnico)");
 
   if (servicosError) {
     return (
@@ -99,7 +85,7 @@ export default async function ServicosDoDiaPage() {
     for (const s of canceladosRaw ?? []) chamadosComTentativaAnterior.add(s.chamado_id as string);
   }
 
-  const servicos = (servicosRaw ?? [])
+  const servicos: ServicoItem[] = (servicosRaw ?? [])
     .map((s) => {
       const chamado = unwrapOne(s.chamados);
       const rt = unwrapOne(s.rts);
@@ -117,30 +103,10 @@ export default async function ServicosDoDiaPage() {
         criadoEm: chamado?.criado_em as string,
         prioridade: chamado?.prioridade as Prioridade,
         slaPrazo: (chamado?.sla_prazo as string | null) ?? null,
-        chamadoStatus: chamado?.status as "aberto" | "em_andamento" | "finalizado" | "cancelado",
+        chamadoStatus: chamado?.status as ServicoItem["chamadoStatus"],
       };
     })
     .sort((a, b) => (a.rotaData === b.rotaData ? a.ordem - b.ordem : a.rotaData.localeCompare(b.rotaData)));
-
-  // Agrupado por dia, na ordem cronológica (pedido do usuário, 08/09/2026).
-  const porDia = new Map<string, typeof servicos>();
-  for (const s of servicos) {
-    const lista = porDia.get(s.rotaData) ?? [];
-    lista.push(s);
-    porDia.set(s.rotaData, lista);
-  }
-  // Dentro de cada dia, agrupa por RT — o técnico visita CASAS, não chamados
-  // soltos. Uma rota com 8 chamados na mesma RT virava 8 cards repetindo o
-  // mesmo código e endereço (pedido do usuário, 08/09/2026).
-  const dias = [...porDia.entries()].map(([dia, doDia]) => {
-    const porRt = new Map<string, typeof doDia>();
-    for (const s of doDia) {
-      const lista = porRt.get(s.rtCodigo) ?? [];
-      lista.push(s);
-      porRt.set(s.rtCodigo, lista);
-    }
-    return { dia, rts: [...porRt.entries()] };
-  });
 
   return (
     <div className="flex flex-1 flex-col">
@@ -155,74 +121,7 @@ export default async function ServicosDoDiaPage() {
         <LogoutButton />
       </header>
 
-      <div className="flex-1 px-4 py-4">
-        {servicos.length === 0 ? (
-          <p className="mt-8 text-center text-sm text-text-tertiary">
-            Nenhum serviço planejado pra você.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {dias.map(({ dia, rts }) => (
-              <section key={dia}>
-                <h2 className="mb-2 text-sm font-semibold text-text-primary">
-                  Rota dia {formatoDataCurta.format(new Date(`${dia}T00:00:00`))}
-                  {dia === hoje && (
-                    <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-white">
-                      hoje
-                    </span>
-                  )}
-                </h2>
-                <ul className="flex flex-col gap-3">
-                  {rts.map(([rtCodigo, doRt]) => (
-                    <RtGrupo
-                      key={rtCodigo}
-                      codigo={rtCodigo}
-                      endereco={doRt[0]?.rtEndereco ?? ""}
-                      quantidade={doRt.length}
-                    >
-                  {doRt.map((s, indice) => (
-              <li key={s.id}>
-                <Link
-                  href={`/servico/${s.id}`}
-                  className="block rounded-[var(--radius-md)] border border-border bg-surface p-3 transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white">
-                      {indice + 1}
-                    </span>
-                    {s.protocolo && (
-                      <span className="font-mono text-xs text-text-tertiary">#{s.protocolo}</span>
-                    )}
-                    {s.criadoEm && (
-                      <span className="text-xs text-text-tertiary">
-                        criado em {formatoDataCurta.format(new Date(s.criadoEm))}
-                      </span>
-                    )}
-                    {s.reexecucao && (
-                      <span className="rounded-full bg-priority-alta/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-priority-alta uppercase">
-                        ↩ Retorno
-                      </span>
-                    )}
-                    <span className="ml-auto">
-                      <StatusServicoBadge status={s.status} />
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm font-medium text-text-primary">{s.assunto}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
-                    <PrioridadeBadge prioridade={s.prioridade} />
-                    <SlaBadge slaPrazo={s.slaPrazo} status={s.chamadoStatus} />
-                  </div>
-                </Link>
-              </li>
-                  ))}
-                    </RtGrupo>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
-      </div>
+      <ServicosDoDiaLista servicos={servicos} hoje={hoje} />
     </div>
   );
 }

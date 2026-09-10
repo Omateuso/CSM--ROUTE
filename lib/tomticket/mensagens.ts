@@ -82,3 +82,56 @@ export function mensagemPendencia(
     ASSINATURA,
   ]);
 }
+
+// Reagendamento não tem categoria (o serviço nem chegou a ser executado, ou foi
+// cancelado pelo gerente antes da conclusão). Texto genérico — ponto de partida
+// editável igual aos outros. Usado na tela de Pendências, que passou a incluir
+// os reagendamentos (pedido do usuário, 10/09/2026).
+export function mensagemReagendamento(
+  descricao?: string | null,
+  comSaudacao: Saudacao = saudacao(),
+): string {
+  const detalhe = descricao?.trim();
+  return montar([
+    `${comSaudacao}.`,
+    "Informo que o atendimento desta demanda não pôde ser concluído na data prevista e será reagendado. Faremos novo agendamento para a conclusão.",
+    detalhe ? `Observação: ${detalhe}` : null,
+    ASSINATURA,
+  ]);
+}
+
+// -----------------------------------------------------------------------------
+// Respostas automáticas de prazo (24h / 48h)
+//
+// A CSM posta esses avisos no chamado assim que a demanda chega. NÃO devem
+// disparar o aviso de "mensagem nova" pro gerente (pedido do usuário,
+// 10/09/2026) — são ruído previsível, não comunicação do cliente que precise de
+// atenção. `ehRespostaAutomaticaIgnorada` é aplicada tanto na coleta
+// (lib/tomticket/coletor.ts, marca a resposta como já vista) quanto no toast
+// do client, como segunda camada.
+// -----------------------------------------------------------------------------
+export const RESPOSTAS_AUTOMATICAS_IGNORADAS = [
+  "A demanda possui prazo de até 24 horas para atendimento e já foi direcionada à equipe de manutenção. Considerando que o chamado foi aberto no dia de hoje, reforço a necessidade de priorização para que o reparo seja realizado dentro do prazo estabelecido.\n\nPermaneço à disposição.",
+  "A demanda possui prazo de até 48 horas para atendimento e já foi devidamente direcionada à equipe de manutenção.\n\nPermaneço à disposição.",
+];
+
+function normalizarTexto(texto: string): string {
+  return texto
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "") // tira acento
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export function ehRespostaAutomaticaIgnorada(texto: string | null | undefined): boolean {
+  if (!texto) return false;
+  const alvo = normalizarTexto(texto);
+  if (!alvo) return false;
+  return RESPOSTAS_AUTOMATICAS_IGNORADAS.some((padrao) => {
+    // Compara pelo miolo distintivo normalizado — tolera pequena edição de
+    // pontuação/espaço sem casar com qualquer frase parecida.
+    const nucleo = normalizarTexto(padrao).slice(0, 90);
+    return nucleo.length > 0 && alvo.includes(nucleo);
+  });
+}

@@ -6,7 +6,7 @@ import { EvidenciaThumbs } from "@/lib/ui/evidencia-thumbs";
 import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 import { ResponderTomticket } from "../responder-tomticket";
 import { ProgramarReexecucao, type RotaParaReexecucao } from "./programar-reexecucao";
-import { mensagemPendencia } from "@/lib/tomticket/mensagens";
+import { mensagemPendencia, mensagemReagendamento } from "@/lib/tomticket/mensagens";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
 
 // Página própria desde 22/08/2026 (pedido do usuário) — antes era um modal
@@ -53,9 +53,12 @@ export default async function PendenciasPage() {
     supabase
       .from("historico")
       .select(
-        "id, chamado_id, servico_id, categoria, descricao, criado_em, criado_por:criado_por(nome), chamados(assunto, tomticket_id, rts(codigo, nome)), servicos(id, tomticket_resposta_id, evidencias(tipo, momento, storage_path))",
+        "id, chamado_id, servico_id, categoria, descricao, criado_em, criado_por:criado_por(nome), chamados(assunto, tomticket_id, status, rts(codigo, nome)), servicos(id, tomticket_resposta_id, evidencias(tipo, momento, storage_path))",
       )
-      .eq("evento", "servico_pendente")
+      // Pendência de verdade (técnico não concluiu) OU reagendamento — o
+      // usuário pediu que o reagendamento também apareça aqui (10/09/2026),
+      // com o mesmo botão de responder o cliente no TomTicket.
+      .in("evento", ["servico_pendente", "servico_reagendado"])
       .order("criado_em", { ascending: false }),
     // Rotas confirmadas de hoje em diante — a nova execução é anexada a uma
     // delas (fn_programar_reexecucao não cria rota).
@@ -97,9 +100,12 @@ export default async function PendenciasPage() {
     for (const s of servicosAtivosRaw ?? []) chamadosJaRecapturados.add(s.chamado_id as string);
   }
 
-  const pendenciasFiltradas = (pendenciasRaw ?? []).filter(
-    (p) => !chamadosJaRecapturados.has(p.chamado_id as string),
-  );
+  const pendenciasFiltradas = (pendenciasRaw ?? []).filter((p) => {
+    if (chamadosJaRecapturados.has(p.chamado_id as string)) return false;
+    // Chamado fechado direto no TomTicket não é mais pendência.
+    const st = unwrapOne(p.chamados)?.status as string | undefined;
+    return st !== "finalizado" && st !== "cancelado";
+  });
 
   const caminhosPendencia = pendenciasFiltradas.flatMap((p) =>
     unwrapMany(unwrapOne(p.servicos)?.evidencias).map((e) => e.storage_path as string),
@@ -160,7 +166,9 @@ export default async function PendenciasPage() {
       // iGEDES (o chamado fica parado esperando decisão deles), enquanto os
       // outros quatro são "voltaremos". Ver lib/tomticket/mensagens.ts.
       // Montado no servidor por causa da saudação, que depende da hora.
-      mensagemPadrao: categoria ? mensagemPendencia(categoria, p.descricao as string | null) : null,
+      mensagemPadrao: categoria
+        ? mensagemPendencia(categoria, p.descricao as string | null)
+        : mensagemReagendamento(p.descricao as string | null),
       anexos: [
         ...(fotoParcial ? ["Foto do parcial"] : []),
         ...(os ? ["OS"] : []),
@@ -174,8 +182,8 @@ export default async function PendenciasPage() {
         <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Execução</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary uppercase">Pendências</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Atendimento iniciado, mas não concluído — some sozinha daqui assim que o chamado entrar numa
-          rota nova.
+          Atendimentos que ficaram para trás — o técnico não concluiu, ou o serviço foi reagendado.
+          Some sozinha daqui assim que o chamado entrar numa rota nova.
         </p>
       </header>
 
@@ -214,10 +222,11 @@ export default async function PendenciasPage() {
                 <p className="text-xs font-semibold text-priority-alta">
                   {p.categoria
                     ? (PENDENCIA_CATEGORIA_LABEL[p.categoria as PendenciaCategoria] ?? p.categoria)
-                    : "Pendência"}
+                    : "Reagendado"}
                 </p>
                 <p className="mt-1 text-xs text-text-tertiary">
-                  Reportado por <strong className="text-text-secondary">{p.tecnicoNome}</strong> em{" "}
+                  {p.categoria ? "Reportado por " : "Reagendado por "}
+                  <strong className="text-text-secondary">{p.tecnicoNome}</strong> em{" "}
                   {formatoDataHora.format(new Date(p.criadoEm))}
                 </p>
                 <p className="mt-1.5 text-sm whitespace-pre-wrap text-text-primary">
