@@ -5,9 +5,8 @@
 // Sem `--confirmar` ele só mostra o que APAGARIA, sem tocar em nada.
 //
 // APAGA: chamados, rotas, rota_rts, serviços (e o que cascateia deles —
-// execuções, conclusões, evidências, validações), histórico, posições dos
-// técnicos (Fase 5), arquivos de evidência no Storage, e o relógio da
-// sincronização.
+// execuções, conclusões, evidências, validações), histórico, arquivos de
+// evidência no Storage, e o relógio da sincronização.
 //
 // NÃO APAGA: RTs, CAPS, zonas, regiões, equipes, usuários/perfis, regras de
 // SLA. Ou seja, o cadastro fica de pé — some só o que é execução do dia a dia.

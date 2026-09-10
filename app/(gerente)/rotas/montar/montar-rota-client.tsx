@@ -46,8 +46,8 @@ const ROTULO_INFO: Record<Candidata["rotulo"], { label: string; corTexto: string
   boa_opcao: { label: "Boa opção", corTexto: "text-text-secondary", corDot: "bg-priority-alta" },
   alto_deslocamento: {
     label: "Alto deslocamento",
-    corTexto: "text-text-tertiary",
-    corDot: "border border-text-tertiary",
+    corTexto: "font-bold text-priority-alta",
+    corDot: "bg-priority-alta",
   },
 };
 

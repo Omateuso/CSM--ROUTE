@@ -46,7 +46,6 @@ export async function register() {
   // um ciclo lento faria os seguintes empilharem e disputarem as mesmas linhas.
   let rodando = false;
 
-
   async function rodar() {
     if (rodando) {
       console.log("[sync] passada anterior ainda rodando — pulei esta.");

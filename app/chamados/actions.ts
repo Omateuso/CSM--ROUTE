@@ -2,6 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import {
+  ErroTomTicket,
+  lerReplies,
+  resolverTicketId,
+  responderComoOperador,
+  vincularAtendente,
+  type AnexoParaEnvio,
+} from "@/lib/tomticket/client";
+import {
+  TOMTICKET_MAX_ANEXOS,
+  TOMTICKET_MAX_MENSAGEM,
+  TOMTICKET_MAX_REQUISICAO_BYTES,
+  tomticketConfigurado,
+} from "@/lib/tomticket/config";
+import { jaEstaNaConversa } from "@/lib/tomticket/conversa";
 
 export type ActionState = { error: string | null };
 
@@ -138,4 +153,180 @@ export async function marcarRespostasVistas(chamadoId: string): Promise<void> {
   await supabase.rpc("fn_marcar_respostas_vistas", { p_chamado_id: chamadoId });
   revalidatePath("/chamados");
   revalidatePath("/", "layout"); // atualiza o contador do sino no menu
+}
+
+// -----------------------------------------------------------------------------
+// Responder o cliente pelo modal de detalhe do chamado (item 8, 10/09/2026).
+//
+// O cliente pode responder o chamado no TomTicket e, até aqui, o gerente não
+// tinha como responder de volta pelo sistema. Isto envia uma resposta de
+// ATENDENTE (`/ticket/reply/operator`), com anexos opcionais, SEM finalizar o
+// chamado (é acompanhamento, não conclusão — a conclusão validada tem o fluxo
+// próprio em /validacao). Só `gerente`.
+//
+// Sem migration: a idempotência real é a trava viva (releitura da conversa no
+// TomTicket), que o projeto já trata como o guard primário; o `historico` fica
+// como registro. Nossa resposta volta como reply de atendente na próxima sync e
+// entra em `chamado_respostas` normalmente.
+// -----------------------------------------------------------------------------
+export type RespostaChamadoState = { error: string | null; aviso: string | null; ok: boolean };
+
+const MARGEM_ANEXO_BYTES = 512 * 1024;
+
+export async function responderChamado(
+  _prev: RespostaChamadoState,
+  formData: FormData,
+): Promise<RespostaChamadoState> {
+  const chamadoId = String(formData.get("chamadoId") ?? "");
+  const mensagem = String(formData.get("mensagem") ?? "").trim();
+  const arquivos = formData
+    .getAll("arquivos")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+
+  if (!chamadoId) return { error: "Chamado inválido.", aviso: null, ok: false };
+  if (!mensagem) return { error: "A mensagem não pode ficar vazia.", aviso: null, ok: false };
+  if (mensagem.length > TOMTICKET_MAX_MENSAGEM) {
+    return {
+      error: `A mensagem tem ${mensagem.length} caracteres e o TomTicket aceita no máximo ${TOMTICKET_MAX_MENSAGEM}.`,
+      aviso: null,
+      ok: false,
+    };
+  }
+  if (!tomticketConfigurado()) {
+    return {
+      error:
+        "A integração com o TomTicket ainda não foi configurada (falta o token). Responda pelo TomTicket por enquanto.",
+      aviso: null,
+      ok: false,
+    };
+  }
+  if (arquivos.length > TOMTICKET_MAX_ANEXOS) {
+    return {
+      error: `O TomTicket aceita no máximo ${TOMTICKET_MAX_ANEXOS} anexos por resposta.`,
+      aviso: null,
+      ok: false,
+    };
+  }
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sessão expirada. Entre de novo.", aviso: null, ok: false };
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "gerente") {
+    return { error: "Só o gerente pode responder um chamado no TomTicket.", aviso: null, ok: false };
+  }
+
+  const { data: chamado } = await supabase
+    .from("chamados")
+    .select("id, tomticket_id, tomticket_ticket_id")
+    .eq("id", chamadoId)
+    .single();
+  if (!chamado) return { error: "Chamado não encontrado.", aviso: null, ok: false };
+
+  const protocolo = String(chamado.tomticket_id ?? "").trim();
+  if (!protocolo) {
+    return {
+      error: "Esse chamado é de entrada manual e não tem protocolo do TomTicket pra responder.",
+      aviso: null,
+      ok: false,
+    };
+  }
+
+  const anexos: AnexoParaEnvio[] = [];
+  let totalBytes = 0;
+  for (const arquivo of arquivos) {
+    const bytes = new Uint8Array(await arquivo.arrayBuffer());
+    totalBytes += bytes.byteLength;
+    anexos.push({
+      nome: arquivo.name || "anexo",
+      mime: arquivo.type || "application/octet-stream",
+      conteudo: bytes,
+    });
+  }
+  if (totalBytes > TOMTICKET_MAX_REQUISICAO_BYTES - MARGEM_ANEXO_BYTES) {
+    return {
+      error: `Os anexos somam ${(totalBytes / 1024 / 1024).toFixed(1)} MB e o TomTicket aceita no máximo ${(
+        TOMTICKET_MAX_REQUISICAO_BYTES /
+        1024 /
+        1024
+      ).toFixed(0)} MB por resposta. Anexe os maiores manualmente no TomTicket.`,
+      aviso: null,
+      ok: false,
+    };
+  }
+
+  try {
+    let ticketId = String(chamado.tomticket_ticket_id ?? "").trim();
+    if (!ticketId) {
+      const resolvido = await resolverTicketId(protocolo);
+      if (!resolvido) {
+        return {
+          error: `Não achei o chamado #${protocolo} no TomTicket. Confira se o protocolo está certo.`,
+          aviso: null,
+          ok: false,
+        };
+      }
+      ticketId = resolvido;
+      await supabase.from("chamados").update({ tomticket_ticket_id: ticketId }).eq("id", chamadoId);
+    }
+
+    // Trava viva: a conversa AO VIVO já tem essa mensagem? Cobre um envio
+    // anterior que chegou ao TomTicket e falhou ao registrar aqui.
+    const antes = await lerReplies(ticketId);
+    if (jaEstaNaConversa(antes, mensagem)) {
+      return {
+        error:
+          "Essa mensagem já aparece na conversa do chamado no TomTicket — não enviei de novo pra não duplicar.",
+        aviso: null,
+        ok: false,
+      };
+    }
+
+    // Vincular o atendente é organização interna do TomTicket — erro engolido
+    // de propósito, não pode custar a resposta.
+    const operadorId = process.env.TOMTICKET_OPERADOR_ID?.trim();
+    if (operadorId) {
+      try {
+        await vincularAtendente(ticketId, operadorId);
+      } catch {
+        // segue o fluxo
+      }
+    }
+
+    await responderComoOperador({ ticketId, mensagem, anexos });
+
+    await supabase.from("historico").insert({
+      chamado_id: chamadoId,
+      evento: "tomticket_respondido",
+      descricao: `Resposta ao cliente enviada ao TomTicket:\n\n${mensagem}`,
+      criado_por: user.id,
+    });
+
+    revalidatePath("/chamados");
+    revalidatePath("/", "layout");
+
+    // "O servidor aceitou" e "a mensagem chegou" são coisas diferentes.
+    const depois = await lerReplies(ticketId);
+    if (!jaEstaNaConversa(depois, mensagem)) {
+      return {
+        error: null,
+        ok: true,
+        aviso:
+          "O TomTicket aceitou a resposta, mas ela ainda não apareceu na conversa. Confira no chamado antes de reenviar.",
+      };
+    }
+
+    return { error: null, aviso: null, ok: true };
+  } catch (erro) {
+    if (erro instanceof ErroTomTicket) return { error: erro.message, aviso: null, ok: false };
+    return {
+      error: `Não consegui responder no TomTicket (${erro instanceof Error ? erro.message : String(erro)}).`,
+      aviso: null,
+      ok: false,
+    };
+  }
 }

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import RegisterServiceWorker from "./register-service-worker";
 import { AppNav } from "./app-nav";
+import { NovasRespostasToast } from "./novas-respostas-toast";
 import { createClient } from "@/lib/supabase/server";
 
 const geistSans = Geist({
@@ -66,9 +67,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         {role ? (
-          <AppNav role={role} nome={nome} respostasNaoVistas={respostasNaoVistas}>
-            {children}
-          </AppNav>
+          <>
+            <AppNav role={role} nome={nome} respostasNaoVistas={respostasNaoVistas}>
+              {children}
+            </AppNav>
+            <NovasRespostasToast />
+          </>
         ) : (
           children
         )}

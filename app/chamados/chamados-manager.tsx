@@ -54,15 +54,21 @@ export function ChamadosManager({
   chamados,
   rts,
   podeCriar,
+  podeResponder,
 }: {
   chamados: ChamadoRow[];
   rts: Rt[];
   podeCriar: boolean;
+  podeResponder: boolean;
 }) {
   const [busca, setBusca] = useState("");
   const [prioridadeFiltro, setPrioridadeFiltro] = useState("todas");
   const [regiaoFiltro, setRegiaoFiltro] = useState("todas");
   const [slaFiltro, setSlaFiltro] = useState("todos");
+  // Chamado finalizado some da lista por padrão (pedido do usuário, 10/09/2026)
+  // — a tela é o espelho/busca do TomTicket e não a fila de trabalho; o toggle
+  // traz de volta pra consulta de histórico.
+  const [mostrarFinalizados, setMostrarFinalizados] = useState(false);
   const [soRespostaNova, setSoRespostaNova] = useState(false);
   const totalRespostaNova = useMemo(() => chamados.filter((c) => c.temRespostaNova).length, [chamados]);
   const [modoDialogo, setModoDialogo] = useState<ModoDialogo>("nenhum");
@@ -92,6 +98,7 @@ export function ChamadosManager({
   const linhasFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return chamados.filter((c) => {
+      if (!mostrarFinalizados && c.status === "finalizado") return false;
       if (soRespostaNova && !c.temRespostaNova) return false;
       if (prioridadeFiltro !== "todas" && c.prioridade !== prioridadeFiltro) return false;
       if (regiaoFiltro !== "todas" && c.regiaoNome !== regiaoFiltro) return false;
@@ -109,7 +116,7 @@ export function ChamadosManager({
         (c.tomticketId ?? "").toLowerCase().includes(termo)
       );
     });
-  }, [chamados, busca, prioridadeFiltro, regiaoFiltro, slaFiltro, soRespostaNova]);
+  }, [chamados, busca, prioridadeFiltro, regiaoFiltro, slaFiltro, mostrarFinalizados, soRespostaNova]);
 
   // Renderizar a lista inteira de uma vez era o gargalo real da tela: com
   // ~300 chamados o HTML passava de 750kb, e cada linha ainda é serializada
@@ -143,6 +150,14 @@ export function ChamadosManager({
 
   function fechar() {
     setModoDialogo("nenhum");
+  }
+
+  function recarregarDetalhe(chamadoId: string) {
+    // Após responder no TomTicket: atualiza a linha do tempo sem piscar
+    // "Carregando..." no modal inteiro.
+    buscarDetalheChamado(chamadoId)
+      .then(setDetalhe)
+      .catch(() => {});
   }
 
   return (
@@ -213,6 +228,16 @@ export function ChamadosManager({
             </option>
           ))}
         </select>
+
+        <label className="flex items-center gap-2 text-sm text-text-secondary">
+          <input
+            type="checkbox"
+            checked={mostrarFinalizados}
+            onChange={(e) => setMostrarFinalizados(e.target.checked)}
+            className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
+          />
+          Mostrar finalizados
+        </label>
 
         {totalRespostaNova > 0 && (
           <button
@@ -379,6 +404,10 @@ export function ChamadosManager({
         open={modoDialogo === "detalhes"}
         chamado={chamadoSelecionado}
         detalhe={detalhe}
+        podeResponder={podeResponder}
+        onRespondido={() => {
+          if (chamadoSelecionado) recarregarDetalhe(chamadoSelecionado.id);
+        }}
         onClose={fechar}
       />
     </div>

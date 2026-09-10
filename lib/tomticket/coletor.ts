@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listarChamadosAlterados, listarDepartamentos, type ChamadoTomTicket } from "./client";
+import { ehRespostaAutomaticaIgnorada } from "./mensagens";
 
 // Coleta direta do TomTicket — substitui o import por planilha (ver migration
 // 0030 pro racional completo).
@@ -136,7 +137,10 @@ async function sincronizarRespostasEAnexos(
     const naoVisto =
       resp.tipo === "cliente" &&
       resp.respondidoEm !== null &&
-      new Date(resp.respondidoEm) >= marcarNaoVistoDesde;
+      new Date(resp.respondidoEm) >= marcarNaoVistoDesde &&
+      // Avisos automáticos de prazo (24h/48h) da própria CSM não alimentam o
+      // sino nem o toast — entram já como "vistos" (pedido do usuário, 10/09).
+      !ehRespostaAutomaticaIgnorada(resp.mensagem);
 
     const { data: inserida, error } = await supabase
       .from("chamado_respostas")
