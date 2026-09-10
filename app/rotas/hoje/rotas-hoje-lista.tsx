@@ -1,4 +1,7 @@
+"use client";
+
 import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badge";
+import { FOCUS_RING } from "@/lib/ui/styles";
 import type { ParadaStatus, RotaHoje, TecnicoAoVivo } from "./tipos";
 
 const STATUS_TXT: Record<ParadaStatus, { rotulo: string; classe: string }> = {
@@ -12,43 +15,106 @@ const formatoHora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: 
 export function RotasHojeLista({
   rotas,
   tecnicos,
+  rotaAtiva = null,
+  onSelecionar,
+  selecionavel = false,
 }: {
   rotas: RotaHoje[];
   tecnicos: TecnicoAoVivo[];
+  rotaAtiva?: string | null;
+  onSelecionar?: (rotaId: string) => void;
+  /** Só faz sentido escolher quando há mais de uma equipe em campo. */
+  selecionavel?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-4 lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
       {tecnicos.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-2 text-xs">
+        <ul className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-border bg-surface px-3 py-2 text-xs">
           {tecnicos.map((t) => (
-            <span key={t.id} className="inline-flex items-center gap-1.5 text-text-secondary">
-              <span
-                className="h-2.5 w-2.5 rounded-full border border-white"
-                style={{ backgroundColor: t.cor }}
-                aria-hidden="true"
-              />
-              {t.nome}
-              {t.ultima ? (
-                <span className="text-text-tertiary">· {formatoHora.format(new Date(t.ultima.em))}</span>
-              ) : (
-                <span className="text-text-tertiary">· sem sinal</span>
+            <li key={t.id} className="flex flex-col gap-0.5">
+              <span className="inline-flex items-center gap-1.5 text-text-secondary">
+                {/* Mesmo símbolo do mapa: cor da equipe e o número dentro. */}
+                <span
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-white text-[9px] font-semibold text-white"
+                  style={{ backgroundColor: t.cor }}
+                  aria-hidden="true"
+                >
+                  {t.equipeNumero ?? ""}
+                </span>
+                {t.nome}
+                {t.ultima ? (
+                  <span className="text-text-tertiary">· {formatoHora.format(new Date(t.ultima.em))}</span>
+                ) : (
+                  <span className="text-text-tertiary">· sem sinal</span>
+                )}
+              </span>
+
+              {/* Tempo estimado até a próxima RT — sai da mesma consulta que
+                  desenha o caminho dele no mapa. Sem provedor de rota
+                  configurado, a linha some em vez de mostrar número errado. */}
+              {t.proxima && (
+                <span className="pl-5.5 text-text-tertiary">
+                  próxima:{" "}
+                  <span className="font-mono text-text-secondary">{t.proxima.rtCodigo}</span>{" "}
+                  {t.proxima.duracaoMin != null ? (
+                    <>
+                      em{" "}
+                      <span className="font-semibold text-text-primary tabular-nums">
+                        ~{t.proxima.duracaoMin} min
+                      </span>{" "}
+                    </>
+                  ) : null}
+                  <span className="tabular-nums">
+                    ({t.proxima.distanciaKm.toFixed(1)} km
+                    {t.proxima.duracaoMin == null ? " em linha reta" : ""})
+                  </span>
+                </span>
               )}
-            </span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {rotas.map((r) => {
         const pct = r.progresso.total > 0 ? Math.round((r.progresso.feitas / r.progresso.total) * 100) : 0;
         return (
-          <article key={r.id} className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold text-text-primary">{r.equipeNome}</h2>
-              <span className="text-xs text-text-tertiary">
-                {r.progresso.feitas}/{r.progresso.total} paradas
-              </span>
-            </div>
-            <p className="mt-0.5 text-xs text-text-tertiary">{r.regiaoNome}</p>
+          <article
+            key={r.id}
+            className={`rounded-[var(--radius-md)] border bg-surface p-4 transition-colors ${
+              rotaAtiva === r.id ? "border-accent" : "border-border"
+            }`}
+          >
+            {selecionavel ? (
+              <button
+                type="button"
+                onClick={() => onSelecionar?.(r.id)}
+                aria-pressed={rotaAtiva === r.id}
+                className={`-m-1 flex w-[calc(100%+0.5rem)] flex-col rounded-[var(--radius-sm)] p-1 text-left transition-colors hover:bg-surface-input ${FOCUS_RING}`}
+              >
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-semibold text-text-primary">{r.equipeNome}</span>
+                  <span className="text-xs text-text-tertiary">
+                    {r.progresso.feitas}/{r.progresso.total} paradas
+                  </span>
+                </span>
+                <span className="mt-0.5 flex items-center gap-2 text-xs text-text-tertiary">
+                  {r.regiaoNome}
+                  <span className={rotaAtiva === r.id ? "text-accent" : "text-text-tertiary"}>
+                    {rotaAtiva === r.id ? "· caminho no mapa" : "· ver caminho"}
+                  </span>
+                </span>
+              </button>
+            ) : (
+              <>
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="text-sm font-semibold text-text-primary">{r.equipeNome}</h2>
+                  <span className="text-xs text-text-tertiary">
+                    {r.progresso.feitas}/{r.progresso.total} paradas
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-text-tertiary">{r.regiaoNome}</p>
+              </>
+            )}
 
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-input" aria-hidden="true">
               <div className="h-full rounded-full bg-sla-dentro" style={{ width: `${pct}%` }} />
@@ -56,7 +122,7 @@ export function RotasHojeLista({
 
             <ol className="mt-3 flex flex-col gap-2">
               {r.paradas.map((p) => (
-                <li key={`${p.rtId}-${p.ordem}`} className="rounded-[var(--radius-sm)] border border-border p-2.5">
+                <li key={`${r.id}-${p.rtId}-${p.ordem}`} className="rounded-[var(--radius-sm)] border border-border p-2.5">
                   <div className="flex items-center gap-2">
                     <span
                       className={`h-2 w-2 shrink-0 rounded-full ${STATUS_TXT[p.status].classe}`}

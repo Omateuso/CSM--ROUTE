@@ -5,7 +5,10 @@ import LogoutButton from "@/app/logout-button";
 import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badge";
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { RtGrupo } from "./rt-grupo";
+import { MapaDoDia } from "./mapa-do-dia";
 import { StatusServicoBadge, type StatusServico } from "../status-servico-badge";
+import { FOCUS_RING } from "@/lib/ui/styles";
+import { linkGoogleMapsDestino, linkGoogleMapsRota, paradasNavegaveis } from "@/lib/navegacao";
 
 // Com ano: sem ele, um chamado de 2025 e um de 2026 aparecem como "08/09" e
 // "12/11" e o técnico lê fora de ordem, sem ter como perceber (achado do
@@ -46,7 +49,7 @@ export default async function ServicosDoDiaPage() {
   const { data: servicosRaw, error: servicosError } = await supabase
     .from("servicos")
     .select(
-      "id, status, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco)",
+      "id, status, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
     )
     .eq("tecnico_id", user.id)
     // Hoje EM DIANTE (não só hoje): o técnico precisa enxergar a rota de
@@ -112,6 +115,8 @@ export default async function ServicosDoDiaPage() {
         rtCodigo: rt?.codigo as string,
         rtNome: rt?.nome as string,
         rtEndereco: rt?.endereco as string,
+        rtLat: rt?.latitude == null ? null : Number(rt.latitude),
+        rtLng: rt?.longitude == null ? null : Number(rt.longitude),
         assunto: chamado?.assunto as string,
         protocolo: (chamado?.tomticket_id as string | null) ?? null,
         criadoEm: chamado?.criado_em as string,
@@ -139,7 +144,15 @@ export default async function ServicosDoDiaPage() {
       lista.push(s);
       porRt.set(s.rtCodigo, lista);
     }
-    return { dia, rts: [...porRt.entries()] };
+    const rts = [...porRt.entries()];
+    // Uma parada por RT, na ordem da rota — e nao um ponto por chamado.
+    const paradas = paradasNavegaveis(
+      rts.map(([, doRt]) => ({ lat: doRt[0]?.rtLat ?? null, lng: doRt[0]?.rtLng ?? null })),
+    );
+    const paradasComCodigo = rts
+      .map(([codigo, doRt]) => ({ codigo, lat: doRt[0]?.rtLat ?? null, lng: doRt[0]?.rtLng ?? null }))
+      .filter((p): p is { codigo: string; lat: number; lng: number } => p.lat != null && p.lng != null);
+    return { dia, rts, navegacao: linkGoogleMapsRota(paradas), paradasComCodigo };
   });
 
   return (
@@ -162,7 +175,7 @@ export default async function ServicosDoDiaPage() {
           </p>
         ) : (
           <div className="flex flex-col gap-6">
-            {dias.map(({ dia, rts }) => (
+            {dias.map(({ dia, rts, navegacao, paradasComCodigo }) => (
               <section key={dia}>
                 <h2 className="mb-2 text-sm font-semibold text-text-primary">
                   Rota dia {formatoDataCurta.format(new Date(`${dia}T00:00:00`))}
@@ -172,6 +185,26 @@ export default async function ServicosDoDiaPage() {
                     </span>
                   )}
                 </h2>
+
+                {navegacao && (
+                  <a
+                    href={navegacao.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`mb-3 flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-accent bg-accent/5 px-4 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 ${FOCUS_RING}`}
+                  >
+                    <span aria-hidden="true">➤</span>
+                    Abrir rota no Google Maps
+                  </a>
+                )}
+                <MapaDoDia paradas={paradasComCodigo} />
+
+                {navegacao?.truncada && (
+                  <p className="mb-3 text-xs text-text-tertiary">
+                    O Google Maps aceita no máximo 10 paradas por link — este abre as{" "}
+                    {navegacao.paradasNoLink} primeiras da rota.
+                  </p>
+                )}
                 <ul className="flex flex-col gap-3">
                   {rts.map(([rtCodigo, doRt]) => (
                     <RtGrupo
@@ -179,6 +212,11 @@ export default async function ServicosDoDiaPage() {
                       codigo={rtCodigo}
                       endereco={doRt[0]?.rtEndereco ?? ""}
                       quantidade={doRt.length}
+                      urlNavegacao={
+                        doRt[0]?.rtLat != null && doRt[0]?.rtLng != null
+                          ? linkGoogleMapsDestino({ lat: doRt[0].rtLat, lng: doRt[0].rtLng })
+                          : null
+                      }
                     >
                   {doRt.map((s, indice) => (
               <li key={s.id}>

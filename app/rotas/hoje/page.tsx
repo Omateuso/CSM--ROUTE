@@ -2,10 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FOCUS_RING } from "@/lib/ui/styles";
-import { RotaHojeMapa } from "./rota-hoje-mapa";
-import { RotasHojeLista } from "./rotas-hoje-lista";
+import { RotaHojePainel } from "./rota-hoje-painel";
 import { RotaHojeRealtime } from "./rota-hoje-realtime";
-import type { ParadaStatus, RotaHoje, TecnicoAoVivo } from "./tipos";
+import { tracadoDaRota } from "@/lib/maps/tracado-rota";
+import { rotaAoVivo } from "@/lib/maps/rota-ao-vivo";
+import { haversineKm } from "@/lib/routing/proximity";
+import type { ParadaStatus, RotaHoje, TecnicoAoVivo, TracadoPlanejado } from "./tipos";
 
 function unwrapOne<T>(v: T | T[] | null | undefined): T | null {
   if (Array.isArray(v)) return v[0] ?? null;
@@ -30,7 +32,22 @@ function statusDaParada(statuses: string[]): ParadaStatus {
 
 // Paleta pros pins/trilhas dos técnicos (distinta da paleta operacional de
 // prioridade/SLA — aqui é só "qual técnico é qual").
-const CORES_TECNICO = ["#2563eb", "#7c3aed", "#db2777", "#0891b2", "#ca8a04", "#4f46e5"];
+// Cor por EQUIPE, não por técnico (decisão do usuário, 10/09/2026): o pino
+// mostra o número da equipe, e a cor agrupa quem é do mesmo time. Indexada
+// pelo número da equipe, então a equipe 1 tem sempre a mesma cor — não muda
+// quando outra equipe entra em campo.
+const CORES_EQUIPE = ["#2563eb", "#7c3aed", "#db2777", "#0891b2", "#ca8a04", "#4f46e5"];
+const COR_SEM_EQUIPE = "#6b7280";
+
+// Soma dos trechos em linha reta. É o fallback quando não há provedor de
+// rota configurado: a SEQUÊNCIA das paradas é conhecida sem API nenhuma,
+// então a rota tem que aparecer no mapa de qualquer jeito — o que falta
+// sem integração é o traçado seguir as ruas, não a rota existir.
+function distanciaEmLinha(pontos: { lat: number; lng: number }[]): number {
+  let total = 0;
+  for (let i = 1; i < pontos.length; i++) total += haversineKm(pontos[i - 1], pontos[i]);
+  return total;
+}
 
 export default async function RotaDoDiaPage() {
   const supabase = await createClient();
@@ -58,7 +75,7 @@ export default async function RotaDoDiaPage() {
   const { data: rotasRaw, error } = await supabase
     .from("rotas")
     .select(
-      "id, status, equipe:equipe_id(nome), regiao:regiao_id(nome), rota_rts(ordem, rt_id, tecnico_id, rts(codigo, nome, endereco, latitude, longitude)), servicos(id, rt_id, status, tecnico_id, tecnico:tecnico_id(nome), chamados(assunto, prioridade, tomticket_id))",
+      "id, status, equipe:equipe_id(nome, numero), regiao:regiao_id(nome), rota_rts(ordem, rt_id, tecnico_id, rts(codigo, nome, endereco, latitude, longitude)), servicos(id, rt_id, status, tecnico_id, tecnico:tecnico_id(nome), chamados(assunto, prioridade, tomticket_id))",
     )
     .eq("data", hoje)
     .eq("status", "confirmada");
@@ -167,23 +184,116 @@ export default async function RotaDoDiaPage() {
     return {
       id: r.id as string,
       equipeNome: unwrapOne(r.equipe)?.nome ?? "—",
+      equipeNumero: (unwrapOne(r.equipe)?.numero as number | null) ?? null,
       regiaoNome: unwrapOne(r.regiao)?.nome ?? "—",
       progresso: { feitas, total: paradas.length },
       paradas,
     };
   });
 
-  const tecnicos: TecnicoAoVivo[] = tecnicoIds.map((id, i) => {
-    const trilha = trilhaPorTecnico.get(id) ?? [];
-    const ultima = trilha[trilha.length - 1] ?? null;
-    return {
-      id,
-      nome: nomePorTecnico.get(id) ?? "Técnico",
-      cor: CORES_TECNICO[i % CORES_TECNICO.length],
-      trilha: trilha.map((t) => ({ lat: t.lat, lng: t.lng })),
-      ultima: ultima ? { lat: ultima.lat, lng: ultima.lng, em: ultima.em } : null,
-    };
-  });
+  // Equipe e paradas pendentes de cada técnico, a partir das rotas já montadas.
+  const equipePorTecnico = new Map<string, { numero: number | null; nome: string; rotaId: string }>();
+  const pendentesPorTecnico = new Map<string, typeof rotas[number]["paradas"]>();
+  for (const r of rotas) {
+    for (const parada of r.paradas) {
+      if (!parada.tecnicoId) continue;
+      if (!equipePorTecnico.has(parada.tecnicoId)) {
+        equipePorTecnico.set(parada.tecnicoId, { numero: r.equipeNumero, nome: r.equipeNome, rotaId: r.id });
+      }
+      if (parada.status !== "concluida" && parada.lat != null && parada.lng != null) {
+        pendentesPorTecnico.set(parada.tecnicoId, [
+          ...(pendentesPorTecnico.get(parada.tecnicoId) ?? []),
+          parada,
+        ]);
+      }
+    }
+  }
+
+  const tecnicos: TecnicoAoVivo[] = await Promise.all(
+    tecnicoIds.map(async (id) => {
+      const trilha = trilhaPorTecnico.get(id) ?? [];
+      const ultima = trilha[trilha.length - 1] ?? null;
+      const equipe = equipePorTecnico.get(id) ?? null;
+      const pendentes = (pendentesPorTecnico.get(id) ?? []).sort((a, b) => a.ordem - b.ordem);
+
+      // O caminho que ele está seguindo agora — o mesmo que o link do
+      // Google Maps abre no celular dele. Só faz sentido com posição
+      // conhecida E parada pendente; sem isso o mapa cai no traçado
+      // planejado da rota inteira (o comportamento anterior).
+      const pontosPendentes = pendentes.map((x) => ({ lat: x.lat as number, lng: x.lng as number }));
+      const temCaminho = Boolean(ultima) && pontosPendentes.length > 0;
+      const aoVivo = temCaminho
+        ? await rotaAoVivo({ lat: ultima!.lat, lng: ultima!.lng }, pontosPendentes)
+        : null;
+
+      // Sem provedor, liga a posição atual às paradas que faltam em linha
+      // reta: a ordem é a mesma, e o gerente continua vendo pra onde ele vai.
+      const caminhoAproximado =
+        temCaminho && !aoVivo ? [{ lat: ultima!.lat, lng: ultima!.lng }, ...pontosPendentes] : null;
+
+      return {
+        id,
+        nome: nomePorTecnico.get(id) ?? "Técnico",
+        cor:
+          equipe?.numero != null
+            ? CORES_EQUIPE[(equipe.numero - 1) % CORES_EQUIPE.length]
+            : COR_SEM_EQUIPE,
+        equipeNumero: equipe?.numero ?? null,
+        equipeNome: equipe?.nome ?? null,
+        rotaId: equipe?.rotaId ?? null,
+        trilha: trilha.map((t) => ({ lat: t.lat, lng: t.lng })),
+        ultima: ultima ? { lat: ultima.lat, lng: ultima.lng, em: ultima.em } : null,
+        rotaAoVivo: aoVivo?.geometria ?? caminhoAproximado,
+        rotaAoVivoAproximada: !aoVivo && caminhoAproximado != null,
+        // Só faz sentido com posição conhecida: sem sinal não há de onde
+        // medir, e mostrar "0,0 km" daria a entender que ele já chegou.
+        proxima:
+          ultima && pendentes[0]
+            ? {
+                rtCodigo: pendentes[0].rtCodigo,
+                // Distância sempre; tempo só com provedor — mesma regra que a
+                // sugestão de rota já segue desde a Fase 2.
+                distanciaKm:
+                  aoVivo?.proxima?.distanciaKm ??
+                  haversineKm({ lat: ultima.lat, lng: ultima.lng }, pontosPendentes[0]),
+                duracaoMin: aoVivo?.proxima?.duracaoMin ?? null,
+              }
+            : null,
+      };
+    }),
+  );
+
+  // Traçado de rua de cada rota, pelas paradas na ordem confirmada. É
+  // cacheado por sequência de coordenadas (lib/maps/tracado-rota.ts) —
+  // sem isso, cada ping de GPS do técnico dispararia um redesenho pago,
+  // porque o Realtime refaz este Server Component.
+  const tracados: TracadoPlanejado[] = (
+    await Promise.all(
+      rotas.map(async (r) => {
+        const pontos = r.paradas
+          .filter((p) => p.lat != null && p.lng != null)
+          .map((p) => ({ lat: p.lat as number, lng: p.lng as number }));
+        if (pontos.length < 2) return null;
+        const tracado = await tracadoDaRota(pontos);
+        if (tracado) {
+          return {
+            rotaId: r.id,
+            pontos: tracado.geometria,
+            distanciaKm: tracado.distanciaKm,
+            duracaoMin: tracado.duracaoMin,
+            aproximado: false,
+          };
+        }
+        return {
+          rotaId: r.id,
+          pontos,
+          distanciaKm: distanciaEmLinha(pontos),
+          duracaoMin: null,
+          aproximado: true,
+        };
+      }),
+    )
+  ).filter((t): t is TracadoPlanejado => t !== null);
 
   const totalParadas = rotas.reduce((acc, r) => acc + r.progresso.total, 0);
   const totalFeitas = rotas.reduce((acc, r) => acc + r.progresso.feitas, 0);
@@ -221,12 +331,7 @@ export default async function RotaDoDiaPage() {
             {rotas.length} rota{rotas.length > 1 ? "s" : ""} · {totalFeitas} de {totalParadas} paradas
             concluídas
           </p>
-          <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-            <div className="h-[420px] lg:h-[600px]">
-              <RotaHojeMapa rotas={rotas} tecnicos={tecnicos} />
-            </div>
-            <RotasHojeLista rotas={rotas} tecnicos={tecnicos} />
-          </div>
+          <RotaHojePainel rotas={rotas} tecnicos={tecnicos} tracados={tracados} />
         </>
       )}
     </div>

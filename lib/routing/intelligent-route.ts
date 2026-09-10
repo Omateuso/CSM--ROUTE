@@ -1,4 +1,4 @@
-import { calcularMatrizDistancia } from "@/lib/maps/google/matrix";
+import { obterProvedor, type ElementoMatrizRota } from "@/lib/maps/provedor";
 import { maisProximas, type PontoGeografico } from "./proximity";
 import { detectarNucleos, maiorNucleo, type Nucleo } from "./clusters";
 import { calcularScoreInicial, calcularScoreComDeslocamento, gerarMotivo } from "./score";
@@ -124,22 +124,22 @@ async function sugerirProximaEscolha(
   const nucleo = maiorNucleo(detectarNucleos([referencia, ...proximas]));
 
   // item 8 do spec: distância sempre exibida, tempo só "quando a
-  // integração Google estiver disponível" — ou seja, a ausência da
-  // integração (chave sem billing, API fora do ar, etc.) é um cenário
-  // esperado, não um erro fatal. Se a chamada à Routes API falhar por
+  // integração de rotas estiver disponível" — ou seja, a ausência da
+  // integração (chave ausente, cota estourada, API fora do ar) é um cenário
+  // esperado, não um erro fatal. Se a chamada ao provedor falhar por
   // completo, cai pra Haversine em todas as candidatas (sem duração) em
   // vez de derrubar a sugestão inteira.
-  let matriz: Awaited<ReturnType<typeof calcularMatrizDistancia>>;
+  let matriz: ElementoMatrizRota[];
   try {
-    matriz = await calcularMatrizDistancia(referencia, proximas);
+    matriz = await obterProvedor().matriz(referencia, proximas);
   } catch (err) {
-    console.warn("Routes API indisponível, caindo pra Haversine:", err);
+    console.warn("Provedor de rotas indisponível, caindo pra Haversine:", err);
     matriz = proximas.map(() => ({ distanciaKm: null, duracaoMin: null, rotaEncontrada: false }));
   }
 
   const resultado: Candidata[] = proximas.map((r, indice) => {
     const m = matriz[indice];
-    // se a Routes API falhar pontualmente pra um destino, cai pro
+    // se o provedor falhar pontualmente pra um destino, cai pro
     // Haversine em vez de derrubar a sugestão inteira (item 8: distância
     // sempre exibida; tempo só quando a integração estiver disponível).
     const distanciaKm = m.distanciaKm ?? r.distanciaAprox;

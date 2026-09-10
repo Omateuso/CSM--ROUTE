@@ -11,11 +11,14 @@ export function EquipeCreateDialog({
   open,
   zonas,
   responsaveis,
+  numeroSugerido,
   onClose,
 }: {
   open: boolean;
   zonas: Zona[];
   responsaveis: Responsavel[];
+  /** Próximo número livre — só sugestão; a unicidade é garantida no banco. */
+  numeroSugerido: number;
   onClose: () => void;
 }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(criarEquipe, {
@@ -25,6 +28,7 @@ export function EquipeCreateDialog({
 
   const uid = useId();
   const idNome = `${uid}-nome`;
+  const idNumero = `${uid}-numero`;
   const idZona = `${uid}-zona`;
   const idResponsavel = `${uid}-responsavel`;
 
@@ -45,6 +49,24 @@ export function EquipeCreateDialog({
           />
         </div>
 
+        <div className="flex flex-col gap-1">
+          <label htmlFor={idNumero} className={FIELD_LABEL}>
+            Número da equipe
+          </label>
+          <input
+            id={idNumero}
+            name="numero"
+            type="number"
+            min={1}
+            step={1}
+            defaultValue={numeroSugerido}
+            required
+            className={FIELD_INPUT}
+          />
+          <p className="text-xs text-text-tertiary">
+            Aparece no pino do técnico no mapa da Rota do dia. Não pode repetir.
+          </p>
+        </div>
         <div className="flex flex-col gap-1">
           <label htmlFor={idZona} className={FIELD_LABEL}>
             Zona padrão

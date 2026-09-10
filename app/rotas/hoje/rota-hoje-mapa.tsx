@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import { APIProvider, Map as GoogleMap, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
-import type { ParadaStatus, RotaHoje, TecnicoAoVivo } from "./tipos";
+import { useMemo } from "react";
+import { MapaBase, type LinhaMapa, type MarcadorMapa } from "@/lib/ui/mapa/mapa-base";
+import type { ParadaStatus, RotaHoje, TecnicoAoVivo, TracadoPlanejado } from "./tipos";
 
 const COR_STATUS: Record<ParadaStatus, string> = {
   concluida: "#16a34a", // sla-dentro
@@ -10,121 +10,167 @@ const COR_STATUS: Record<ParadaStatus, string> = {
   nao_iniciada: "#9ca3af", // text-tertiary
 };
 
-function AjustarLimites({
-  pontos,
-}: {
-  pontos: { lat: number; lng: number }[];
-}) {
-  const map = useMap();
-  useEffect(() => {
-    if (!map || pontos.length === 0) return;
-    const bounds = new google.maps.LatLngBounds();
-    for (const p of pontos) bounds.extend(p);
-    map.fitBounds(bounds, 48);
-    // só no carregamento — não recentraliza a cada ping/refresh
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map]);
-  return null;
-}
+const COR_PLANEJADO = "#1e3a6e"; // accent
 
-// A lib não tem <Polyline> em v1 — desenha imperativo via google.maps.
-function Trilha({ path, cor }: { path: { lat: number; lng: number }[]; cor: string }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!map || path.length < 2) return;
-    const linha = new google.maps.Polyline({
-      path,
-      map,
-      strokeColor: cor,
-      strokeOpacity: 0.55,
-      strokeWeight: 3,
-    });
-    return () => linha.setMap(null);
-  }, [map, path, cor]);
-  return null;
-}
+const HORA = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 export function RotaHojeMapa({
   rotas,
   tecnicos,
+  tracados = [],
+  rotaAtiva = null,
 }: {
   rotas: RotaHoje[];
   tecnicos: TecnicoAoVivo[];
+  tracados?: TracadoPlanejado[];
+  /** Rota cujo caminho está sendo mostrado. `null` = nenhuma escolhida ainda. */
+  rotaAtiva?: string | null;
 }) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-  if (!apiKey) {
-    return (
-      <div className="flex h-full min-h-96 items-center justify-center rounded-[var(--radius-md)] border border-dashed border-border-strong bg-surface-input px-6 text-center">
-        <p className="max-w-sm text-sm text-text-tertiary">
-          Mapa desativado — falta configurar{" "}
-          <code className="font-mono text-xs">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>.
-        </p>
-      </div>
+  const marcadores = useMemo<MarcadorMapa[]>(() => {
+    const daParada = rotas.flatMap((r) =>
+      r.paradas
+        .filter((p) => p.lat != null && p.lng != null)
+        .map((p) => {
+          // Fora da rota escolhida: apagada, nunca escondida — o gerente
+          // continua vendo onde estão as outras equipes.
+          const foco = rotaAtiva == null || r.id === rotaAtiva;
+          return {
+            // A chave precisa da rota: a mesma RT pode ser parada de duas
+            // rotas no mesmo dia, e `rtId-ordem` colidia (React reclamava de
+            // chave duplicada e podia embaralhar os marcadores).
+            id: `${r.id}-${p.rtId}-${p.ordem}`,
+            posicao: { lat: p.lat as number, lng: p.lng as number },
+            espec: {
+              cor: COR_STATUS[p.status],
+              tamanho: foco ? 26 : 20,
+              conteudo: p.ordem,
+              opacidade: foco ? 1 : 0.35,
+            },
+            titulo: `${r.equipeNome} · ${p.ordem}. ${p.rtCodigo} — ${p.rtEndereco}${p.tecnicoNome ? ` · ${p.tecnicoNome}` : ""}`,
+            zIndex: foco ? (p.status === "em_andamento" ? 15 : 5) : 1,
+          } satisfies MarcadorMapa;
+        }),
     );
-  }
 
-  const paradas = rotas.flatMap((r) => r.paradas.filter((p) => p.lat != null && p.lng != null));
-  const pontosParaLimite = [
-    ...paradas.map((p) => ({ lat: p.lat as number, lng: p.lng as number })),
-    ...tecnicos.flatMap((t) => (t.ultima ? [{ lat: t.ultima.lat, lng: t.ultima.lng }] : [])),
-  ];
+    const doTecnico = tecnicos.flatMap((t) => {
+      if (!t.ultima) return [];
+      const foco = rotaAtiva == null || t.rotaId === rotaAtiva;
+      return [
+        {
+          id: `tec-${t.id}`,
+          posicao: { lat: t.ultima.lat, lng: t.ultima.lng },
+          // Número da equipe dentro do pino, cor da equipe (pedido do
+          // usuário). Dois técnicos da mesma equipe ficam iguais de
+          // propósito — quem separa é o nome no tooltip e a lista ao lado.
+          espec: {
+            cor: t.cor,
+            tamanho: 28,
+            conteudo: t.equipeNumero ?? "",
+            borda: 3,
+            halo: `${t.cor}40`,
+            opacidade: foco ? 1 : 0.4,
+          },
+          titulo:
+            `${t.nome}${t.equipeNome ? ` · ${t.equipeNome}` : ""} · visto às ` +
+            HORA.format(new Date(t.ultima.em)) +
+            (t.proxima
+              ? ` · ${t.proxima.rtCodigo} a ${t.proxima.distanciaKm.toFixed(1)} km` +
+                (t.proxima.duracaoMin != null ? ` (~${t.proxima.duracaoMin} min)` : "")
+              : ""),
+          zIndex: 40,
+        } satisfies MarcadorMapa,
+      ];
+    });
+
+    return [...daParada, ...doTecnico];
+  }, [rotas, tecnicos, rotaAtiva]);
+
+  const linhas = useMemo<LinhaMapa[]>(() => {
+    // Sem rota escolhida (e com mais de uma em campo), nenhum caminho é
+    // desenhado — cinco rotas sobrepostas não informam nada.
+    if (rotaAtiva == null) return [];
+
+    const tecnicosDaRota = tecnicos.filter((t) => t.rotaId === rotaAtiva);
+    const temAoVivo = tecnicosDaRota.some((t) => t.rotaAoVivo);
+
+    // Já percorrido: sólido e apagado. O que falta: tracejado e forte.
+    const percorridas = tecnicosDaRota
+      .filter((t) => t.trilha.length >= 2)
+      .map((t) => ({
+        id: `trilha-${t.id}`,
+        pontos: t.trilha,
+        cor: t.cor,
+        opacidade: 0.35,
+        espessura: 3,
+      }));
+
+    const aoVivo = tecnicosDaRota
+      .filter((t) => t.rotaAoVivo && t.rotaAoVivo.length >= 2)
+      .map((t) => ({
+        id: `aovivo-${t.id}`,
+        pontos: t.rotaAoVivo as { lat: number; lng: number }[],
+        cor: t.cor,
+        opacidade: 0.9,
+        espessura: 5,
+        tracejada: true,
+      }));
+
+    // O planejado da rota inteira só entra quando ninguém dela está em campo
+    // com posição conhecida — senão competiria com o caminho real.
+    const planejadas = temAoVivo
+      ? []
+      : tracados
+          .filter((t) => t.rotaId === rotaAtiva)
+          .map((t) => ({
+            id: `planejado-${t.rotaId}`,
+            pontos: t.pontos,
+            cor: COR_PLANEJADO,
+            opacidade: 0.55,
+            espessura: 4,
+            tracejada: true,
+          }));
+
+    return [...planejadas, ...percorridas, ...aoVivo];
+  }, [tracados, tecnicos, rotaAtiva]);
+
+  const tracadoAtivo = tracados.find((t) => t.rotaId === rotaAtiva) ?? null;
+  const aproximado =
+    tracadoAtivo?.aproximado ||
+    tecnicos.some((t) => t.rotaId === rotaAtiva && t.rotaAoVivoAproximada);
 
   return (
-    <div className="h-full min-h-96 overflow-hidden rounded-[var(--radius-md)] border border-border">
-      <APIProvider apiKey={apiKey}>
-        <GoogleMap
-          mapId="DEMO_MAP_ID"
-          defaultCenter={{ lat: -22.9068, lng: -43.1729 }}
-          defaultZoom={11}
-          gestureHandling="greedy"
-          internalUsageAttributionIds={["gmp_git_agentskills_v1"]}
-          style={{ width: "100%", height: "100%" }}
-        >
-          <AjustarLimites pontos={pontosParaLimite} />
-
-          {tecnicos.map((t) => (
-            <Trilha key={`trilha-${t.id}`} path={t.trilha} cor={t.cor} />
-          ))}
-
-          {paradas.map((p) => (
-            <AdvancedMarker
-              key={`${p.rtId}-${p.ordem}`}
-              position={{ lat: p.lat as number, lng: p.lng as number }}
-              title={`${p.ordem}. ${p.rtCodigo} — ${p.rtEndereco}${p.tecnicoNome ? ` · ${p.tecnicoNome}` : ""}`}
-              zIndex={p.status === "em_andamento" ? 15 : 5}
-            >
-              <div
-                className="flex items-center justify-center rounded-full border-2 border-white text-[11px] font-semibold text-white shadow-md"
-                style={{ width: 26, height: 26, backgroundColor: COR_STATUS[p.status] }}
-              >
-                {p.ordem}
-              </div>
-            </AdvancedMarker>
-          ))}
-
-          {tecnicos.map((t) =>
-            t.ultima ? (
-              <AdvancedMarker
-                key={`tec-${t.id}`}
-                position={{ lat: t.ultima.lat, lng: t.ultima.lng }}
-                title={`${t.nome} · visto às ${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(t.ultima.em))}`}
-                zIndex={40}
-              >
-                <div
-                  className="rounded-full border-[3px] border-white shadow-lg"
-                  style={{
-                    width: 20,
-                    height: 20,
-                    backgroundColor: t.cor,
-                    boxShadow: `0 0 0 4px ${t.cor}40`,
-                  }}
-                />
-              </AdvancedMarker>
-            ) : null,
+    <MapaBase className="h-full min-h-96" marcadores={marcadores} linhas={linhas}>
+      {linhas.length > 0 && (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-[1000] flex flex-col gap-1 rounded-[var(--radius-sm)] border border-border bg-surface/95 px-3 py-2 text-xs shadow-sm backdrop-blur-sm">
+          <p className="flex items-center gap-2 text-text-secondary">
+            <span
+              className="inline-block h-0.5 w-5 shrink-0"
+              style={{ borderTop: "3px dashed currentColor" }}
+              aria-hidden="true"
+            />
+            Caminho a seguir
+            {tracadoAtivo && (
+              <span className="text-text-tertiary">
+                ({tracadoAtivo.distanciaKm.toFixed(1)} km
+                {tracadoAtivo.duracaoMin != null ? ` · ${tracadoAtivo.duracaoMin} min` : ""})
+              </span>
+            )}
+          </p>
+          <p className="flex items-center gap-2 text-text-tertiary">
+            <span
+              className="inline-block h-0.5 w-5 shrink-0 opacity-50"
+              style={{ borderTop: "3px solid currentColor" }}
+              aria-hidden="true"
+            />
+            Já percorrido
+          </p>
+          {aproximado && (
+            <p className="text-text-tertiary">
+              Traçado em linha reta — configure a chave de rotas para seguir as ruas.
+            </p>
           )}
-        </GoogleMap>
-      </APIProvider>
-    </div>
+        </div>
+      )}
+    </MapaBase>
   );
 }

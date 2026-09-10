@@ -9,6 +9,7 @@ import { ConcluirServicoForm } from "./concluir-servico-form";
 import { PendenciaForm } from "./pendencia-form";
 import { AvaliarServicoForm } from "./avaliar-servico-form";
 import { FOCUS_RING } from "@/lib/ui/styles";
+import { linkGoogleMapsDestino, linkWaze } from "@/lib/navegacao";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 
@@ -64,7 +65,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
   const { data: servicoRaw } = await supabase
     .from("servicos")
     .select(
-      "id, status, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco)",
+      "id, status, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
     )
     .eq("id", id)
     .eq("tecnico_id", user.id)
@@ -218,6 +219,31 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
         </div>
         <h1 className="mt-1 text-lg font-semibold text-text-primary">{rt?.nome}</h1>
         <p className="mt-0.5 text-sm text-text-tertiary">{rt?.endereco}</p>
+
+        {/* Navegação abre no app de mapa do próprio técnico — turn-by-turn de
+            verdade, sem custo de API e sem reimplementar navegação no PWA. */}
+        {rt?.latitude != null && rt?.longitude != null && (
+          <div className="mt-3 flex gap-2">
+            <a
+              href={linkGoogleMapsDestino({ lat: Number(rt.latitude), lng: Number(rt.longitude) })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-accent bg-accent/5 px-4 py-2.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 ${FOCUS_RING}`}
+            >
+              <span aria-hidden="true">➤</span>
+              Como chegar
+            </a>
+            <a
+              href={linkWaze({ lat: Number(rt.latitude), lng: Number(rt.longitude) })}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Abrir no Waze"
+              className={`flex shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border px-3 py-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-input ${FOCUS_RING}`}
+            >
+              Waze
+            </a>
+          </div>
+        )}
       </header>
 
       <div className="flex-1 px-4 py-5">

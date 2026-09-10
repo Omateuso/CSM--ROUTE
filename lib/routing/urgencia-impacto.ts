@@ -5,11 +5,11 @@
 // custo" — por isso é um módulo irmão pequeno, não um encaixe forçado no
 // motor existente (ver nota no plano aprovado).
 //
-// Reaproveita sem alterar: calcularMatrizDistancia (lib/maps/google/matrix.ts,
-// deslocamento real de carro) e haversineKm (proximity.ts, fallback quando a
-// Routes API falhar — mesmo comportamento gracioso já usado em
-// intelligent-route.ts, billing desligado hoje inclusive).
-import { calcularMatrizDistancia } from "@/lib/maps/google/matrix";
+// Reaproveita sem alterar: o provedor de rotas (lib/maps/provedor.ts,
+// deslocamento real de carro) e haversineKm (proximity.ts, fallback quando o
+// provedor falhar — mesmo comportamento gracioso já usado em
+// intelligent-route.ts, provedor sem chave configurada inclusive).
+import { obterProvedor } from "@/lib/maps/provedor";
 import { haversineKm, type PontoGeografico } from "./proximity";
 
 export type ParadaRota = {
@@ -57,13 +57,13 @@ async function distanciasOuFallback(
 ): Promise<ImpactoDistancia[]> {
   if (destinos.length === 0) return [];
   try {
-    const matriz = await calcularMatrizDistancia(origem, destinos);
+    const matriz = await obterProvedor().matriz(origem, destinos);
     return matriz.map((m, indice) => ({
       distanciaKm: m.distanciaKm ?? haversineKm(origem, destinos[indice]),
       duracaoMin: m.duracaoMin,
     }));
   } catch (err) {
-    console.warn("Routes API indisponível pro impacto de urgência, caindo pra Haversine:", err);
+    console.warn("Provedor de rotas indisponível pro impacto de urgência, caindo pra Haversine:", err);
     return destinos.map((d) => ({ distanciaKm: haversineKm(origem, d), duracaoMin: null }));
   }
 }

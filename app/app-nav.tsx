@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -14,6 +13,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useRealtimeRefresh } from "@/lib/realtime/use-realtime";
 import { NAV_LINKS, type NavLink } from "./nav-links";
 import { NavIcons } from "./nav-icons";
 import styles from "./app-nav.module.css";
@@ -143,40 +143,8 @@ export function AppNav({
 
   // Sino de respostas do cliente (0036) — Realtime em `chamado_respostas`.
   // Qualquer INSERT/UPDATE (a sync grava, o gerente marca como visto) refaz o
-  // fetch do layout, que recalcula o contador. Mesmo padrão + fix de
-  // setAuth do dashboard-realtime.tsx (a assinatura chega a SUBSCRIBED mas a
-  // RLS falha calada sem o token no socket).
-  useEffect(() => {
-    const supabase = createClient();
-    let canal: ReturnType<typeof supabase.channel> | null = null;
-    let cancelado = false;
-
-    (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) await supabase.realtime.setAuth(session.access_token);
-      if (cancelado) return;
-      canal = supabase
-        .channel("app-nav-respostas")
-        .on("postgres_changes", { event: "*", schema: "public", table: "chamado_respostas" }, () => {
-          router.refresh();
-        })
-        .subscribe();
-    })();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) supabase.realtime.setAuth(session.access_token);
-    });
-
-    return () => {
-      cancelado = true;
-      subscription.unsubscribe();
-      if (canal) supabase.removeChannel(canal);
-    };
-  }, [router]);
+  // fetch do layout, que recalcula o contador.
+  useRealtimeRefresh("app-nav-respostas", [{ tabela: "chamado_respostas" }]);
 
   // Setas ←/→ trocam de aba (mesmo padrão do arquivo) — aqui "trocar de
   // aba" é navegação de verdade (router.push), não troca de painel em
