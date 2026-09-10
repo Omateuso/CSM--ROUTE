@@ -1,49 +1,38 @@
-/* Port do menu-pasta (26/08/2026) — arquivo de referência aprovado pelo
-   usuário: menu-pasta-ospower.html (portado literalmente, ver prompt v2).
-   Variáveis, geometria da lingueta/corpo/canto côncavo, medição por
-   elemento fantasma, FLIP das pílulas e o tempo/curva de animação vêm
-   direto do arquivo — não são valores inventados aqui. Substitui de vez a
-   pill bar/dock flutuante de 24-25/08 (mesma decisão de manter os tokens
-   locais deste componente, não em app/globals.css, só que agora a pasta
-   TAMBÉM é o fundo do conteúdo — ver .paper abaixo — não só da barra).
-   Duas diferenças conscientes do arquivo, ambas exigidas pela stack real
-   (app multi-página, não uma demo de painel único):
-   1) `body{padding;background}` do arquivo virou `.shellOuter` (só entra
-      em cena quando o usuário está logado como gerente/gestão — login e
-      a interface do técnico continuam fora dessa paleta/moldura).
-   2) `height:100%` encadeado por html/body virou `height:100dvh` aqui —
-      precisa ser um valor de viewport de verdade (não só min-height) pra
-      que o excesso de conteúdo fique contido dentro de `.paper` (que tem
-      overflow:auto), em vez de vazar por baixo do `overflow:hidden` da
-      pasta. */
+/* Menu lateral retrátil (10/09/2026) — substitui o menu-pasta de 26/08.
+   Ver o porquê em app/app-nav.tsx: a aba ativa saía da fileira e ia para a
+   primeira posição, então a lista se rearranjava a cada clique.
+
+   A PALETA NÃO MUDOU de propósito. O cinza escuro da moldura (--shell) e o
+   claro do conteúdo (--paper) vieram do menu-pasta e valem hoje para o fundo
+   de toda página de gerente/gestão — trocá-los aqui repintaria o produto
+   inteiro numa tarefa que é de navegação. Os tokens continuam locais deste
+   componente (não em app/globals.css), pra não vazarem para o resto do app.
+
+   Continua valendo do arquivo anterior: `height:100dvh` (valor de viewport
+   de verdade, não só min-height) é o que mantém o excesso de conteúdo dentro
+   de `.paper`, que rola, em vez de vazar por baixo do `overflow:hidden`. */
 .shellOuter {
-  --shell: #56574f; /* moldura cinza escuro */
-  --paper: #e3e5de; /* pasta: lingueta + corpo */
-  --pill: #e9eae4; /* abas inativas */
-  --pill-hover: #f2f3ee;
+  --shell: #56574f; /* moldura */
+  --paper: #e3e5de; /* painel de conteúdo */
   --ink: #2b2b28;
-  --muted: #6b6c66;
-  --line: #d6d8d0;
+  /* Teal do app (mesma unificação de 27/08 usada no botão Entrar, no
+     Proximidade de rota e nos cards de operação). É a única cor do menu —
+     todo o resto é o cinza da moldura com branco em opacidades diferentes. */
+  --accent: #008a83;
 
   --r-shell: 30px;
   --r-body: 24px;
-  --r-tab: 20px;
-  --notch: 18px;
-  --header: 64px;
-  --inset: 14px;
-  /* --tab-pad-l: 28px, não 50px — arquivo reserva 50px pro botão fechar
-     (removido aqui, ver app-nav.tsx: "nada pra fechar" nesse contexto,
-     autorizado explicitamente no prompt). */
-  --tab-pad-l: 28px;
-  --tab-pad-r: 34px;
+  --r-item: 10px;
+
+  --w-aberto: 244px;
+  --w-fechado: 68px;
+  --inset: 12px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --dur: 420ms;
+  --dur: 200ms;
 
   height: 100dvh;
-  /* Sem padding no topo (era 16px nos 4 lados) — o header/pasta deve
-     começar rente ao topo da janela, sem faixa/gap reservado ali. Mantém
-     o "cartão flutuante" nas laterais/embaixo, que não foi apontado como
-     problema. */
+  /* Sem padding no topo: a moldura começa rente ao topo da janela, sem faixa
+     clara reservada ali (correção de 27/08, mantida). */
   padding: 0 16px 16px;
   background: radial-gradient(120% 120% at 50% 0%, #fbfbfa 0%, #eceded 100%);
   color: var(--ink);
@@ -52,230 +41,401 @@
 .app {
   position: relative;
   height: 100%;
+  display: flex;
   background: var(--shell);
-  /* Cantos de cima retos (era var(--r-shell) nos 4) — com o topo agora
-     rente à janela, um raio ali criaria de novo um pedacinho de faixa
-     clara "vazando" nos ~30px do canto (o arco do border-radius passaria
-     a expor o fundo externo bem onde o topo deveria estar flush). Embaixo
-     continua arredondado, mesmo efeito de cartão que já existia. */
+  /* Cantos de cima retos porque o topo está flush com a janela; embaixo
+     continua o arredondado de cartão. */
   border-radius: 0 0 var(--r-shell) var(--r-shell);
   box-shadow: 0 40px 90px -35px rgba(0, 0, 0, 0.4);
   overflow: hidden;
 }
 
-/* ---------- topo: pílulas + usuário ---------- */
-/* O arquivo de referência usa `right:16px; max-width:calc(100% - 340px)`
-   — um valor fixo que só funciona porque a demo é uma tela larga única.
-   Aqui a largura da lingueta varia por rota (label curto vs. "Rotas
-   confirmadas"/"Zonas e regiões") E o viewport vai de desktop a celular
-   — um número mágico fixo ou deixa espaço demais numa aba curta ou
-   esmaga as pílulas numa tela estreita (chegou a sumir quase inteiro em
-   390px de largura). Troca: `left` calculado em JS a partir da largura
-   real medida da lingueta (--tab-left, ver app-nav.tsx) + `right:16px` —
-   o navegador calcula a largura disponível sozinho (right - left),
-   corretamente pra qualquer combinação de label/viewport, sem número
-   mágico. */
-.topright {
-  position: absolute;
-  z-index: 4;
-  left: var(--tab-left, var(--inset));
-  right: 16px;
-  top: 12px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.pills {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.pills::-webkit-scrollbar {
-  display: none;
-}
-.pill {
-  height: 40px;
-  padding: 0 15px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--pill);
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  transition:
-    background 160ms var(--ease),
-    transform 160ms var(--ease);
-}
-.pill:hover {
-  background: var(--pill-hover);
-  transform: translateY(-1px);
-}
-.icon {
-  width: 16px;
-  height: 16px;
-  flex: none;
-}
-
-.user {
-  display: flex;
+/* ---------- barra lateral ---------- */
+/* Fundo um pouco mais escuro que a moldura: sem isso o menu não se lê como
+   um painel, e sim como espaço vazio à esquerda do conteúdo. */
+.sidebar {
+  position: relative;
+  z-index: 20;
   flex: 0 0 auto;
-  align-items: center;
-  gap: 10px;
-  padding-left: 12px;
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
-}
-.logout {
-  height: 34px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--pill);
-  color: var(--ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  transition: background 160ms var(--ease);
-}
-.logout:hover {
-  background: var(--pill-hover);
-}
-
-/* sino de respostas novas do cliente (0036) */
-.sino {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--pill);
-  color: var(--ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  text-decoration: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  transition: background 160ms var(--ease);
-}
-.sino:hover {
-  background: var(--pill-hover);
-}
-.sinoAtivo {
-  background: #1e3a6e; /* --accent do app; fixo aqui pra não vazar token */
-  color: #fff;
-}
-.sinoAtivo:hover {
-  background: #16305a;
-}
-.sinoBadge {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.25);
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
-  line-height: 18px;
-}
-.sino:not(.sinoAtivo) .sinoBadge {
-  background: rgba(0, 0, 0, 0.12);
-}
-
-/* ---------- a pasta ---------- */
-.tab {
-  position: absolute;
-  left: var(--inset);
-  top: 12px;
-  height: calc(var(--header) - 12px);
-  padding: 0 var(--tab-pad-r) 0 var(--tab-pad-l);
-  background: var(--paper);
-  border-radius: var(--r-tab) var(--r-tab) 0 0;
+  width: var(--w-aberto);
   display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap;
+  flex-direction: column;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.13);
   overflow: hidden;
   transition: width var(--dur) var(--ease);
 }
-.tabInner {
+.fechado .sidebar {
+  width: var(--w-fechado);
+}
+
+/* ---------- cabeçalho: marca + gatilho ---------- */
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 4px 0 6px;
+  margin-bottom: 14px;
+}
+.marcaLogo {
+  display: inline-flex;
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+.marcaNome {
+  min-width: 0;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Recolhido sobra só o gatilho, centralizado na calha — sem marca boiando
+   num vazio nem duas linhas competindo por 68px. */
+.fechado .marca {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+.fechado .marcaLogo,
+.fechado .marcaNome {
+  display: none;
+}
+
+.toggle {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  margin-left: auto;
+  border: 0;
+  border-radius: var(--r-item);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition:
+    background 160ms var(--ease),
+    color 160ms var(--ease);
 }
-.joint {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--header) - var(--notch));
-  width: var(--notch);
-  height: var(--notch);
-  background: radial-gradient(circle at 100% 0%, transparent var(--notch), var(--paper) calc(var(--notch) + 0.5px));
-  transition: left var(--dur) var(--ease);
-  pointer-events: none;
+.toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
-.paper {
+.fechado .toggle {
+  margin-left: 0;
+  width: 44px;
+  height: 44px;
+}
+
+/* ---------- lista ---------- */
+/* Barra de rolagem escondida (não desligada): com a lista alta ela ainda
+   rola, mas uma barra clara cortando a calha de 68px do menu recolhido é
+   exatamente o que o usuário apontou. Mesmo tratamento que a fileira de
+   pílulas do menu antigo já usava. */
+.nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nav::-webkit-scrollbar {
+  display: none;
+}
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Um item só: vale para link de navegação e para o sino — os dois recolhem
+   exatamente do mesmo jeito, sem regra separada para cada. */
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-item);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 150ms var(--ease),
+    color 150ms var(--ease);
+}
+.item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.96);
+}
+.fechado .item {
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Página atual: realce translúcido + marcador à esquerda, no MESMO lugar da
+   lista. Antes era uma laje na cor exata do painel de conteúdo, o que fazia
+   o item parecer um buraco recortado no menu e pesava mais que a própria
+   página. `aria-current="page"` carrega o mesmo significado para quem não
+   enxerga a cor. */
+.itemAtivo {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-weight: 600;
+}
+.itemAtivo:hover {
+  background: rgba(255, 255, 255, 0.19);
+  color: #fff;
+}
+.itemAtivo::before {
+  content: "";
   position: absolute;
-  left: var(--inset);
-  right: var(--inset);
-  top: var(--header);
-  bottom: 0;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 18px;
+  border-radius: 0 3px 3px 0;
   background: var(--paper);
-  border-radius: 0 var(--r-body) var(--r-body) var(--r-body);
+  transform: translateY(-50%);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.75;
+}
+.icon svg {
+  width: 100%;
+  height: 100%;
+}
+.item:hover .icon,
+.itemAtivo .icon {
+  opacity: 1;
+}
+
+/* Recolhido, o rótulo some da tela mas continua no fluxo de leitura de tela
+   (padrão visually-hidden) — `display:none` o apagaria também para quem usa
+   leitor de tela, e aí o item viraria um ícone sem nome. */
+.rotulo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fechado .rotulo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- rodapé: sino + usuário ---------- */
+.rodape {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* O sino era um bloco azul cheio — o elemento mais pesado da tela inteira,
+   competindo com o conteúdo da página. Agora é um item normal; quem chama
+   atenção é só o número. */
+.badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 20px;
+}
+/* Recolhido não há linha para o número ocupar: vira um selo sobre o ícone. */
+.fechado .badge {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  margin-left: 0;
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 6px;
+}
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.usuarioTexto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.usuarioNome {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.usuarioPapel {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sair {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  margin-left: auto;
+  border: 0;
+  border-radius: var(--r-item);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition:
+    background 150ms var(--ease),
+    color 150ms var(--ease);
+}
+.sair:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+/* Recolhido: some o avatar e o nome, fica só a ação. */
+.fechado .usuario {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+.fechado .avatar,
+.fechado .usuarioTexto {
+  display: none;
+}
+.fechado .sair {
+  margin-left: 0;
+  width: 44px;
+  height: 44px;
+}
+
+/* ---------- painel de conteúdo ---------- */
+.paper {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: var(--inset) var(--inset) var(--inset) 0;
+  background: var(--paper);
+  border-radius: var(--r-body);
   overflow: auto;
 }
 
-.ghost {
-  position: absolute;
-  visibility: hidden;
-  pointer-events: none;
-  white-space: nowrap;
-  padding: 0 var(--tab-pad-r) 0 var(--tab-pad-l);
-  font-size: 13.5px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
+.backdrop {
+  display: none;
 }
 
-.pill:focus-visible,
-.tab:focus-visible,
-.logout:focus-visible {
+.item:focus-visible,
+.toggle:focus-visible,
+.sair:focus-visible,
+.backdrop:focus-visible {
   outline: 2px solid #fff;
-  outline-offset: 3px;
+  outline-offset: 2px;
+}
+
+/* Tela estreita: a calha de ícones fica sempre visível e o menu aberto passa
+   a COBRIR o conteúdo em vez de empurrá-lo — com 244px de menu num celular
+   não sobraria página. */
+@media (max-width: 860px) {
+  .sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+  }
+  .aberto .sidebar {
+    background: #4b4c45;
+    box-shadow: 14px 0 34px -12px rgba(0, 0, 0, 0.55);
+  }
+  .paper {
+    margin-left: var(--w-fechado);
+  }
+  .aberto .backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    border: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.38);
+    cursor: pointer;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tab,
-  .joint,
-  .pill {
+  .sidebar,
+  .item,
+  .toggle,
+  .sair {
     transition: none;
   }
 }
 
-/* Ninguém quer imprimir a moldura escura/pasta — só o conteúdo da página
-   (achado ao construir a impressão do relatório com timbrado, 26/08/2026,
-   que herda esse shell por estar dentro do layout raiz; corrigido aqui de
-   propósito pra beneficiar qualquer página, não só o relatório). Reset
-   pontual (não `all:unset`, que apagaria herança sem querer) das
-   propriedades que criam a moldura/pasta — `.paper` volta a ser um bloco
-   comum em fluxo normal, deixando `@page`/cabeçalho/rodapé fixos de cada
-   página cuidar da impressão sozinhos. */
+/* Ninguém quer imprimir o menu — só o conteúdo da página (achado ao
+   construir a impressão do relatório com timbrado, 26/08/2026, que herda
+   este shell por estar no layout raiz; vale pra qualquer página, não só o
+   relatório). Reset pontual das propriedades que criam a moldura, nunca
+   `all:unset`, que apagaria herança sem querer. */
 @media print {
   .shellOuter {
     height: auto;
@@ -284,20 +444,19 @@
   }
   .app {
     position: static;
+    display: block;
     height: auto;
     background: none;
     border-radius: 0;
     box-shadow: none;
     overflow: visible;
   }
-  .topright,
-  .tab,
-  .joint {
+  .sidebar,
+  .backdrop {
     display: none;
   }
   .paper {
-    position: static;
-    inset: auto;
+    margin: 0;
     background: none;
     border-radius: 0;
     overflow: visible;

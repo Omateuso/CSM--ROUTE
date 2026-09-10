@@ -1,42 +1,76 @@
 "use client";
 
-import {
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useId,
-  type CSSProperties,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { useState, type ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeRefresh } from "@/lib/realtime/use-realtime";
-import { NAV_LINKS, type NavLink } from "./nav-links";
+import { NAV_LINKS } from "./nav-links";
 import { NavIcons } from "./nav-icons";
 import styles from "./app-nav.module.css";
 
-// Port do menu-pasta (26/08/2026) — porte literal do arquivo de referência
-// aprovado pelo usuário (menu-pasta-ospower.html, ver prompt v2: "isso é
-// um port, não um redesign"). Substitui de vez a pill bar/dock flutuante
-// de 24-25/08 — a aba ativa deixa de ser uma pílula pintada e vira uma
-// pasta (lingueta + corpo), com o CONTEÚDO DA PÁGINA sendo o corpo dela
-// (por isso o componente agora recebe `children` e envolve a página
-// inteira, não só a barra de navegação).
-function prefersReducedMotion() {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Menu lateral retrátil (10/09/2026) — substitui o menu-pasta de 26/08.
+//
+// Motivo, relatado pelo usuário: no menu-pasta a aba clicada era REMOVIDA da
+// fileira (`links.filter(...)`) e redesenhada como lingueta na primeira
+// posição. A lista inteira se rearranjava a cada clique e o item recém
+// escolhido aparecia longe de onde estava. Aqui TODOS os links são
+// renderizados sempre, na mesma ordem de `NAV_LINKS`, e o ativo só muda de
+// aparência no lugar em que já estava. Nada de FLIP, filtro ou medição.
+//
+// A semântica mudou junto, por consequência: navegação entre páginas é
+// `<nav>` + lista de links com `aria-current="page"`, não
+// `role="tablist"/"tab"/"tabpanel"` (que descreve painéis trocados na mesma
+// tela). As setas ←/→ saíram com isso — existiam por causa do padrão de
+// abas; entre links, quem anda é o Tab.
+//
+// NOTA PRA QUEM FOR TESTAR: os links agora respondem a `getByRole("link")`.
+// O aviso antigo ("o menu usa role=tab, link acha zero") não vale mais.
+
+const COOKIE_MENU = "menu-lateral";
+
+const ROLE_LABEL: Record<"gerente" | "gestao", string> = {
+  gerente: "Gerente",
+  gestao: "Gestão",
+};
+
+// O estado inicial vem do servidor (cookie lido em app/layout.tsx) em vez de
+// localStorage lido num efeito: assim o HTML do servidor e o do cliente já
+// nascem iguais (sem descasamento de hidratação) e sem `setState` dentro de
+// efeito, que é a regra de lint (`react-hooks/set-state-in-effect`) em que
+// este projeto já tropeçou antes.
+function guardarPreferencia(aberto: boolean) {
+  try {
+    document.cookie = `${COOKIE_MENU}=${aberto ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    // Cookie bloqueado só custa a preferência entre recarregamentos; o menu
+    // continua abrindo e fechando normalmente nesta sessão.
+  }
 }
 
-function pillContent(link: NavLink) {
+function iniciais(nome: string) {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "?";
+  const primeira = partes[0][0] ?? "";
+  const ultima = partes.length > 1 ? (partes[partes.length - 1][0] ?? "") : "";
+  return (primeira + ultima).toUpperCase();
+}
+
+function IconeMenu() {
   return (
-    <>
-      <span className={styles.icon} aria-hidden="true">
-        {NavIcons[link.icon]}
-      </span>
-      <span>{link.label}</span>
-    </>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
+function IconeSair() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 17v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2" />
+      <path d="M10 12h10M17 9l3 3-3 3" />
+    </svg>
   );
 }
 
@@ -44,95 +78,32 @@ export function AppNav({
   role,
   nome,
   respostasNaoVistas,
+  menuAberto,
   children,
 }: {
   role: "gerente" | "gestao";
   nome: string;
   respostasNaoVistas: number;
+  /** Preferência de menu aberto/fechado, lida do cookie no servidor. */
+  menuAberto: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const links = NAV_LINKS[role];
-  // Rota atual sem link no menu (ex.: /mapa, que saiu da navegação em
-  // 25/08 mas a rota continua existindo) — degrada bem: nenhuma pílula
-  // vira pasta, todas ficam na fileira normal, `.paper` só não ganha o
-  // recorte da lingueta.
-  const ativo = links.find((l) => l.href === pathname) ?? null;
+  const [aberto, setAberto] = useState(menuAberto);
 
-  const tabId = useId();
+  // Sino de respostas do cliente (0036) — Realtime em `chamado_respostas`.
+  // Qualquer INSERT/UPDATE (a sync grava, o gerente marca como visto) refaz o
+  // fetch do layout, que recalcula o contador.
+  useRealtimeRefresh("app-nav-respostas", [{ tabela: "chamado_respostas" }]);
 
-  const [tabWidth, setTabWidth] = useState<number | undefined>(undefined);
-  const ghostRef = useRef<HTMLSpanElement>(null);
-  const tabRef = useRef<HTMLDivElement>(null);
-  const tabInnerRef = useRef<HTMLSpanElement>(null);
-  const pillRefs = useRef(new Map<string, HTMLAnchorElement>());
-  const prevRectsRef = useRef(new Map<string, DOMRect>());
-  const mountedRef = useRef(false);
-  const pendingFocusRef = useRef(false);
-
-  const registerPill = useCallback(
-    (href: string) => (el: HTMLAnchorElement | null) => {
-      if (el) pillRefs.current.set(href, el);
-      else pillRefs.current.delete(href);
-    },
-    [],
-  );
-
-  // Mede a lingueta (elemento fantasma, mesmo padding/fonte — não dá pra
-  // saber a largura de "Rotas confirmadas" sem medir de verdade) e roda o
-  // FLIP das pílulas: compara a posição de cada uma agora com a posição
-  // guardada na renderização anterior (guardada no fim deste mesmo efeito,
-  // pra servir de "antes" na próxima troca). Sem "antes" no primeiro
-  // carregamento — pulado de propósito, mesmo comportamento do arquivo
-  // original, que só anima a partir do primeiro clique.
-  useLayoutEffect(() => {
-    if (ghostRef.current) {
-      setTabWidth(Math.ceil(ghostRef.current.getBoundingClientRect().width));
-    }
-
-    const reduced = prefersReducedMotion();
-
-    if (!reduced && tabInnerRef.current) {
-      tabInnerRef.current.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: "ease-out" });
-    }
-
-    const newRects = new Map<string, DOMRect>();
-    pillRefs.current.forEach((el, href) => newRects.set(href, el.getBoundingClientRect()));
-
-    if (mountedRef.current && !reduced) {
-      newRects.forEach((rect, href) => {
-        const el = pillRefs.current.get(href);
-        if (!el) return;
-        const prev = prevRectsRef.current.get(href);
-        if (prev) {
-          const dx = prev.left - rect.left;
-          if (Math.abs(dx) > 0.5) {
-            el.animate([{ transform: `translateX(${dx}px)` }, { transform: "none" }], {
-              duration: 420,
-              easing: "cubic-bezier(.2,.8,.2,1)",
-            });
-          }
-        } else {
-          el.animate(
-            [
-              { opacity: 0, transform: "scale(.85)" },
-              { opacity: 1, transform: "none" },
-            ],
-            { duration: 300, easing: "ease-out" },
-          );
-        }
-      });
-    }
-
-    prevRectsRef.current = newRects;
-    mountedRef.current = true;
-
-    if (pendingFocusRef.current) {
-      pendingFocusRef.current = false;
-      tabRef.current?.focus();
-    }
-  }, [pathname]);
+  function alternarMenu() {
+    setAberto((atual) => {
+      guardarPreferencia(!atual);
+      return !atual;
+    });
+  }
 
   async function handleLogout() {
     const supabase = createClient();
@@ -141,103 +112,119 @@ export function AppNav({
     router.refresh();
   }
 
-  // Sino de respostas do cliente (0036) — Realtime em `chamado_respostas`.
-  // Qualquer INSERT/UPDATE (a sync grava, o gerente marca como visto) refaz o
-  // fetch do layout, que recalcula o contador.
-  useRealtimeRefresh("app-nav-respostas", [{ tabela: "chamado_respostas" }]);
-
-  // Setas ←/→ trocam de aba (mesmo padrão do arquivo) — aqui "trocar de
-  // aba" é navegação de verdade (router.push), não troca de painel em
-  // memória. Handler fica só nos elementos da pasta (tab + pílulas), nunca
-  // em document — arquivo original prende no document, mas isso sequestraria
-  // as setas em qualquer input/select/mapa do resto do app.
-  function handleTabKeyDown(event: KeyboardEvent) {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-    event.preventDefault();
-    const currentIndex = ativo ? links.findIndex((l) => l.href === ativo.href) : -1;
-    const delta = event.key === "ArrowRight" ? 1 : -1;
-    const base = currentIndex >= 0 ? currentIndex : 0;
-    const next = links[(base + delta + links.length) % links.length];
-    if (!next || next.href === pathname) return;
-    pendingFocusRef.current = true;
-    router.push(next.href);
-  }
-
-  const jointLeft = (tabWidth ?? 0) + 14; // --inset: 14px
-  // Onde as pílulas podem começar: logo depois da lingueta (medida de
-  // verdade, não um número fixo — ver comentário em app-nav.module.css
-  // sobre por que o `max-width` fixo do arquivo original quebrava no
-  // celular).
-  const tabLeft = ativo ? jointLeft + 12 : 14;
-
   return (
     <div className={styles.shellOuter}>
-      <div className={styles.app} style={{ "--tab-left": `${tabLeft}px` } as CSSProperties}>
-        <div className={styles.topright}>
-          <div className={styles.pills} role="tablist" aria-label="Navegação" aria-owns={ativo ? tabId : undefined}>
-            {links
-              .filter((link) => link.href !== ativo?.href)
-              .map((link) => (
-                <Link
-                  key={link.href}
-                  ref={registerPill(link.href)}
-                  href={link.href}
-                  role="tab"
-                  aria-selected="false"
-                  className={styles.pill}
-                  onKeyDown={handleTabKeyDown}
-                >
-                  {pillContent(link)}
-                </Link>
-              ))}
+      <div className={`${styles.app} ${aberto ? styles.aberto : styles.fechado}`}>
+        <aside className={styles.sidebar}>
+          {/* Cabeçalho: marca + gatilho. Recolhido sobra só o gatilho,
+              centralizado na calha — o botão não fica boiando num vazio. */}
+          <div className={styles.marca}>
+            <span className={styles.marcaLogo} aria-hidden="true">
+              <Image src="/logo-igedes.png" alt="" width={26} height={26} />
+            </span>
+            {/* O perfil (Gerente/Gestão) NÃO se repete aqui — ele já aparece
+                ao lado do nome, no rodapé, que é onde tem a ver com quem
+                está logado. */}
+            <span className={styles.marcaNome}>Rota Inteligente</span>
+            <button
+              type="button"
+              onClick={alternarMenu}
+              aria-expanded={aberto}
+              aria-label={aberto ? "Recolher o menu" : "Expandir o menu"}
+              title={aberto ? "Recolher o menu" : "Expandir o menu"}
+              className={styles.toggle}
+            >
+              <span className={styles.icon} aria-hidden="true">
+                <IconeMenu />
+              </span>
+            </button>
           </div>
-          <div className={styles.user} aria-label={nome}>
+
+          <nav className={styles.nav} aria-label="Navegação principal">
+            <ul className={styles.lista}>
+              {links.map((link) => {
+                const atual = pathname === link.href;
+                return (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      // `aria-current="page"` é o que anuncia "você está
+                      // aqui" — cor sozinha nunca é sinal suficiente (mesma
+                      // regra do CLAUDE.md pros badges).
+                      aria-current={atual ? "page" : undefined}
+                      className={`${styles.item} ${atual ? styles.itemAtivo : ""}`}
+                      title={aberto ? undefined : link.label}
+                    >
+                      <span className={styles.icon} aria-hidden="true">
+                        {NavIcons[link.icon]}
+                      </span>
+                      <span className={styles.rotulo}>{link.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          <div className={styles.rodape}>
             {respostasNaoVistas > 0 && (
               <Link
                 href="/chamados"
-                className={`${styles.sino} ${styles.sinoAtivo}`}
-                aria-label={`${respostasNaoVistas} chamado(s) com resposta nova do cliente`}
+                className={`${styles.item} ${styles.sino}`}
+                title={aberto ? undefined : `${respostasNaoVistas} chamado(s) com resposta nova`}
               >
-                <span aria-hidden="true">🔔</span>
-                <span className={styles.sinoBadge}>{respostasNaoVistas}</span>
+                <span className={styles.icon} aria-hidden="true">
+                  🔔
+                </span>
+                <span className={styles.rotulo}>Respostas novas</span>
+                <span className={styles.badge} aria-hidden="true">
+                  {respostasNaoVistas}
+                </span>
+                <span className="sr-only">
+                  {respostasNaoVistas} chamado(s) com resposta nova do cliente
+                </span>
               </Link>
             )}
-            <button type="button" onClick={handleLogout} className={styles.logout}>
-              Sair
-            </button>
-          </div>
-        </div>
 
-        {ativo && (
-          <>
-            <div
-              ref={tabRef}
-              id={tabId}
-              role="tab"
-              aria-selected="true"
-              tabIndex={0}
-              onKeyDown={handleTabKeyDown}
-              className={styles.tab}
-              style={{ width: tabWidth }}
-            >
-              <span ref={tabInnerRef} className={styles.tabInner}>
-                <span className={styles.icon} aria-hidden="true">
-                  {NavIcons[ativo.icon]}
-                </span>
-                <span>{ativo.label}</span>
+            <div className={styles.usuario}>
+              <span className={styles.avatar} aria-hidden="true">
+                {iniciais(nome)}
               </span>
+              <span className={styles.usuarioTexto}>
+                <span className={styles.usuarioNome} title={nome}>
+                  {nome}
+                </span>
+                <span className={styles.usuarioPapel}>{ROLE_LABEL[role]}</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="Sair da conta"
+                title="Sair"
+                className={styles.sair}
+              >
+                <span className={styles.icon} aria-hidden="true">
+                  <IconeSair />
+                </span>
+              </button>
             </div>
-            <div className={styles.joint} style={{ left: jointLeft }} />
-          </>
-        )}
+          </div>
+        </aside>
 
-        <div className={styles.paper} role="tabpanel" aria-labelledby={ativo ? tabId : undefined}>
+        {/* Só existe em tela estreita, onde o menu aberto passa a cobrir o
+            conteúdo em vez de empurrá-lo. É um <button> de verdade (não uma
+            div com onClick) pra continuar alcançável e anunciado. */}
+        <button
+          type="button"
+          className={styles.backdrop}
+          onClick={alternarMenu}
+          aria-label="Fechar o menu"
+          tabIndex={aberto ? 0 : -1}
+        />
+
+        <div className={styles.paper}>
           <main className="flex min-h-full min-w-0 flex-col">{children}</main>
         </div>
-
-        <span ref={ghostRef} className={styles.ghost} aria-hidden="true">
-          {ativo ? pillContent(ativo) : null}
-        </span>
       </div>
     </div>
   );
