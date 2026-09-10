@@ -1,4 +1,8 @@
-export type ParadaStatus = "nao_iniciada" | "em_andamento" | "concluida";
+// 4 estados, não 3: "alguém está atendendo AGORA" (`em_atendimento`) é
+// diferente de "a parada tem progresso, mas ninguém está nela" (`parcial`).
+// Colapsar os dois fazia a tela dizer "Atendimento em andamento" para uma
+// parada parada — exatamente o oposto do que o gerente precisa ler.
+export type ParadaStatus = "nao_iniciada" | "parcial" | "em_atendimento" | "concluida";
 
 export type ParadaHoje = {
   ordem: number;
@@ -23,9 +27,10 @@ export type RotaHoje = {
   paradas: ParadaHoje[];
 };
 
-// Traçado de rua da rota PLANEJADA (paradas na ordem confirmada), vindo do
-// provedor de rotas. Diferente da `trilha` do técnico, que é o caminho
-// realmente percorrido (pings de GPS). As duas aparecem juntas no mapa.
+// Traçado de rua da rota planejada (paradas na ordem confirmada), vindo do
+// provedor de rotas. É o caminho que a equipe vai seguir — não depende de
+// saber onde o técnico está, e por isso sobreviveu à remoção do
+// rastreamento de posição (migration 0041).
 export type TracadoPlanejado = {
   rotaId: string;
   pontos: { lat: number; lng: number }[];
@@ -38,28 +43,4 @@ export type TracadoPlanejado = {
    * segue as ruas. A rota nunca some do mapa por falta de integração.
    */
   aproximado: boolean;
-};
-
-export type TecnicoAoVivo = {
-  id: string;
-  nome: string;
-  /** Cor da EQUIPE (decisão do usuário, 10/09/2026) — técnicos da mesma equipe compartilham. */
-  cor: string;
-  /** Vai dentro do pino no mapa. `null` se o técnico não tem equipe. */
-  equipeNumero: number | null;
-  equipeNome: string | null;
-  /** Rota que ele cobre hoje — o mapa usa pra não desenhar o planejado por cima do ao vivo. */
-  rotaId: string | null;
-  trilha: { lat: number; lng: number }[];
-  ultima: { lat: number; lng: number; em: string } | null;
-  /**
-   * O caminho que ele está seguindo agora: da posição atual pelas paradas
-   * que faltam. Mesmo percurso que o link do Google Maps abre no celular
-   * dele. `null` sem posição, sem parada pendente ou sem provedor.
-   */
-  rotaAoVivo: { lat: number; lng: number }[] | null;
-  /** `true` quando o caminho ao vivo é linha reta (sem provedor). */
-  rotaAoVivoAproximada: boolean;
-  /** Distância sempre; tempo só quando há provedor de rota. */
-  proxima: { rtCodigo: string; distanciaKm: number; duracaoMin: number | null } | null;
 };

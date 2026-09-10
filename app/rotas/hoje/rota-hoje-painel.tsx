@@ -3,22 +3,19 @@
 import { useState } from "react";
 import { RotaHojeMapa } from "./rota-hoje-mapa";
 import { RotasHojeLista } from "./rotas-hoje-lista";
-import type { RotaHoje, TecnicoAoVivo, TracadoPlanejado } from "./tipos";
+import type { RotaHoje, TracadoPlanejado } from "./tipos";
 
 // Segura qual rota está selecionada e liga o mapa à lista.
 //
 // Com mais de uma equipe em campo, desenhar todos os caminhos ao mesmo tempo
-// vira uma sopa de linhas cruzadas (foi o que aconteceu com 5 rotas no mesmo
-// dia). Então: uma rota só, o caminho aparece direto; mais de uma, o gerente
-// clica na equipe e vê o caminho DAQUELA equipe, com as paradas das outras
-// apagadas em vez de escondidas.
+// vira uma sopa de linhas cruzadas. Então: uma rota só, o caminho aparece
+// direto; mais de uma, o gerente clica na equipe e vê o caminho DAQUELA
+// equipe, com as paradas das outras apagadas em vez de escondidas.
 export function RotaHojePainel({
   rotas,
-  tecnicos,
   tracados,
 }: {
   rotas: RotaHoje[];
-  tecnicos: TecnicoAoVivo[];
   tracados: TracadoPlanejado[];
 }) {
   const [selecionada, setSelecionada] = useState<string | null>(null);
@@ -38,16 +35,10 @@ export function RotaHojePainel({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="h-[420px] lg:h-[600px]">
-          <RotaHojeMapa
-            rotas={rotas}
-            tecnicos={tecnicos}
-            tracados={tracados}
-            rotaAtiva={rotaAtiva}
-          />
+          <RotaHojeMapa rotas={rotas} tracados={tracados} rotaAtiva={rotaAtiva} />
         </div>
         <RotasHojeLista
           rotas={rotas}
-          tecnicos={tecnicos}
           rotaAtiva={rotaAtiva}
           onSelecionar={(id) => setSelecionada((atual) => (atual === id ? null : id))}
           selecionavel={rotas.length > 1}

@@ -37,7 +37,7 @@ async function contar(tabela) {
   return count ?? 0;
 }
 
-const TABELAS = ["chamados", "rotas", "rota_rts", "servicos", "historico", "evidencias", "tecnico_posicao"];
+const TABELAS = ["chamados", "rotas", "rota_rts", "servicos", "historico", "evidencias"];
 
 console.log("Estado atual:");
 for (const t of TABELAS) console.log(`  ${t.padEnd(12)} ${await contar(t)}`);
@@ -65,9 +65,7 @@ if (caminhos.length > 0) {
 // `on delete restrict`, então serviço sai antes de chamado. `rota_rts` cascateia
 // de `rotas`, e execuções/conclusões/evidências/validações cascateiam de
 // `servicos` — mas apagamos explicitamente o que dá, pra contagem ficar honesta.
-// `tecnico_posicao` (Fase 5, 0038) não tem FK pra nada disto — pode sair a
-// qualquer momento; fica junto porque é dado de execução do dia a dia.
-const ORDEM = ["tecnico_posicao", "historico", "servicos", "rotas", "chamados"];
+const ORDEM = ["historico", "servicos", "rotas", "chamados"];
 for (const tabela of ORDEM) {
   const { error } = await supabase.from(tabela).delete().not("id", "is", null);
   console.log(`  ${tabela.padEnd(12)} ${error ? "ERRO: " + error.message : "ok"}`);

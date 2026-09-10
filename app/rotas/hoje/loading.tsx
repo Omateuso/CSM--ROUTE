@@ -8,8 +8,8 @@ export default function Loading() {
       titulo="Rota do dia"
       descricao={
         <>
-          As rotas confirmadas de hoje no mapa — cada parada muda de cor conforme o técnico avança, e o
-          pin acompanha a posição de quem está com o app aberto.{" "}
+          As rotas confirmadas de hoje no mapa — cada parada muda de cor conforme a equipe avança, e o
+          atendimento em andamento aparece assim que o técnico inicia.{" "}
           <span className="inline-flex items-center gap-1 align-middle text-xs text-sla-dentro">
             <span aria-hidden="true">●</span> ao vivo
           </span>
