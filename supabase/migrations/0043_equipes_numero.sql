@@ -1,6 +1,11 @@
 -- =============================================================================
 -- Número da equipe — 10/09/2026
 --
+-- RENUMERADA de 0040 para 0043 no merge de 10/09/2026: o repositório remoto
+-- já tinha uma 0040 diferente (reexecucao_nao_reentra_sozinha), criada em
+-- paralelo. Só o número do arquivo mudou; o SQL é o mesmo que JÁ FOI
+-- APLICADO em 10/09 — NÃO rodar de novo (o `add column` falharia).
+--
 -- Pedido do usuário: o pino do técnico no mapa da "Rota do dia" passa a
 -- mostrar o número da equipe, pro gerente/gestão identificarem quem é quem
 -- sem passar o mouse em cada pino.
