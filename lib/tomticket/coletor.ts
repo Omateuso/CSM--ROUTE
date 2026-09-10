@@ -262,7 +262,7 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     .eq("id", true)
     .single();
 
-  // Lido à parte: a coluna só existe depois da migration 0043. Enquanto ela não
+  // Lido à parte: a coluna só existe depois da migration 0044. Enquanto ela não
   // roda, a reconciliação fica DESLIGADA (o SELECT falha -> `colunaReconciliacao`
   // false) em vez de derrubar a coleta inteira. Assim a feature "liga sozinha"
   // quando a migration entra, sem comportamento surpresa num deploy adiantado.
@@ -452,7 +452,7 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     if (!error) servicosCriados += Number(criados ?? 0);
   }
 
-  // Reconciliação (migration 0043): um chamado EXCLUÍDO no TomTicket some do
+  // Reconciliação (migration 0044): um chamado EXCLUÍDO no TomTicket some do
   // `/ticket/list` e a leitura incremental nunca mais o vê — ficaria aberto aqui
   // pra sempre. No máximo 1x/hora, lê a lista COMPLETA de abertos do
   // departamento e encerra qualquer chamado nosso `aberto`/`em_andamento` que
@@ -528,7 +528,7 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     .eq("id", true);
 
   // Gravado à parte do UPDATE principal: `reconciliou` só é true quando a coluna
-  // existe (0043 aplicada) E a leitura completa terminou. Separado pra um erro
+  // existe (0044 aplicada) E a leitura completa terminou. Separado pra um erro
   // aqui nunca derrubar o UPDATE de `ultima_leitura` acima.
   if (reconciliou) {
     await supabase

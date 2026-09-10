@@ -35,7 +35,7 @@ export default async function ServicosDoDiaPage() {
   const { data: servicosRaw, error: servicosError } = await supabase
     .from("servicos")
     .select(
-      "id, status, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco)",
+      "id, status, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
     )
     .eq("tecnico_id", user.id)
     // Hoje EM DIANTE (não só hoje): o técnico precisa enxergar a rota de
@@ -98,6 +98,8 @@ export default async function ServicosDoDiaPage() {
         rtCodigo: rt?.codigo as string,
         rtNome: rt?.nome as string,
         rtEndereco: rt?.endereco as string,
+        rtLat: rt?.latitude == null ? null : Number(rt.latitude),
+        rtLng: rt?.longitude == null ? null : Number(rt.longitude),
         assunto: chamado?.assunto as string,
         protocolo: (chamado?.tomticket_id as string | null) ?? null,
         criadoEm: chamado?.criado_em as string,

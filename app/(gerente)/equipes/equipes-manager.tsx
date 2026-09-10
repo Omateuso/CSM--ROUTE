@@ -13,6 +13,7 @@ export type Responsavel = { id: string; nome: string };
 export type EquipeRow = {
   id: string;
   nome: string;
+  numero: number;
   ativo: boolean;
   zonaPadraoId: string | null;
   responsavelId: string | null;
@@ -99,6 +100,7 @@ export function EquipesManager({
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
+                <th scope="col" className="px-4 py-2.5 font-medium">Nº</th>
                 <th scope="col" className="px-4 py-2.5 font-medium">Nome</th>
                 <th scope="col" className="px-4 py-2.5 font-medium">Zona padrão</th>
                 <th scope="col" className="px-4 py-2.5 font-medium">Responsável</th>
@@ -111,6 +113,7 @@ export function EquipesManager({
             <tbody className="divide-y divide-border">
               {equipes.map((e) => (
                 <tr key={e.id}>
+                  <td className="px-4 py-2.5 align-top font-mono text-text-secondary tabular-nums">{e.numero}</td>
                   <td className="px-4 py-2.5 align-top text-text-primary">{e.nome}</td>
                   <td className="px-4 py-2.5 align-top text-text-secondary">
                     {e.zonaPadraoNome ?? "—"}
@@ -151,7 +154,7 @@ export function EquipesManager({
 
               {equipes.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-text-tertiary">
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-text-tertiary">
                     Nenhuma equipe cadastrada ainda.
                   </td>
                 </tr>
@@ -244,6 +247,7 @@ export function EquipesManager({
         open={modoDialogo === "criar"}
         zonas={zonas}
         responsaveis={responsaveis}
+        numeroSugerido={Math.max(0, ...equipes.map((e) => e.numero)) + 1}
         onClose={fechar}
       />
       <EquipeEditDialog

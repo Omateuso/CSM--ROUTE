@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import RegisterServiceWorker from "./register-service-worker";
@@ -31,11 +32,11 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  // AppNav (menu-pasta) só existe pra gerente/gestão — técnico continua sem
+  // AppNav (menu lateral) só existe pra gerente/gestão — técnico continua sem
   // ele de propósito (interface mobile-first, "poucos toques por tela"), e
   // deslogado (ex.: /login) nunca teria papel nenhum aqui de qualquer jeito.
-  // AppNav envolve `children` (não só a barra): o conteúdo da página É o
-  // corpo da pasta, ver app/app-nav.tsx.
+  // AppNav envolve `children` (não só a barra): o conteúdo da página é o
+  // painel ao lado do menu, ver app/app-nav.tsx.
   const supabase = await createClient();
   const {
     data: { user },
@@ -60,6 +61,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     }
   }
 
+  // Menu aberto ou recolhido: preferência lida aqui, no servidor, e passada
+  // como prop — servidor e cliente renderizam o mesmo estado desde o
+  // primeiro paint. Ler isso de localStorage num efeito daria descasamento
+  // de hidratação e exigiria `setState` dentro de efeito. Padrão = aberto.
+  const menuAberto = (await cookies()).get("menu-lateral")?.value !== "0";
+
   return (
     <html
       lang="pt-BR"
@@ -68,7 +75,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         {role ? (
           <>
-            <AppNav role={role} nome={nome} respostasNaoVistas={respostasNaoVistas}>
+            <AppNav
+              role={role}
+              nome={nome}
+              respostasNaoVistas={respostasNaoVistas}
+              menuAberto={menuAberto}
+            >
               {children}
             </AppNav>
             <NovasRespostasToast />

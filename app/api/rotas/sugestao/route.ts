@@ -9,8 +9,8 @@ import { ROUTE_PROXIMITY_RADIUS_KM } from "@/lib/routing/config";
 const RAIOS_PERMITIDOS_KM = [5, 10, 15, 20, 25];
 
 // Lógica de sugestão de rota fica inteira no servidor (item 17 do spec da
-// Fase 2/Parte B) — nunca no client. Isso também é onde a chave da Routes
-// API é usada, então nunca pode virar código client-side.
+// Fase 2/Parte B) — nunca no client. Isso também é onde a chave do provedor
+// de rotas (ORS) é usada, então nunca pode virar código client-side.
 const STATUS_ABERTO = new Set(["aberto", "em_andamento"]);
 
 export async function POST(request: Request) {

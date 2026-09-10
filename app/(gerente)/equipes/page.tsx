@@ -42,7 +42,7 @@ export default async function EquipesPage() {
   ] = await Promise.all([
     supabase
       .from("equipes")
-      .select("id, nome, ativo, zona_padrao_id, responsavel_id, zonas(nome), responsavel:responsavel_id(nome)")
+      .select("id, nome, numero, ativo, zona_padrao_id, responsavel_id, zonas(nome), responsavel:responsavel_id(nome)")
       .order("nome", { ascending: true }),
     supabase.from("zonas").select("id, nome").order("nome", { ascending: true }),
     supabase
@@ -74,6 +74,7 @@ export default async function EquipesPage() {
     return {
       id: e.id as string,
       nome: e.nome as string,
+      numero: e.numero as number,
       ativo: e.ativo as boolean,
       zonaPadraoId: e.zona_padrao_id as string | null,
       responsavelId: e.responsavel_id as string | null,

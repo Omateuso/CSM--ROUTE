@@ -5,9 +5,22 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = { error: string | null };
 
+// O número é o rótulo que aparece no pino do técnico no mapa da Rota do
+// dia (migration 0040) — precisa ser inteiro positivo, e a unicidade é
+// garantida por constraint no banco, não só aqui.
+function lerNumero(formData: FormData): number | null {
+  const bruto = String(formData.get("numero") ?? "").trim();
+  if (!bruto) return null;
+  const n = Number(bruto);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
 function traduzErro(error: { code?: string; message: string }): string {
   if (error.code === "23503") {
     return "A zona selecionada não existe mais — atualize a página e tente de novo.";
+  }
+  if (error.code === "23505") {
+    return "Já existe uma equipe com esse número. Escolha outro.";
   }
   if (error.code === "42501") {
     return "Você não tem permissão pra fazer essa alteração.";
@@ -17,14 +30,17 @@ function traduzErro(error: { code?: string; message: string }): string {
 
 export async function criarEquipe(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const nome = String(formData.get("nome") ?? "").trim();
+  const numero = lerNumero(formData);
   const zonaPadraoId = String(formData.get("zonaPadraoId") ?? "");
   const responsavelId = String(formData.get("responsavelId") ?? "");
 
   if (!nome) return { error: "Informe o nome da equipe." };
+  if (numero == null) return { error: "Informe o número da equipe (inteiro maior que zero)." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("equipes").insert({
     nome,
+    numero,
     zona_padrao_id: zonaPadraoId || null,
     responsavel_id: responsavelId || null,
   });
@@ -40,14 +56,17 @@ export async function editarEquipe(_prev: ActionState, formData: FormData): Prom
   const zonaPadraoId = String(formData.get("zonaPadraoId") ?? "");
   const responsavelId = String(formData.get("responsavelId") ?? "");
   const ativo = formData.get("ativo") === "on";
+  const numero = lerNumero(formData);
 
   if (!nome) return { error: "Informe o nome da equipe." };
+  if (numero == null) return { error: "Informe o número da equipe (inteiro maior que zero)." };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("equipes")
     .update({
       nome,
+      numero,
       zona_padrao_id: zonaPadraoId || null,
       responsavel_id: responsavelId || null,
       ativo,

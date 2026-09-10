@@ -6,6 +6,9 @@ import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badg
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { RtGrupo } from "./rt-grupo";
 import { StatusServicoBadge, type StatusServico } from "../status-servico-badge";
+import { MapaDoDia } from "./mapa-do-dia";
+import { linkGoogleMapsDestino, linkGoogleMapsRota, paradasNavegaveis } from "@/lib/navegacao";
+import { FOCUS_RING } from "@/lib/ui/styles";
 
 // Com ano: sem ele, um chamado de 2025 e um de 2026 aparecem como "08/09" e
 // "12/11" e o técnico lê fora de ordem, sem ter como perceber.
@@ -24,6 +27,8 @@ export type ServicoItem = {
   rtCodigo: string;
   rtNome: string;
   rtEndereco: string;
+  rtLat: number | null;
+  rtLng: number | null;
   assunto: string;
   protocolo: string | null;
   criadoEm: string;
@@ -68,7 +73,15 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
         lista.push(s);
         porRt.set(s.rtCodigo, lista);
       }
-      return { dia, rts: [...porRt.entries()] };
+      const rts = [...porRt.entries()];
+      // Uma parada por RT, na ordem da rota — e não um ponto por chamado.
+      const paradas = paradasNavegaveis(
+        rts.map(([, doRt]) => ({ lat: doRt[0]?.rtLat ?? null, lng: doRt[0]?.rtLng ?? null })),
+      );
+      const paradasComCodigo = rts
+        .map(([codigo, doRt]) => ({ codigo, lat: doRt[0]?.rtLat ?? null, lng: doRt[0]?.rtLng ?? null }))
+        .filter((x): x is { codigo: string; lat: number; lng: number } => x.lat != null && x.lng != null);
+      return { dia, rts, navegacao: linkGoogleMapsRota(paradas), paradasComCodigo };
     });
   }, [filtrados]);
 
@@ -96,7 +109,7 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
         <p className="mt-8 text-center text-sm text-text-tertiary">Nenhum serviço encontrado com essa busca.</p>
       ) : (
         <div className="flex flex-col gap-6">
-          {dias.map(({ dia, rts }) => (
+          {dias.map(({ dia, rts, navegacao, paradasComCodigo }) => (
             <section key={dia}>
               <h2 className="mb-2 text-sm font-semibold text-text-primary">
                 Rota dia {formatoDataCurta.format(new Date(`${dia}T00:00:00`))}
@@ -106,6 +119,26 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                   </span>
                 )}
               </h2>
+
+              {navegacao && (
+                <a
+                  href={navegacao.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`mb-3 flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-accent bg-accent/5 px-4 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 ${FOCUS_RING}`}
+                >
+                  <span aria-hidden="true">➤</span>
+                  Abrir rota no Google Maps
+                </a>
+              )}
+              <MapaDoDia paradas={paradasComCodigo} />
+
+              {navegacao?.truncada && (
+                <p className="mb-3 text-xs text-text-tertiary">
+                  O Google Maps aceita no máximo 10 paradas por link — este abre as{" "}
+                  {navegacao.paradasNoLink} primeiras da rota.
+                </p>
+              )}
               <ul className="flex flex-col gap-3">
                 {rts.map(([rtCodigo, doRt]) => (
                   <RtGrupo
@@ -113,6 +146,11 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                     codigo={rtCodigo}
                     endereco={doRt[0]?.rtEndereco ?? ""}
                     quantidade={doRt.length}
+                    urlNavegacao={
+                      doRt[0]?.rtLat != null && doRt[0]?.rtLng != null
+                        ? linkGoogleMapsDestino({ lat: doRt[0].rtLat, lng: doRt[0].rtLng })
+                        : null
+                    }
                   >
                     {doRt.map((s, indice) => (
                       <li key={s.id}>

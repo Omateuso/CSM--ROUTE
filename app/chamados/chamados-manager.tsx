@@ -78,7 +78,7 @@ export function ChamadosManager({
   const [regiaoFiltro, setRegiaoFiltro] = useState("todas");
   const [slaFiltro, setSlaFiltro] = useState("todos");
   // Chamado encerrado (finalizado OU cancelado — inclui o excluído no TomTicket,
-  // migration 0043) some da lista por padrão (pedido do usuário, 10/09/2026) — a
+  // migration 0044) some da lista por padrão (pedido do usuário, 10/09/2026) — a
   // tela é o espelho/busca do TomTicket, não a fila de trabalho; o toggle traz
   // de volta pra consulta de histórico.
   const [mostrarEncerrados, setMostrarEncerrados] = useState(false);
