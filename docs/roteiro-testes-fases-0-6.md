@@ -93,14 +93,20 @@ passa a ver o histórico da tentativa anterior.
 **Resultado esperado:** o serviço fica **"Cancelado"** e some de "Meus serviços".
 
 ### 1b. Gerente programa a nova execução
-1. Entre como **gerente** → **Montar rota** → confirme uma rota nova para **hoje**
-   que inclua a **mesma RT** (repita o passo 2).
+1. A reexecução é **anexada a uma rota que já está confirmada** — não confirme uma
+   rota nova só para isso (uma rota nova que inclua a RT já pega o chamado sozinha).
+   Use a **própria rota de hoje onde a pendência aconteceu** (já está confirmada), ou
+   qualquer outra rota confirmada de hoje em diante.
 2. Menu → **Pendências**.
 3. No card da pendência, clique em **Programar nova execução**.
-4. No diálogo: escolha a rota que você acabou de confirmar, o técnico e (opcional)
-   uma observação → confirme.
+4. No diálogo: escolha essa rota, o técnico e (opcional) uma observação → confirme.
 
-**Resultado esperado:** a pendência some da lista de **Pendências**.
+**Resultado esperado:** a pendência some da lista de **Pendências**, e o chamado ganha
+um serviço `planejado` novo nessa rota (aparece para o técnico como retorno — 1c).
+
+> A sincronização automática (a cada 5 min) **não** recoloca sozinha um chamado que
+> virou pendência na rota dele — desde a migration `0040`, isso é decisão do gerente,
+> por aqui.
 
 ### 1c. Técnico vê o retorno
 1. Entre como o técnico da rota nova → **Meus serviços**.
