@@ -200,42 +200,15 @@ atendimento" continua lá — o serviço **não** muda de estado.
 
 ---
 
-## Fase 5 — rota do dia ao vivo
+## Fase 5 — rota do dia ao vivo — **REMOVIDA (10/09/2026)**
 
-**O que mudou:** tela nova (**gerente + gestão**) com o mapa das rotas do dia — as
-paradas mudam de cor conforme o técnico avança, e o pin do técnico acompanha a
-posição de quem está com o app aberto.
-
-**Pré-requisito:** uma rota confirmada para **hoje** (preparação, passo 2).
-
-### 5a. Técnico posta a posição
-1. Entre como **técnico** (no celular ou no navegador do computador) → **Meus
-   serviços**.
-2. O navegador pede permissão de **localização** — permita. (Se já permitiu antes
-   para tirar foto, nem pergunta.)
-3. Deixe a aba aberta e visível por ~1 minuto.
-
-> **Sem celular:** dá para usar o navegador do PC. No Chrome: F12 → menu "⋮" →
-> *More tools* → *Sensors* → *Location*, e escolha uma coordenada.
-
-### 5b. Gerente/gestão veem
-1. Noutra aba (ou outro dispositivo), entre como **gerente** ou **gestão** → menu →
-   **Rota do dia**.
-2. O mapa mostra as paradas das rotas de hoje:
-   - **verde** = parada concluída
-   - **laranja** = em andamento
-   - **cinza** = não iniciada
-3. Depois de ~30s, aparece o **pin colorido do técnico** na última posição dele, e
-   uma linha (trilha) por onde ele passou.
-4. A lista lateral mostra, por equipe: **"parada 3 de 8"** e o status de cada parada.
-5. Enquanto o técnico se move ou o status de um serviço muda, o mapa **atualiza
-   sozinho** (não precisa recarregar).
-
-**Resultado esperado:** na legenda, **"Nome do técnico · HH:MM"** (hora do último
-sinal). Se o técnico não estiver com o app aberto, aparece **"sem sinal"**.
-
-> Distância/tempo **de carro** (ETA real) ainda não entra — depende de habilitar o
-> billing do Google Cloud. Até lá o cálculo é em linha reta. Não é bug.
+A tela "Rota do dia" e o rastreamento de GPS do técnico foram **retirados do
+sistema**. Motivo: acompanhar a posição do técnico ao vivo vira ruído e lê como
+fiscalização — ele para para almoçar, sai de uma RT para comprar material e volta.
+O cálculo de rota/tempo por carro passou a ser feito por OSRM (sem o billing do
+Google). **Não há nada para testar aqui** — o item "Rota do dia" não existe mais no
+menu, e a interface do técnico não pede localização para rastreio (só continua
+pedindo para a foto carimbada, que é da Fase 3/auditoria).
 
 ---
 
@@ -284,5 +257,5 @@ evento **"Correção solicitada"** com o texto que você escreveu.
 | 2 | Gestão → RTs → clicar no código | tela de detalhe com histórico de endereços |
 | 3 | Menu (🔔) + Chamados | sino, filtro "resposta nova", "Conversa do chamado" |
 | 4 | Técnico (serviço planejado) + Gerente → Validação | link "Este serviço tem um problema" + seção "Apontados" |
-| 5 | Menu → Rota do dia | mapa com paradas coloridas + pin do técnico |
+| 5 | — | removida (10/09) — "Rota do dia" não existe mais |
 | 6 | Gerente → Validação | ordem nova, miniaturas, botão "Solicitar correção" |
