@@ -10,9 +10,9 @@ import { FOCUS_RING } from "@/lib/ui/styles";
 // código e o mesmo endereço — o técnico tinha que ler tudo pra saber quantas
 // casas ia visitar.
 //
-// Começa ABERTO: a lista de hoje é o trabalho do dia, e obrigar um clique pra
-// ver o que fazer seria pior. Fechar serve pra tirar do caminho a RT já
-// resolvida.
+// Começa FECHADO (pedido do usuário, 10/09/2026): a lista do dia pode ter
+// muitas RTs, e cada grupo aberto empurra o resto pra baixo — abrir é sob
+// demanda, na RT que o técnico vai atender agora.
 export function RtGrupo({
   codigo,
   endereco,
@@ -24,7 +24,7 @@ export function RtGrupo({
   quantidade: number;
   children: ReactNode;
 }) {
-  const [aberta, setAberta] = useState(true);
+  const [aberta, setAberta] = useState(false);
 
   return (
     <li className="rounded-[var(--radius-md)] border border-border bg-surface">

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ChamadosManager, type ChamadoRow } from "./chamados-manager";
+import { buscarDetalheChamado, type DetalheChamado } from "./actions";
 import { SyncTomticketButton, type SyncInfo } from "./sync-tomticket-button";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
 
@@ -13,8 +14,13 @@ function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   return value ?? null;
 }
 
-export default async function ChamadosPage() {
+export default async function ChamadosPage(props: PageProps<"/chamados">) {
   const supabase = await createClient();
+
+  // Deep-link do toast de "nova mensagem" (app/novas-respostas-toast.tsx): abre
+  // direto o modal de detalhe desse chamado.
+  const searchParams = await props.searchParams;
+  const chamadoIdInicial = typeof searchParams.chamado === "string" ? searchParams.chamado : null;
 
   const {
     data: { user },
@@ -141,6 +147,15 @@ export default async function ChamadosPage() {
     naoImportados: naoImportados ?? 0,
   };
 
+  // Veio do toast com ?chamado=<id>: já busca o detalhe aqui (server) e marca as
+  // respostas do cliente como vistas — o modal abre pronto, sem efeito no client
+  // (evita a regra react-hooks/set-state-in-effect).
+  let detalheInicial: DetalheChamado | null = null;
+  if (chamadoIdInicial && chamados.some((c) => c.id === chamadoIdInicial)) {
+    detalheInicial = await buscarDetalheChamado(chamadoIdInicial);
+    await supabase.rpc("fn_marcar_respostas_vistas", { p_chamado_id: chamadoIdInicial });
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-12">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -162,10 +177,13 @@ export default async function ChamadosPage() {
       </header>
 
       <ChamadosManager
+        key={chamadoIdInicial ?? "lista"}
         chamados={chamados}
         rts={rts}
         podeCriar={podeCriar}
         podeResponder={podeResponder}
+        chamadoIdInicial={chamadoIdInicial}
+        detalheInicial={detalheInicial}
       />
     </div>
   );

@@ -275,6 +275,16 @@ export default async function PendenciasPage() {
                   />
                 </div>
               )}
+
+              {/* Sem `servicoId` = registro anterior à migration 0042 (reagendamento
+                  gravava só o chamado_id) ou às fictícias pré-0026. Não dá pra
+                  ligar o recibo de idempotência da resposta sem um serviço —
+                  então explica, em vez de sumir com o botão em silêncio. */}
+              {integracaoAtiva && p.tomticketId && !p.servicoId && (
+                <p className="mt-3 border-t border-border pt-3 text-right text-xs text-text-tertiary">
+                  Registro anterior à atualização do sistema — responda o cliente pelo TomTicket.
+                </p>
+              )}
             </article>
           ))}
         </div>

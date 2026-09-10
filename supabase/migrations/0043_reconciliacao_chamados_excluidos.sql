@@ -1,0 +1,31 @@
+-- =============================================================================
+-- Reconciliação: chamado EXCLUÍDO no TomTicket some da lista (pedido do usuário,
+-- 10/09/2026)
+--
+-- O PROBLEMA: a sync incremental (`last_update_ge`, migration 0030) só vê
+-- chamado que MUDOU. Um chamado EXCLUÍDO no TomTicket simplesmente some do
+-- `/ticket/list` — nunca mais volta na resposta — então o sistema segue
+-- mostrando ele aberto pra sempre. Diferente de "cancelado" (situação 4), que a
+-- sync incremental pega porque o ticket ainda existe e teve `last_update`
+-- bumpado.
+--
+-- A SOLUÇÃO (feita no coletor, não aqui): de tempos em tempos (no máximo 1x por
+-- hora), o coletor lê a lista COMPLETA de chamados abertos do departamento no
+-- TomTicket e marca como `cancelado` qualquer chamado nosso que esteja
+-- `aberto`/`em_andamento` e não apareça mais lá. É o mesmo padrão de "leitura
+-- completa" que a base-automatizacao (`Coletor._ler_tudo`) usa pra descobrir os
+-- que sumiram.
+--
+-- Excluído -> `cancelado` (NÃO um valor de status novo): já é o valor "fora de
+-- cena", `traduzirStatus` já mapeia a situação 4 do TomTicket pra ele, e se o
+-- ticket for restaurado a sync incremental o traz de volta sozinha.
+--
+-- Esta migration só adiciona o relógio da reconciliação. A regra de esconder
+-- `cancelado`/`finalizado` da lista de Chamados por padrão é da UI
+-- (app/chamados/chamados-manager.tsx) e não precisa de migration.
+-- =============================================================================
+
+-- Quando a última leitura COMPLETA (reconciliação) rodou. O coletor usa isto
+-- pra não fazer o scan de ~21 páginas em toda passada de 5 min — só quando
+-- passou de 1h da última. Nullable: nunca rodou = roda na próxima sync.
+alter table sync_estado add column ultima_reconciliacao timestamptz;

@@ -58,6 +58,9 @@ export async function sincronizarComTomticket(): Promise<SyncState> {
     if (r.servicosCriados > 0) {
       partes.push(`${r.servicosCriados} já entraram numa rota confirmada`);
     }
+    if (r.reconciliados > 0) {
+      partes.push(`${r.reconciliados} encerrado(s) — sumiram do TomTicket`);
+    }
 
     return { error: null, resumo: `${partes.join(", ")}.` };
   } catch (erro) {

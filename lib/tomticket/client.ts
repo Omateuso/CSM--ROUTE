@@ -362,6 +362,73 @@ export async function listarChamadosAlterados(opcoes: {
   return { chamados, totalNaJanela, cortou: ids.length > maxChamados || totalNaJanela > maxChamados };
 }
 
+// Códigos de "situação" abertos do TomTicket (catálogo em
+// docs/referencias/base-automatizacao/base/chamados.py). Todo o resto (4
+// cancelada, 5 finalizada) está fora de cena.
+const SITUACOES_ABERTAS = "0,1,2,3,6,8,9,10,11";
+
+// TODOS os protocolos de chamado ABERTO de um departamento, AGORA.
+//
+// Diferente de `listarChamadosAlterados`, aqui NÃO há `last_update_ge`: é a foto
+// completa do que ainda está aberto. É o que permite descobrir um chamado que
+// foi EXCLUÍDO no TomTicket — ele some do `/ticket/list` e a leitura incremental
+// nunca mais o vê. Mesmo raciocínio de `Coletor._ler_tudo` na base-automatizacao.
+//
+// Sem `/ticket/detail` por chamado (só a listagem): pra reconciliar basta o
+// conjunto de protocolos que ainda existem abertos. ~21 páginas / ~7s pro
+// departamento MANUTENÇÃO - SRT. Propaga o erro de qualquer página — quem chama
+// PRECISA saber que a leitura foi parcial e não reconciliar em cima disso.
+export async function listarProtocolosAbertos(departmentId: string): Promise<Set<string>> {
+  const protocolos = new Set<string>();
+
+  for (let pagina = 1; pagina <= 400; pagina++) {
+    const corpo = await chamar("/ticket/list", {
+      method: "GET",
+      params: {
+        page: String(pagina),
+        situation: SITUACOES_ABERTAS,
+        department_id: departmentId,
+      },
+    });
+
+    const itens = comoLista(corpo.data);
+    if (itens.length === 0) break;
+    for (const item of itens) {
+      const protocolo = String(item.protocol ?? "").trim();
+      if (protocolo) protocolos.add(protocolo);
+    }
+
+    const proxima = numeroOuNulo(corpo.next_page);
+    if (proxima === null || proxima <= pagina) break;
+  }
+
+  return protocolos;
+}
+
+// A situação atual de UM chamado, pelo protocolo. Usado na reconciliação pra
+// decidir o status certo de um chamado que sumiu da lista de abertos:
+//   { existe: false }                 -> foi EXCLUÍDO  -> vira `cancelado`
+//   { existe: true, situacaoId: 5 }   -> foi finalizado sem a sync pegar
+//   { existe: true, situacaoId: 4 }   -> foi cancelado sem a sync pegar
+export async function situacaoDoProtocolo(
+  protocolo: string,
+): Promise<{ existe: boolean; situacaoId: number | null }> {
+  const corpo = await chamar("/ticket/list", {
+    method: "GET",
+    params: { min_protocol: protocolo, max_protocol: protocolo },
+  });
+
+  for (const item of comoLista(corpo.data)) {
+    if (String(item.protocol ?? "") === String(protocolo)) {
+      const situacao = item.situation && typeof item.situation === "object"
+        ? (item.situation as Record<string, unknown>)
+        : {};
+      return { existe: true, situacaoId: numeroOuNulo(situacao.id) };
+    }
+  }
+  return { existe: false, situacaoId: null };
+}
+
 // O chamado completo, com `custom_fields` e a mensagem sem truncar.
 export async function buscarDetalhe(ticketId: string): Promise<ChamadoTomTicket> {
   const corpo = await chamar("/ticket/detail", { method: "GET", params: { ticket_id: ticketId } });

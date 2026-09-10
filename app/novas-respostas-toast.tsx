@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ehRespostaAutomaticaIgnorada } from "@/lib/tomticket/mensagens";
 
-type Toast = { id: string; protocolo: string | null; assunto: string };
+type Toast = { id: string; chamadoId: string; protocolo: string | null; assunto: string };
 
 const DURACAO_MS = 8000;
 const MAX_VISIVEIS = 3;
@@ -16,12 +16,23 @@ const MAX_VISIVEIS = 3;
 // CSM — mesma regra da coleta (lib/tomticket/mensagens.ts), aqui como segunda
 // camada. Mesmo padrão de Realtime + setAuth do dashboard-realtime.tsx.
 export function NovasRespostasToast() {
+  const router = useRouter();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const vistos = useRef(new Set<string>());
 
   const remover = useCallback((id: string) => {
     setToasts((atual) => atual.filter((t) => t.id !== id));
   }, []);
+
+  const abrirChamado = useCallback(
+    (t: Toast) => {
+      remover(t.id);
+      // router.push (não <Link>): funciona mesmo já estando em /chamados, onde
+      // navegar pra mesma pathname sem query não faria nada.
+      router.push(`/chamados?chamado=${t.chamadoId}`);
+    },
+    [remover, router],
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -66,11 +77,16 @@ export function NovasRespostasToast() {
 
             const toast: Toast = {
               id: nova.id,
+              chamadoId: nova.chamado_id,
               protocolo: (chamado?.tomticket_id as string | null) ?? null,
               assunto: (chamado?.assunto as string | null) ?? "chamado",
             };
             setToasts((atual) => [...atual, toast].slice(-MAX_VISIVEIS));
             setTimeout(() => remover(nova.id), DURACAO_MS);
+            // Atualiza a tela atual sem reload: badges 🔔 da lista de /chamados e
+            // o contador do sino no menu (layout). Mesmo padrão do
+            // dashboard-realtime.tsx.
+            router.refresh();
           },
         )
         .subscribe();
@@ -89,7 +105,7 @@ export function NovasRespostasToast() {
       subscription.unsubscribe();
       if (canal) supabase.removeChannel(canal);
     };
-  }, [remover]);
+  }, [remover, router]);
 
   if (toasts.length === 0) return null;
 
@@ -113,13 +129,13 @@ export function NovasRespostasToast() {
                 {t.protocolo ? `#${t.protocolo} · ` : ""}
                 {t.assunto}
               </p>
-              <Link
-                href="/chamados"
-                onClick={() => remover(t.id)}
+              <button
+                type="button"
+                onClick={() => abrirChamado(t)}
                 className="mt-1 inline-block text-xs font-medium text-accent hover:text-accent-hover"
               >
                 Ver chamado →
-              </Link>
+              </button>
             </div>
             <button
               type="button"

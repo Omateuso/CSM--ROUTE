@@ -59,6 +59,7 @@ export async function register() {
           `, ${r.servicosCriados} serviço(s) em rota confirmada` +
           (r.respostasNovas ? `, ${r.respostasNovas} resposta(s) de cliente` : "") +
           (r.anexosBaixados ? `, ${r.anexosBaixados} anexo(s) baixado(s)` : "") +
+          (r.reconciliados ? `, ${r.reconciliados} encerrado(s) na reconciliação` : "") +
           (r.ignorados ? `, ${r.ignorados} sem RT` : ""),
       );
     } catch (erro) {

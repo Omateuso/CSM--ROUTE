@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { listarChamadosAlterados, listarDepartamentos, type ChamadoTomTicket } from "./client";
+import {
+  listarChamadosAlterados,
+  listarDepartamentos,
+  listarProtocolosAbertos,
+  situacaoDoProtocolo,
+  type ChamadoTomTicket,
+} from "./client";
 import { ehRespostaAutomaticaIgnorada } from "./mensagens";
 
 // Coleta direta do TomTicket — substitui o import por planilha (ver migration
@@ -95,6 +101,8 @@ export type ResultadoSync = {
   respostasNovas: number;
   /** Anexos do cliente baixados pro bucket nesta passada. */
   anexosBaixados: number;
+  /** Chamados encerrados pela reconciliação (sumiram do TomTicket). */
+  reconciliados: number;
 };
 
 // Nome de arquivo seguro pro path do Storage: sem acento, sem espaço, sem
@@ -117,7 +125,7 @@ async function sincronizarRespostasEAnexos(
   supabase: SupabaseClient,
   chamadoId: string,
   chamado: ChamadoTomTicket,
-  marcarNaoVistoDesde: Date,
+  primeiroPovoamento: boolean,
 ): Promise<{ respostasNovas: number; anexosBaixados: number }> {
   let respostasNovas = 0;
   let anexosBaixados = 0;
@@ -134,12 +142,19 @@ async function sincronizarRespostasEAnexos(
   for (const resp of chamado.respostas) {
     if (idPorReply.has(resp.replyId)) continue;
 
+    // Se estamos INSERINDO a resposta agora, ela nunca foi mostrada ao gerente
+    // — então uma resposta de cliente entra como "não vista" e alimenta o
+    // sino/toast. Sem gate por timestamp: a comparação
+    // `respondidoEm >= <última leitura>` abria uma janela (o intervalo de ~5min
+    // entre a resposta chegar e a próxima passada) em que a resposta era
+    // sincronizada de forma SILENCIOSA, já marcada como vista. Exceções:
+    //   - primeiro povoamento (histórico inteiro entra de uma vez — marcar tudo
+    //     como não visto afogaria o sino);
+    //   - avisos automáticos de prazo (24h/48h) da própria CSM, que são ruído
+    //     previsível (pedido do usuário, 10/09).
     const naoVisto =
       resp.tipo === "cliente" &&
-      resp.respondidoEm !== null &&
-      new Date(resp.respondidoEm) >= marcarNaoVistoDesde &&
-      // Avisos automáticos de prazo (24h/48h) da própria CSM não alimentam o
-      // sino nem o toast — entram já como "vistos" (pedido do usuário, 10/09).
+      !primeiroPovoamento &&
       !ehRespostaAutomaticaIgnorada(resp.mensagem);
 
     const { data: inserida, error } = await supabase
@@ -222,7 +237,7 @@ async function sincronizarRespostasEAnexos(
 // Reler alguns a mais custa quase nada; perder um custa uma visita.
 const FOLGA_MS = 5 * 60 * 1000;
 
-async function resolverDepartamento(): Promise<string | null> {
+async function resolverDepartamento(): Promise<string> {
   // Default NÃO é "todos": a conta inteira tem ~330 mil chamados de 200
   // departamentos (atestado, RH, laboratório...). Só MANUTENÇÃO - SRT interessa
   // — são ~8,9 mil. Sincronizar sem filtro encheria o banco de lixo.
@@ -246,6 +261,25 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     .select("ultima_leitura")
     .eq("id", true)
     .single();
+
+  // Lido à parte: a coluna só existe depois da migration 0043. Enquanto ela não
+  // roda, a reconciliação fica DESLIGADA (o SELECT falha -> `colunaReconciliacao`
+  // false) em vez de derrubar a coleta inteira. Assim a feature "liga sozinha"
+  // quando a migration entra, sem comportamento surpresa num deploy adiantado.
+  let ultimaReconciliacaoMs = 0;
+  let colunaReconciliacao = true;
+  {
+    const { data: rec, error } = await supabase
+      .from("sync_estado")
+      .select("ultima_reconciliacao")
+      .eq("id", true)
+      .maybeSingle();
+    if (error) {
+      colunaReconciliacao = false;
+    } else if (rec?.ultima_reconciliacao) {
+      ultimaReconciliacaoMs = new Date(rec.ultima_reconciliacao as string).getTime();
+    }
+  }
 
   const desde = estado?.ultima_leitura
     ? new Date(new Date(estado.ultima_leitura as string).getTime() - FOLGA_MS)
@@ -379,19 +413,17 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
   // Fase 3: respostas e anexos do cliente. `/ticket/detail` já trouxe replies
   // e attachments na MESMA requisição que a sync já fez — sem chamada de API a
   // mais aqui, só o download dos arquivos (uma vez cada). Uma resposta de
-  // cliente só entra como "não vista" (alimenta o sino) se chegou DEPOIS da
-  // última leitura — no primeiro povoamento, o histórico entra já marcado
-  // como visto pra não afogar o contador.
-  const marcarNaoVistoDesde = estado?.ultima_leitura
-    ? new Date(estado.ultima_leitura as string)
-    : inicioDaLeitura;
+  // cliente que está sendo INSERIDA agora entra como "não vista" (alimenta o
+  // sino/toast), exceto no primeiro povoamento — aí o histórico inteiro entra
+  // de uma vez e marcar tudo como não visto afogaria o contador.
+  const primeiroPovoamento = !estado?.ultima_leitura;
   let respostasNovas = 0;
   let anexosBaixados = 0;
   for (const chamado of lidos) {
     const chamadoId = chamado.protocolo ? idPorProtocolo.get(chamado.protocolo) : undefined;
     if (!chamadoId) continue;
     try {
-      const r = await sincronizarRespostasEAnexos(supabase, chamadoId, chamado, marcarNaoVistoDesde);
+      const r = await sincronizarRespostasEAnexos(supabase, chamadoId, chamado, primeiroPovoamento);
       respostasNovas += r.respostasNovas;
       anexosBaixados += r.anexosBaixados;
     } catch {
@@ -420,6 +452,66 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     if (!error) servicosCriados += Number(criados ?? 0);
   }
 
+  // Reconciliação (migration 0043): um chamado EXCLUÍDO no TomTicket some do
+  // `/ticket/list` e a leitura incremental nunca mais o vê — ficaria aberto aqui
+  // pra sempre. No máximo 1x/hora, lê a lista COMPLETA de abertos do
+  // departamento e encerra qualquer chamado nosso `aberto`/`em_andamento` que
+  // não apareça mais lá. Mesmo padrão de `Coletor._ler_tudo` da base-automatizacao.
+  let reconciliados = 0;
+  let reconciliou = false;
+  const RECONCILIA_INTERVALO_MS = 60 * 60 * 1000;
+
+  if (colunaReconciliacao && Date.now() - ultimaReconciliacaoMs >= RECONCILIA_INTERVALO_MS) {
+    try {
+      const abertosNoTomticket = await listarProtocolosAbertos(departmentId);
+      // A leitura da lista completa terminou sem exceção — só agora dá pra agir
+      // e avançar o relógio da reconciliação. Uma leitura parcial marcaria
+      // chamados vivos como encerrados.
+      reconciliou = true;
+
+      const resolvidosSet = new Set(resolvidos);
+      const { data: nossosAbertos } = await supabase
+        .from("chamados")
+        .select("id, tomticket_id")
+        .in("status", ["aberto", "em_andamento"]);
+
+      const sumiram = (nossosAbertos ?? []).filter((c) => {
+        const proto = String(c.tomticket_id ?? "").trim();
+        // `resolvidosSet`: tocado nesta passada, então está vivo com certeza.
+        return proto && !resolvidosSet.has(proto) && !abertosNoTomticket.has(proto);
+      });
+
+      // Cada divergência custa 1 requisição pra confirmar a situação. Em uso
+      // normal são pouquíssimas; o teto é só um seguro contra um backlog
+      // gigante numa primeira passada — o resto entra na próxima janela.
+      for (const c of sumiram.slice(0, 200)) {
+        const proto = String(c.tomticket_id).trim();
+        let novoStatus: StatusChamado = "cancelado"; // sumiu de vez = foi excluído
+        try {
+          const s = await situacaoDoProtocolo(proto);
+          if (s.existe) {
+            const traduzido = traduzirStatus(s.situacaoId);
+            // Ainda aberto no TomTicket = ruído de paginação da lista completa;
+            // não mexe.
+            if (traduzido !== "finalizado" && traduzido !== "cancelado") continue;
+            novoStatus = traduzido;
+          }
+        } catch {
+          // sem conseguir confirmar a situação, trata como fora de cena mesmo.
+        }
+        const { error } = await supabase
+          .from("chamados")
+          .update({ status: novoStatus })
+          .eq("id", c.id as string);
+        if (!error) reconciliados++;
+      }
+    } catch {
+      // Leitura parcial / falha de rede: NÃO reconcilia em cima de dado
+      // incompleto e o relógio da reconciliação não avança (tenta na próxima).
+      reconciliou = false;
+    }
+  }
+
   // O relógio só avança porque chegamos aqui sem exceção. Se a coleta falhar, a
   // rota de erro NÃO grava `ultima_leitura` — senão a próxima passada pularia
   // justamente a janela que falhou.
@@ -435,6 +527,16 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     })
     .eq("id", true);
 
+  // Gravado à parte do UPDATE principal: `reconciliou` só é true quando a coluna
+  // existe (0043 aplicada) E a leitura completa terminou. Separado pra um erro
+  // aqui nunca derrubar o UPDATE de `ultima_leitura` acima.
+  if (reconciliou) {
+    await supabase
+      .from("sync_estado")
+      .update({ ultima_reconciliacao: new Date().toISOString() })
+      .eq("id", true);
+  }
+
   return {
     novos,
     atualizados,
@@ -444,5 +546,6 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     servicosCriados,
     respostasNovas,
     anexosBaixados,
+    reconciliados,
   };
 }

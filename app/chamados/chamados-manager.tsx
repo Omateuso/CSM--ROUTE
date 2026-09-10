@@ -55,29 +55,44 @@ export function ChamadosManager({
   rts,
   podeCriar,
   podeResponder,
+  chamadoIdInicial = null,
+  detalheInicial = null,
 }: {
   chamados: ChamadoRow[];
   rts: Rt[];
   podeCriar: boolean;
   podeResponder: boolean;
+  /** Veio do toast (?chamado=<id>): abre esse chamado já no primeiro render. */
+  chamadoIdInicial?: string | null;
+  /** Detalhe já buscado no server pro chamado do deep-link. */
+  detalheInicial?: DetalheChamado | null;
 }) {
+  // Linha do deep-link (const, não state: o componente remonta por `key` quando
+  // o ?chamado= muda, então isto é recalculado a cada montagem).
+  const chamadoDoDeepLink = chamadoIdInicial
+    ? (chamados.find((c) => c.id === chamadoIdInicial) ?? null)
+    : null;
+
   const [busca, setBusca] = useState("");
   const [prioridadeFiltro, setPrioridadeFiltro] = useState("todas");
   const [regiaoFiltro, setRegiaoFiltro] = useState("todas");
   const [slaFiltro, setSlaFiltro] = useState("todos");
-  // Chamado finalizado some da lista por padrão (pedido do usuário, 10/09/2026)
-  // — a tela é o espelho/busca do TomTicket e não a fila de trabalho; o toggle
-  // traz de volta pra consulta de histórico.
-  const [mostrarFinalizados, setMostrarFinalizados] = useState(false);
+  // Chamado encerrado (finalizado OU cancelado — inclui o excluído no TomTicket,
+  // migration 0043) some da lista por padrão (pedido do usuário, 10/09/2026) — a
+  // tela é o espelho/busca do TomTicket, não a fila de trabalho; o toggle traz
+  // de volta pra consulta de histórico.
+  const [mostrarEncerrados, setMostrarEncerrados] = useState(false);
   const [soRespostaNova, setSoRespostaNova] = useState(false);
   const totalRespostaNova = useMemo(() => chamados.filter((c) => c.temRespostaNova).length, [chamados]);
-  const [modoDialogo, setModoDialogo] = useState<ModoDialogo>("nenhum");
-  const [chamadoSelecionado, setChamadoSelecionado] = useState<ChamadoRow | null>(null);
+  const [modoDialogo, setModoDialogo] = useState<ModoDialogo>(chamadoDoDeepLink ? "detalhes" : "nenhum");
+  const [chamadoSelecionado, setChamadoSelecionado] = useState<ChamadoRow | null>(chamadoDoDeepLink);
   // ver comentário equivalente em rts-manager.tsx: força os diálogos a
   // remontar do zero a cada abertura.
   const [dialogInstancia, setDialogInstancia] = useState(0);
   const [pagina, setPagina] = useState(1);
-  const [detalhe, setDetalhe] = useState<DetalheChamado | null>(null);
+  const [detalhe, setDetalhe] = useState<DetalheChamado | null>(
+    chamadoDoDeepLink ? (detalheInicial ?? DETALHE_VAZIO) : null,
+  );
 
   // Regiões agrupadas por zona (mesma fonte que o seletor de RT dos
   // diálogos) — todas as 98 RTs entram aqui, então o filtro sempre lista
@@ -98,7 +113,7 @@ export function ChamadosManager({
   const linhasFiltradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return chamados.filter((c) => {
-      if (!mostrarFinalizados && c.status === "finalizado") return false;
+      if (!mostrarEncerrados && (c.status === "finalizado" || c.status === "cancelado")) return false;
       if (soRespostaNova && !c.temRespostaNova) return false;
       if (prioridadeFiltro !== "todas" && c.prioridade !== prioridadeFiltro) return false;
       if (regiaoFiltro !== "todas" && c.regiaoNome !== regiaoFiltro) return false;
@@ -116,7 +131,7 @@ export function ChamadosManager({
         (c.tomticketId ?? "").toLowerCase().includes(termo)
       );
     });
-  }, [chamados, busca, prioridadeFiltro, regiaoFiltro, slaFiltro, mostrarFinalizados, soRespostaNova]);
+  }, [chamados, busca, prioridadeFiltro, regiaoFiltro, slaFiltro, mostrarEncerrados, soRespostaNova]);
 
   // Renderizar a lista inteira de uma vez era o gargalo real da tela: com
   // ~300 chamados o HTML passava de 750kb, e cada linha ainda é serializada
@@ -150,6 +165,12 @@ export function ChamadosManager({
 
   function fechar() {
     setModoDialogo("nenhum");
+    // Se a tela abriu por deep-link (?chamado=<id>), tira o parâmetro da URL pra
+    // um F5 não reabrir o modal. `history.replaceState` (não router.replace):
+    // só limpa a query, sem round-trip nem remontar a lista/perder filtros.
+    if (chamadoIdInicial && typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState(null, "", "/chamados");
+    }
   }
 
   function recarregarDetalhe(chamadoId: string) {
@@ -232,11 +253,11 @@ export function ChamadosManager({
         <label className="flex items-center gap-2 text-sm text-text-secondary">
           <input
             type="checkbox"
-            checked={mostrarFinalizados}
-            onChange={(e) => setMostrarFinalizados(e.target.checked)}
+            checked={mostrarEncerrados}
+            onChange={(e) => setMostrarEncerrados(e.target.checked)}
             className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
           />
-          Mostrar finalizados
+          Mostrar encerrados
         </label>
 
         {totalRespostaNova > 0 && (
