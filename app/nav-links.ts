@@ -14,7 +14,6 @@ export const NAV_LINKS: Record<"gerente" | "gestao", NavLink[]> = {
     { href: "/urgencias", label: "Urgências", icon: "siren" },
     { href: "/rotas/montar", label: "Montar rota", icon: "route" },
     { href: "/rotas/confirmadas", label: "Rotas confirmadas", icon: "check" },
-    { href: "/rotas/hoje", label: "Rota do dia", icon: "pin" },
     { href: "/validacao", label: "Validação", icon: "clip" },
     { href: "/pendencias", label: "Pendências", icon: "alert" },
     { href: "/relatorios/mensal-csm", label: "Relatório mensal", icon: "report" },
@@ -24,7 +23,6 @@ export const NAV_LINKS: Record<"gerente" | "gestao", NavLink[]> = {
   ],
   gestao: [
     { href: "/painel", label: "Painel", icon: "grid" },
-    { href: "/rotas/hoje", label: "Rota do dia", icon: "pin" },
     { href: "/urgencias", label: "Urgências", icon: "siren" },
     { href: "/relatorio", label: "Relatório diário", icon: "clip" },
     { href: "/rts", label: "RTs", icon: "home" },

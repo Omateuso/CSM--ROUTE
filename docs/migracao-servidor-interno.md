@@ -105,7 +105,6 @@ linha reta (Haversine), que não depende de rede:
 
 - `lib/routing/intelligent-route.ts` — a sugestão de rota continua, sem tempo de carro.
 - `lib/routing/urgencia-impacto.ts` — idem, para o impacto de uma urgência.
-- `lib/maps/tracado-rota.ts` — sem traçado, o mapa mostra só as paradas.
 
 Isso foi verificado nos dois sentidos em 10/09/2026: com provedor ativo, as
 20 candidatas vieram com tempo de carro; sem chave configurada, as mesmas 20

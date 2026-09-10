@@ -99,13 +99,4 @@ export const NavIcons = {
       <path d="M9 12h6M9 16h6" />
     </svg>
   ),
-  // Novo (Rota do dia ao vivo, 09/09/2026) — pin de localização com ponto,
-  // "onde as equipes estão agora". Distinto de `map` (mapa dobrado, Zonas),
-  // `route` (trajeto com nós, Montar rota) e `check` (Rotas confirmadas).
-  pin: (
-    <svg viewBox="0 0 24 24" {...stroke}>
-      <path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11z" />
-      <circle cx="12" cy="10" r="2.6" />
-    </svg>
-  ),
 } satisfies Record<string, ReactNode>;
