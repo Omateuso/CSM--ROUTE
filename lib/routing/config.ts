@@ -42,3 +42,13 @@ export const ALTO_DESLOCAMENTO_MULTIPLICADOR = 1.5;
 // nas RTs erra bastante, e o objetivo é sinalizar discrepância grande pro
 // gerente, nunca bloquear o técnico por erro normal de precisão.
 export const EVIDENCIA_DISTANCIA_LIMITE_KM = 0.4;
+
+// Central de Urgências — despacho (11/09/2026). Sem GPS ao vivo do técnico
+// (a tabela foi removida de propósito na 0041 — rastreamento contínuo lê
+// como fiscalização, contra a filosofia do produto). O sinal de
+// "disponibilidade" é a carga de trabalho de hoje: um técnico com um
+// atendimento em execução NESTE INSTANTE é penalizado na recomendação,
+// tratado como se estivesse esse tanto mais longe — nunca excluído, o
+// gerente sempre pode escolher manualmente (a recomendação é auxílio, não
+// obrigação — mesma regra da Rota Inteligente).
+export const URGENCIA_PENALIDADE_TECNICO_OCUPADO_KM = 3;

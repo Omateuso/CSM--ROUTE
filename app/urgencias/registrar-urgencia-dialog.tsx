@@ -1,196 +1,284 @@
 "use client";
 
-import { useActionState, useId, useMemo, useState } from "react";
-import { registrarUrgencia, type ActionState } from "./actions";
-import { PRIORIDADE_OPTIONS } from "@/app/chamados/prioridade-badge";
+import { useActionState, useId, useState, type FormEvent } from "react";
+import { registrarUrgencia, buscarChamadosParaUrgencia, type ActionState, type ChamadoParaUrgencia } from "./actions";
+import { PrioridadeBadge } from "@/app/chamados/prioridade-badge";
+import { SlaBadge } from "@/app/chamados/sla-badge";
+import { StatusChamadoBadge } from "@/app/chamados/status-chamado-badge";
+import { URGENCIA_ORIGEM_OPTIONS } from "./urgencia-origem";
 import { Modal } from "@/lib/ui/modal";
 import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
 import { FOCUS_RING, FIELD_INPUT, FIELD_LABEL } from "@/lib/ui/styles";
 
-type Rt = { id: string; codigo: string; endereco: string; zonaNome: string };
-
-// Formulário de "Registrar Urgência" — o gerente leu algo excepcional no
-// WhatsApp e precisa capturar isso na hora. Prioridade fica opcional aqui
-// de propósito ("solicitada" não é "validada" — a triagem de verdade
-// acontece depois, em fn_validar_urgencia).
+// Modelo "chamado primeiro" (migration 0045, 11/09/2026): a Central de
+// Urgências nunca cadastra RT/assunto/descrição de novo — o gerente busca um
+// chamado JÁ existente (protocolo, assunto ou código da RT) e registra a
+// urgência em cima dele. Dois passos dentro do mesmo diálogo: buscar +
+// escolher, depois confirmar motivo/origem/solicitante.
 export function RegistrarUrgenciaDialog({
   open,
-  rts,
   onClose,
   onRegistrada,
 }: {
   open: boolean;
-  rts: Rt[];
   onClose: () => void;
   onRegistrada: (urgenciaId: string) => void;
 }) {
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(registrarUrgencia, {
-    error: null,
-  });
-  useCloseOnSuccess(isPending, state.error, () => {
-    if (state.urgenciaId) onRegistrada(state.urgenciaId);
+  const [chamado, setChamado] = useState<ChamadoParaUrgencia | null>(null);
+
+  function handleClose() {
+    setChamado(null);
     onClose();
-  });
-
-  const uid = useId();
-  const idRt = `${uid}-rt`;
-  const idBusca = `${uid}-busca`;
-  const idDescricao = `${uid}-descricao`;
-  const idMotivo = `${uid}-motivo`;
-  const idSolicitante = `${uid}-solicitante`;
-  const idPrioridade = `${uid}-prioridade`;
-  const idTomticket = `${uid}-tomticket`;
-  const idAnexo = `${uid}-anexo`;
-
-  const [busca, setBusca] = useState("");
-  const rtsFiltradas = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return rts;
-    return rts.filter((r) => r.codigo.toLowerCase().includes(termo) || r.endereco.toLowerCase().includes(termo));
-  }, [rts, busca]);
-  const zonas = [...new Set(rtsFiltradas.map((r) => r.zonaNome))];
+  }
 
   return (
-    <Modal open={open} title="Registrar urgência" onClose={onClose}>
-      <form action={formAction} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
+    <Modal open={open} title="Registrar urgência" onClose={handleClose}>
+      {chamado === null ? (
+        <BuscarChamado onSelecionar={setChamado} onCancelar={handleClose} />
+      ) : (
+        <ConfirmarUrgencia
+          chamado={chamado}
+          onVoltar={() => setChamado(null)}
+          onClose={handleClose}
+          onRegistrada={onRegistrada}
+        />
+      )}
+    </Modal>
+  );
+}
+
+function BuscarChamado({
+  onSelecionar,
+  onCancelar,
+}: {
+  onSelecionar: (chamado: ChamadoParaUrgencia) => void;
+  onCancelar: () => void;
+}) {
+  const idBusca = useId();
+  const [busca, setBusca] = useState("");
+  const [resultados, setResultados] = useState<ChamadoParaUrgencia[] | null>(null);
+  const [buscando, setBuscando] = useState(false);
+
+  async function handleBuscar(event: FormEvent) {
+    event.preventDefault();
+    if (busca.trim().length < 2) return;
+    setBuscando(true);
+    const encontrados = await buscarChamadosParaUrgencia(busca);
+    setResultados(encontrados);
+    setBuscando(false);
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-text-secondary">
+        Busque o chamado que já existe (protocolo, assunto ou código da RT) — a urgência é registrada em cima dele,
+        sem recadastrar nada.
+      </p>
+
+      <form onSubmit={handleBuscar} className="flex items-end gap-2">
+        <div className="flex flex-1 flex-col gap-1">
           <label htmlFor={idBusca} className={FIELD_LABEL}>
-            Buscar RT (código ou endereço)
+            Buscar chamado
           </label>
           <input
             id={idBusca}
             type="search"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Ex.: SRT 22 ou nome da rua..."
+            placeholder="Ex.: 322810, SRT 22, vazamento..."
+            autoFocus
             className={FIELD_INPUT}
           />
         </div>
+        <button
+          type="submit"
+          disabled={buscando || busca.trim().length < 2}
+          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+        >
+          {buscando ? "Buscando..." : "Buscar"}
+        </button>
+      </form>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor={idRt} className={FIELD_LABEL}>
-            RT
-          </label>
-          <select id={idRt} name="rtId" defaultValue="" required className={FIELD_INPUT}>
-            <option value="" disabled>
-              Selecione...
-            </option>
-            {zonas.map((zonaNome) => (
-              <optgroup key={zonaNome} label={zonaNome}>
-                {rtsFiltradas
-                  .filter((r) => r.zonaNome === zonaNome)
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.codigo} — {r.endereco}
-                    </option>
-                  ))}
-              </optgroup>
-            ))}
-          </select>
+      {resultados !== null && (
+        <div className="flex max-h-80 flex-col gap-2 overflow-y-auto">
+          {resultados.length === 0 ? (
+            <p className="rounded-[var(--radius-md)] border border-dashed border-border-strong bg-surface-input px-4 py-6 text-center text-xs text-text-tertiary">
+              Nenhum chamado aberto encontrado com esse termo. Chamados já encerrados ou que já têm uma urgência em
+              andamento não aparecem aqui.
+            </p>
+          ) : (
+            resultados.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => onSelecionar(c)}
+                className={`flex flex-col gap-1 rounded-[var(--radius-sm)] border border-border p-3 text-left transition-colors hover:border-accent hover:bg-surface-input ${FOCUS_RING}`}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs text-text-secondary">{c.rtCodigo}</span>
+                  {c.tomticketId && <span className="font-mono text-xs text-text-tertiary">#{c.tomticketId}</span>}
+                  <span className="ml-auto">
+                    <PrioridadeBadge prioridade={c.prioridade} />
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-text-primary">{c.assunto}</p>
+                <p className="text-xs text-text-tertiary">
+                  {c.rtEndereco} · {c.capsNome}
+                </p>
+              </button>
+            ))
+          )}
         </div>
+      )}
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor={idDescricao} className={FIELD_LABEL}>
-            Descrição
-          </label>
-          <textarea
-            id={idDescricao}
-            name="descricao"
-            rows={3}
-            placeholder="O que foi relatado — o mais literal possível."
-            required
-            className={`${FIELD_INPUT} resize-none`}
-          />
-        </div>
+      <div className="flex justify-end border-t border-border pt-4">
+        <button
+          type="button"
+          onClick={onCancelar}
+          className={`text-sm font-medium text-text-tertiary transition-colors hover:text-text-primary ${FOCUS_RING}`}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor={idMotivo} className={FIELD_LABEL}>
-            Motivo da urgência
-          </label>
-          <input
-            id={idMotivo}
-            name="motivo"
-            type="text"
-            placeholder="Por que não pode esperar a próxima rota"
-            required
-            className={FIELD_INPUT}
-          />
-        </div>
+const formatoData = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor={idSolicitante} className={FIELD_LABEL}>
-              Solicitante
-            </label>
-            <input
-              id={idSolicitante}
-              name="solicitante"
-              type="text"
-              placeholder="Quem relatou no WhatsApp"
-              required
-              className={FIELD_INPUT}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor={idTomticket} className={FIELD_LABEL}>
-              Protocolo TomTicket
-            </label>
-            <input
-              id={idTomticket}
-              name="tomticketId"
-              type="text"
-              placeholder="Opcional — pode não existir ainda"
-              className={`${FIELD_INPUT} font-mono tabular-nums`}
-            />
-          </div>
-        </div>
+function ConfirmarUrgencia({
+  chamado,
+  onVoltar,
+  onClose,
+  onRegistrada,
+}: {
+  chamado: ChamadoParaUrgencia;
+  onVoltar: () => void;
+  onClose: () => void;
+  onRegistrada: (urgenciaId: string) => void;
+}) {
+  const [state, formAction, isPending] = useActionState<ActionState, FormData>(registrarUrgencia, { error: null });
+  useCloseOnSuccess(isPending, state.error, () => {
+    if (state.urgenciaId) onRegistrada(state.urgenciaId);
+    onClose();
+  });
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor={idPrioridade} className={FIELD_LABEL}>
-              Prioridade (se já souber)
-            </label>
-            <select id={idPrioridade} name="prioridade" defaultValue="" className={FIELD_INPUT}>
-              <option value="">Decidir na análise</option>
-              {PRIORIDADE_OPTIONS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor={idAnexo} className={FIELD_LABEL}>
-              Anexo (opcional)
-            </label>
-            <input id={idAnexo} name="anexo" type="file" accept="image/*,application/pdf" className={FIELD_INPUT} />
+  const uid = useId();
+  const idMotivo = `${uid}-motivo`;
+  const idSolicitante = `${uid}-solicitante`;
+  const idAnexo = `${uid}-anexo`;
+
+  return (
+    <form action={formAction} className="flex flex-col gap-4">
+      <input type="hidden" name="chamadoId" value={chamado.id} />
+
+      <div className="rounded-[var(--radius-md)] border border-border bg-surface-input p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-xs font-semibold text-text-primary">{chamado.rtCodigo}</span>
+          {chamado.tomticketId && (
+            <span className="font-mono text-xs text-text-tertiary">#{chamado.tomticketId}</span>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            <PrioridadeBadge prioridade={chamado.prioridade} />
+            <SlaBadge slaPrazo={chamado.slaPrazo} status={chamado.status} />
+            <StatusChamadoBadge status={chamado.status} />
           </div>
         </div>
-
-        {state.error && (
-          <p role="alert" className="text-sm text-danger">
-            {state.error}
+        <p className="mt-1 text-sm font-medium text-text-primary">{chamado.assunto}</p>
+        <p className="mt-1 text-xs text-text-tertiary">
+          {chamado.rtEndereco} · {chamado.capsNome} · {chamado.regiaoNome}
+        </p>
+        <p className="mt-1 text-xs text-text-tertiary">Aberto em {formatoData.format(new Date(chamado.criadoEm))}</p>
+        {chamado.descricao && (
+          <p className="mt-2 max-h-24 overflow-y-auto rounded-[var(--radius-sm)] border border-border bg-surface p-2 text-xs whitespace-pre-wrap text-text-secondary">
+            {chamado.descricao}
           </p>
         )}
+        <button
+          type="button"
+          onClick={onVoltar}
+          className={`mt-2 text-xs font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}
+        >
+          ← Trocar chamado
+        </button>
+      </div>
 
-        <div className="mt-1 flex items-center justify-end gap-3 border-t border-border pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isPending}
-            className={`text-sm font-medium text-text-tertiary transition-colors hover:text-text-primary ${FOCUS_RING}`}
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={isPending}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
-          >
-            {isPending ? "Registrando..." : "Registrar urgência"}
-          </button>
+      <p className="text-xs text-text-tertiary">
+        Prioridade do TomTicket mostrada acima — nunca é alterada por registrar uma urgência. O que muda aqui é só o
+        tratamento operacional.
+      </p>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor={idMotivo} className={FIELD_LABEL}>
+          Motivo da urgência
+        </label>
+        <input
+          id={idMotivo}
+          name="motivo"
+          type="text"
+          placeholder="Por que não pode esperar a próxima rota"
+          required
+          className={FIELD_INPUT}
+        />
+      </div>
+
+      <fieldset className="flex flex-col gap-1">
+        <legend className={FIELD_LABEL}>Origem</legend>
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2">
+          {URGENCIA_ORIGEM_OPTIONS.map((o, indice) => (
+            <label key={o.value} className="flex items-center gap-1.5 text-sm text-text-primary">
+              <input type="radio" name="origem" value={o.value} required defaultChecked={indice === 0} />
+              {o.label}
+            </label>
+          ))}
         </div>
-      </form>
-    </Modal>
+      </fieldset>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label htmlFor={idSolicitante} className={FIELD_LABEL}>
+            Solicitante
+          </label>
+          <input
+            id={idSolicitante}
+            name="solicitante"
+            type="text"
+            placeholder="Quem relatou"
+            required
+            className={FIELD_INPUT}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor={idAnexo} className={FIELD_LABEL}>
+            Anexo (opcional)
+          </label>
+          <input id={idAnexo} name="anexo" type="file" accept="image/*,application/pdf" className={FIELD_INPUT} />
+        </div>
+      </div>
+
+      {state.error && (
+        <p role="alert" className="text-sm text-danger">
+          {state.error}
+        </p>
+      )}
+
+      <div className="mt-1 flex items-center justify-end gap-3 border-t border-border pt-4">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isPending}
+          className={`text-sm font-medium text-text-tertiary transition-colors hover:text-text-primary ${FOCUS_RING}`}
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isPending}
+          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+        >
+          {isPending ? "Registrando..." : "Registrar urgência"}
+        </button>
+      </div>
+    </form>
   );
 }

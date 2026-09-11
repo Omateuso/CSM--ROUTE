@@ -3,8 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { UrgenciasManager } from "./urgencias-manager";
 import { haversineKm } from "@/lib/routing/proximity";
 import type { UrgenciaRow } from "./types";
-import type { UrgenciaStatus } from "./urgencia-status-badge";
+import { derivarStatusDisplay } from "./urgencia-status-badge";
 import type { Prioridade } from "@/app/chamados/prioridade-badge";
+import type { StatusChamado } from "@/app/chamados/status-chamado-badge";
+import type { UrgenciaOrigem } from "./urgencia-origem";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -13,8 +15,6 @@ function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
 }
-
-const STATUS_SERVICO_CONCLUIDO = new Set(["concluido_tecnico", "aguardando_validacao", "validado"]);
 
 export default async function UrgenciasPage() {
   const supabase = await createClient();
@@ -38,40 +38,30 @@ export default async function UrgenciasPage() {
 
   const [
     { data: urgenciasRaw, error: urgenciasError },
-    { data: rtsRaw, error: rtsError },
     { data: rotasHojeRaw, error: rotasError },
   ] = await Promise.all([
     supabase
       .from("urgencias")
       .select(
-        "id, codigo, status, rt_id, atendida_por_servico_id, descricao, motivo, solicitante, prioridade, criado_em, rts(codigo, nome, endereco, latitude, longitude, regioes(nome)), chamados(tomticket_id)",
+        "id, codigo, status, chamado_id, motivo, origem, solicitante, prioridade, criado_em, atendida_por_servico_id, chamados(tomticket_id, assunto, prioridade, status, sla_prazo, rt_id, rts(codigo, nome, endereco, latitude, longitude, regioes(nome)))",
       )
       .order("criado_em", { ascending: false }),
-    supabase
-      .from("rts")
-      .select("id, codigo, endereco, regioes(nome, zonas(nome))")
-      .eq("ativo", true)
-      .order("codigo", { ascending: true }),
-    supabase
-      .from("rotas")
-      .select("id, equipes(nome)")
-      .eq("data", hoje)
-      .eq("status", "confirmada"),
+    supabase.from("rotas").select("id, equipes(nome)").eq("data", hoje).eq("status", "confirmada"),
   ]);
 
-  if (urgenciasError || rtsError || rotasError) {
+  if (urgenciasError || rotasError) {
     return (
       <div className="flex flex-1 items-center justify-center px-4">
         <p className="text-sm text-danger">
-          Não foi possível carregar os dados ({urgenciasError?.message ?? rtsError?.message ?? rotasError?.message}).
+          Não foi possível carregar os dados ({urgenciasError?.message ?? rotasError?.message}).
         </p>
       </div>
     );
   }
 
   // Status do serviço que cada urgência em atendimento gerou — é o que
-  // distingue "Em atendimento" de "Concluída" na exibição (nunca gravado
-  // como valor próprio em urgencias.status, ver migration 0027).
+  // distingue "técnico escalado" / "em atendimento" / "concluída" / "precisa
+  // de novo despacho" (ver derivarStatusDisplay acima).
   const servicoIds = [
     ...new Set((urgenciasRaw ?? []).map((u) => u.atendida_por_servico_id as string | null).filter(Boolean)),
   ] as string[];
@@ -81,11 +71,10 @@ export default async function UrgenciasPage() {
     for (const s of servicosRaw ?? []) statusPorServico.set(s.id as string, s.status as string);
   }
 
-  // "Equipe mais próxima hoje" (indicador barato, só Haversine — a
-  // estimativa fina com deslocamento real de carro fica pra tela de
-  // detalhe, calculada sob demanda depois da urgência validada, mesma
-  // disciplina de custo do resto da Rota Inteligente: nunca gastar API paga
-  // antes de precisar de verdade).
+  // "Equipe mais próxima hoje" (indicador barato, só Haversine — sem GPS ao
+  // vivo do técnico, decisão de 11/09/2026). A estimativa fina com
+  // deslocamento real de carro + carga de trabalho fica pra tela de
+  // detalhe, calculada sob demanda só depois da urgência validada.
   const rotaIdsHoje = (rotasHojeRaw ?? []).map((r) => r.id as string);
   const pontosReferenciaHoje: { equipeNome: string; lat: number; lng: number }[] = [];
   if (rotaIdsHoje.length > 0) {
@@ -118,16 +107,12 @@ export default async function UrgenciasPage() {
   }
 
   const urgencias: UrgenciaRow[] = (urgenciasRaw ?? []).map((u) => {
-    const rt = unwrapOne(u.rts);
     const chamado = unwrapOne(u.chamados);
+    const rt = chamado ? unwrapOne(chamado.rts) : null;
     const status = u.status as UrgenciaRow["status"];
     const servicoStatus = u.atendida_por_servico_id
       ? (statusPorServico.get(u.atendida_por_servico_id as string) ?? null)
       : null;
-    const statusDisplay: UrgenciaStatus =
-      status === "em_atendimento" && servicoStatus && STATUS_SERVICO_CONCLUIDO.has(servicoStatus)
-        ? "concluida"
-        : (status as UrgenciaStatus);
 
     const lat = rt?.latitude != null ? Number(rt.latitude) : null;
     const lng = rt?.longitude != null ? Number(rt.longitude) : null;
@@ -136,29 +121,23 @@ export default async function UrgenciasPage() {
       id: u.id as string,
       codigo: u.codigo as string,
       status,
-      statusDisplay,
-      rtId: u.rt_id as string,
+      statusDisplay: derivarStatusDisplay(status, servicoStatus),
+      chamadoId: u.chamado_id as string,
+      tomticketId: (chamado?.tomticket_id as string | null) ?? null,
+      chamadoAssunto: chamado?.assunto ?? "—",
+      chamadoPrioridade: (chamado?.prioridade as Prioridade) ?? "normal",
+      chamadoStatus: (chamado?.status as StatusChamado) ?? "aberto",
+      chamadoSlaPrazo: (chamado?.sla_prazo as string | null) ?? null,
       rtCodigo: rt?.codigo ?? "—",
       rtNome: rt?.nome ?? "—",
       rtEndereco: rt?.endereco ?? "—",
       regiaoNome: unwrapOne(rt?.regioes)?.nome ?? "—",
-      descricao: u.descricao as string,
       motivo: u.motivo as string,
+      origem: u.origem as UrgenciaOrigem,
       solicitante: u.solicitante as string,
-      prioridade: (u.prioridade as Prioridade | null) ?? null,
+      prioridadeUrgencia: (u.prioridade as Prioridade | null) ?? null,
       criadoEm: u.criado_em as string,
-      tomticketId: (chamado?.tomticket_id as string | null) ?? null,
       equipeMaisProxima: lat != null && lng != null ? equipeMaisProxima(lat, lng) : null,
-    };
-  });
-
-  const rts = (rtsRaw ?? []).map((rt) => {
-    const regiao = unwrapOne(rt.regioes);
-    return {
-      id: rt.id as string,
-      codigo: rt.codigo as string,
-      endereco: rt.endereco as string,
-      zonaNome: unwrapOne(regiao?.zonas)?.nome ?? "—",
     };
   });
 
@@ -169,11 +148,11 @@ export default async function UrgenciasPage() {
         <h1 className="mt-1 text-2xl font-semibold text-text-primary uppercase">Central de urgências</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
           Ocorrências excepcionais recebidas fora do ciclo normal de rota — o sistema observa e calcula, quem decide
-          é sempre o gerente.
+          é sempre o gerente. Toda urgência parte de um chamado já existente; nada é cadastrado de novo aqui.
         </p>
       </header>
 
-      <UrgenciasManager urgencias={urgencias} rts={rts} podeGerenciar={role === "gerente"} />
+      <UrgenciasManager urgencias={urgencias} podeGerenciar={role === "gerente"} />
     </div>
   );
 }

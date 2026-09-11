@@ -7,26 +7,17 @@ import { UrgenciaCard } from "./urgencia-card";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import type { UrgenciaRow } from "./types";
 
-type Rt = { id: string; codigo: string; endereco: string; zonaNome: string };
-
-const SECOES: { titulo: string; statusDisplay: UrgenciaRow["statusDisplay"][] }[] = [
-  { titulo: "Solicitadas", statusDisplay: ["solicitada"] },
+const SECOES: { titulo: string; statusDisplay: UrgenciaRow["statusDisplay"][]; sempreVisivel?: boolean }[] = [
+  { titulo: "Solicitadas", statusDisplay: ["solicitada"], sempreVisivel: true },
   { titulo: "Em análise", statusDisplay: ["em_analise"] },
-  { titulo: "Validadas — aguardando decisão", statusDisplay: ["validada"] },
-  { titulo: "Em atendimento", statusDisplay: ["em_atendimento"] },
+  { titulo: "Aguardando despacho", statusDisplay: ["validada"] },
+  { titulo: "Em atendimento", statusDisplay: ["tecnico_escalado", "em_atendimento"] },
+  { titulo: "Precisa de novo despacho", statusDisplay: ["pendente_novo_despacho"] },
   { titulo: "Concluídas", statusDisplay: ["concluida"] },
   { titulo: "Não validadas / canceladas", statusDisplay: ["nao_validada", "cancelada"] },
 ];
 
-export function UrgenciasManager({
-  urgencias,
-  rts,
-  podeGerenciar,
-}: {
-  urgencias: UrgenciaRow[];
-  rts: Rt[];
-  podeGerenciar: boolean;
-}) {
+export function UrgenciasManager({ urgencias, podeGerenciar }: { urgencias: UrgenciaRow[]; podeGerenciar: boolean }) {
   const router = useRouter();
   const [registrarAberto, setRegistrarAberto] = useState(false);
   const [busca, setBusca] = useState("");
@@ -39,7 +30,7 @@ export function UrgenciasManager({
         u.codigo.toLowerCase().includes(termo) ||
         u.rtCodigo.toLowerCase().includes(termo) ||
         u.rtEndereco.toLowerCase().includes(termo) ||
-        u.descricao.toLowerCase().includes(termo) ||
+        u.chamadoAssunto.toLowerCase().includes(termo) ||
         u.motivo.toLowerCase().includes(termo) ||
         (u.tomticketId ?? "").includes(termo),
     );
@@ -56,7 +47,7 @@ export function UrgenciasManager({
           type="search"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por código, RT, protocolo ou descrição..."
+          placeholder="Buscar por código, RT, protocolo ou assunto..."
           className="w-full max-w-sm rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
         {podeGerenciar && (
@@ -74,7 +65,7 @@ export function UrgenciasManager({
         const itens = filtradas.filter((u) => secao.statusDisplay.includes(u.statusDisplay));
         // seções vazias somem, exceto "Solicitadas" — fica sempre visível
         // como ponto de partida da tela, mesmo zerada.
-        if (itens.length === 0 && secao.titulo !== "Solicitadas") return null;
+        if (itens.length === 0 && !secao.sempreVisivel) return null;
 
         return (
           <section key={secao.titulo} className="mb-8">
@@ -98,8 +89,8 @@ export function UrgenciasManager({
 
       {podeGerenciar && (
         <RegistrarUrgenciaDialog
+          key={registrarAberto ? "aberto" : "fechado"}
           open={registrarAberto}
-          rts={rts}
           onClose={() => setRegistrarAberto(false)}
           onRegistrada={(urgenciaId) => router.push(`/urgencias/${urgenciaId}`)}
         />

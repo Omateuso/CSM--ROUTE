@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PrioridadeBadge } from "@/app/chamados/prioridade-badge";
+import { SlaBadge } from "@/app/chamados/sla-badge";
 import { UrgenciaStatusBadge } from "./urgencia-status-badge";
+import { URGENCIA_ORIGEM_LABEL } from "./urgencia-origem";
 import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import type { UrgenciaRow } from "./types";
@@ -21,8 +23,12 @@ function formatarTempoDecorrido(criadoEm: string): string {
 
 const formatoHora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-// "Tempo decorrido" (item 1 do spec) precisa ficar vivo sem recarregar a
-// página — recalcula a cada minuto, client-side.
+// "Tempo decorrido" precisa ficar vivo sem recarregar a página — recalcula
+// a cada minuto, client-side. Prioridade mostrada é sempre a do CHAMADO
+// (TomTicket, nunca alterada por este módulo) — item 9 do prompt: deixar
+// explícito que "baixa" não significa que deixou de ser urgente
+// operacionalmente. A classificação própria da urgência (se já validada)
+// aparece à parte, com rótulo distinto, pra não confundir as duas escalas.
 export function UrgenciaCard({ urgencia }: { urgencia: UrgenciaRow }) {
   const [tempoDecorrido, setTempoDecorrido] = useState(() => formatarTempoDecorrido(urgencia.criadoEm));
 
@@ -55,15 +61,27 @@ export function UrgenciaCard({ urgencia }: { urgencia: UrgenciaRow }) {
         </span>
       </div>
 
-      <p className="mt-2 text-sm font-medium text-text-primary">{urgencia.motivo}</p>
-      <p className="mt-1 text-sm text-text-secondary">{urgencia.descricao}</p>
+      <p className="mt-2 text-sm font-medium text-text-primary">{urgencia.chamadoAssunto}</p>
+      <p className="mt-1 text-sm text-text-secondary">{urgencia.motivo}</p>
       <p className="mt-1 text-xs text-text-tertiary">
         {urgencia.rtEndereco} · {urgencia.regiaoNome}
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-tertiary">
-        {urgencia.prioridade && <PrioridadeBadge prioridade={urgencia.prioridade} />}
-        <span>Solicitado por {urgencia.solicitante}</span>
+        <span className="flex items-center gap-1">
+          <span className="text-text-tertiary">TomTicket:</span>
+          <PrioridadeBadge prioridade={urgencia.chamadoPrioridade} />
+        </span>
+        <SlaBadge slaPrazo={urgencia.chamadoSlaPrazo} status={urgencia.chamadoStatus} />
+        {urgencia.prioridadeUrgencia && (
+          <span className="flex items-center gap-1">
+            <span className="text-text-tertiary">Classificação:</span>
+            <PrioridadeBadge prioridade={urgencia.prioridadeUrgencia} />
+          </span>
+        )}
+        <span>
+          {URGENCIA_ORIGEM_LABEL[urgencia.origem]} · {urgencia.solicitante}
+        </span>
         <span>
           {formatoHora.format(new Date(urgencia.criadoEm))} — {tempoDecorrido}
         </span>

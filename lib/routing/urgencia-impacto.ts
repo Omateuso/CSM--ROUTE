@@ -11,6 +11,7 @@
 // intelligent-route.ts, provedor sem chave configurada inclusive).
 import { obterProvedor } from "@/lib/maps/provedor";
 import { haversineKm, type PontoGeografico } from "./proximity";
+import { URGENCIA_PENALIDADE_TECNICO_OCUPADO_KM } from "./config";
 
 export type ParadaRota = {
   rtId: string;
@@ -18,11 +19,19 @@ export type ParadaRota = {
   lat: number;
   lng: number;
   ordem: number;
+  tecnicoId: string | null;
   tecnicoNome: string | null;
   // "feita" = nenhum serviço dessa parada ainda está planejado/em_execucao
   // (inclusive quando não existe serviço nenhum ali — nada pendente).
   feita: boolean;
 };
+
+// Sinal de disponibilidade SEM GPS ao vivo (decisão de 11/09/2026, ver
+// cabeçalho da migration 0045): só o que já é observável hoje —
+// "esse técnico tem um atendimento em execução agora" e "quantos serviços
+// ainda restam pra ele hoje". Calculado pelo chamador (uma query em
+// `servicos`) e passado pronto — este módulo não fala com o banco.
+export type DisponibilidadeTecnico = { ocupadoAgora: boolean; restantesHoje: number };
 
 export type RotaAtivaHoje = {
   rotaId: string;
@@ -44,11 +53,17 @@ export type OpcaoAtendimentoUrgencia = {
   rotaId: string;
   equipeId: string;
   equipeNome: string;
+  tecnicoId: string | null;
   tecnicoNome: string | null;
   proximaParadaCodigo: string | null; // null = rota já concluída hoje
   ultimaParadaCodigo: string;
   insercao: ImpactoDistancia | null; // null quando não há parada pendente pra comparar
   fimDeRota: ImpactoDistancia;
+  // Carga de trabalho do técnico responsável pela parada de referência —
+  // só exibição/ranqueamento, nunca some uma opção (item 10 do spec: a
+  // recomendação nunca impede a escolha manual).
+  tecnicoOcupadoAgora: boolean;
+  tecnicoServicosRestantesHoje: number;
 };
 
 async function distanciasOuFallback(
@@ -81,6 +96,7 @@ function somarImpacto(a: ImpactoDistancia, b: ImpactoDistancia, c: ImpactoDistan
 export async function calcularImpactoUrgencia(
   urgenciaRt: PontoGeografico,
   rotasAtivas: RotaAtivaHoje[],
+  disponibilidadePorTecnico: Map<string, DisponibilidadeTecnico> = new Map(),
 ): Promise<OpcaoAtendimentoUrgencia[]> {
   const resultado: OpcaoAtendimentoUrgencia[] = [];
 
@@ -112,25 +128,34 @@ export async function calcularImpactoUrgencia(
       fimDeRota = (await distanciasOuFallback(ultima, [urgenciaRt]))[0];
     }
 
+    const referencia = proxima ?? ultima;
+    const disponibilidade = referencia.tecnicoId ? disponibilidadePorTecnico.get(referencia.tecnicoId) : undefined;
+
     resultado.push({
       rotaId: rota.rotaId,
       equipeId: rota.equipeId,
       equipeNome: rota.equipeNome,
-      tecnicoNome: (proxima ?? ultima).tecnicoNome,
+      tecnicoId: referencia.tecnicoId,
+      tecnicoNome: referencia.tecnicoNome,
       proximaParadaCodigo: proxima?.codigo ?? null,
       ultimaParadaCodigo: ultima.codigo,
       insercao,
       fimDeRota,
+      tecnicoOcupadoAgora: disponibilidade?.ocupadoAgora ?? false,
+      tecnicoServicosRestantesHoje: disponibilidade?.restantesHoje ?? 0,
     });
   }
 
-  // menor impacto primeiro — usa a melhor das duas opções disponíveis pra
-  // cada equipe como critério de ranqueamento.
-  resultado.sort((a, b) => {
-    const menorA = Math.min(a.insercao?.distanciaKm ?? Infinity, a.fimDeRota.distanciaKm);
-    const menorB = Math.min(b.insercao?.distanciaKm ?? Infinity, b.fimDeRota.distanciaKm);
-    return menorA - menorB;
-  });
+  // Menor impacto AJUSTADO primeiro — usa a melhor das duas opções
+  // disponíveis, penalizando (nunca descartando) o técnico já ocupado agora
+  // com um atendimento em execução. Ex. do spec original: técnico a 2km mas
+  // em atendimento perde pro técnico a 4km livre.
+  function distanciaAjustada(o: OpcaoAtendimentoUrgencia): number {
+    const menor = Math.min(o.insercao?.distanciaKm ?? Infinity, o.fimDeRota.distanciaKm);
+    return o.tecnicoOcupadoAgora ? menor + URGENCIA_PENALIDADE_TECNICO_OCUPADO_KM : menor;
+  }
+
+  resultado.sort((a, b) => distanciaAjustada(a) - distanciaAjustada(b));
 
   return resultado;
 }
