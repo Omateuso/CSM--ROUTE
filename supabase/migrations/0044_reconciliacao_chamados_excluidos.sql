@@ -2,6 +2,14 @@
 -- Reconciliação: chamado EXCLUÍDO no TomTicket some da lista (pedido do usuário,
 -- 10/09/2026)
 --
+-- RENUMERADA de 0043 para 0044 no merge de 10/09/2026: o repositório remoto já
+-- tinha uma 0043 diferente (equipes_numero, do Mateus), criada em paralelo. Só
+-- o número do arquivo mudou; o SQL é o mesmo que o usuário JÁ RODOU em 10-11/09
+-- sob o nome antigo (0043) — CONFIRMADO ao vivo em 11/09: a coluna já existe e
+-- a reconciliação já rodou pelo menos uma vez (`sync_estado.ultima_reconciliacao`
+-- preenchida). NÃO rodar de novo (o `add column` falha com "already exists",
+-- exatamente o erro que o usuário bateu ao tentar).
+--
 -- O PROBLEMA: a sync incremental (`last_update_ge`, migration 0030) só vê
 -- chamado que MUDOU. Um chamado EXCLUÍDO no TomTicket simplesmente some do
 -- `/ticket/list` — nunca mais volta na resposta — então o sistema segue
