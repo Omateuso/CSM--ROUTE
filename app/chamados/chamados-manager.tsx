@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChamadoCreateDialog } from "./chamado-create-dialog";
 import { ChamadoDetalheDialog } from "./chamado-detalhe-dialog";
 import { PrioridadeBadge, type Prioridade } from "./prioridade-badge";
@@ -73,6 +74,7 @@ export function ChamadosManager({
     ? (chamados.find((c) => c.id === chamadoIdInicial) ?? null)
     : null;
 
+  const router = useRouter();
   const [busca, setBusca] = useState("");
   const [prioridadeFiltro, setPrioridadeFiltro] = useState("todas");
   const [regiaoFiltro, setRegiaoFiltro] = useState("todas");
@@ -166,10 +168,17 @@ export function ChamadosManager({
   function fechar() {
     setModoDialogo("nenhum");
     // Se a tela abriu por deep-link (?chamado=<id>), tira o parâmetro da URL pra
-    // um F5 não reabrir o modal. `history.replaceState` (não router.replace):
-    // só limpa a query, sem round-trip nem remontar a lista/perder filtros.
+    // um F5 não reabrir o modal — PELO ROUTER. A versão anterior usava
+    // `window.history.replaceState` pra poupar o round-trip, e isso deixava a
+    // URL dizendo /chamados enquanto a árvore interna do Next ainda era a de
+    // `?chamado=…`; no `router.refresh()` seguinte (o toast dispara um a cada
+    // resposta de cliente) o Next detectava a incoerência e RECARREGAVA a
+    // página inteira — o toast sumia e o segundo clique no mesmo chamado não
+    // abria nada (reproduzido em 11/09/2026). O custo do router.replace é a
+    // lista remontar com os filtros no padrão; quem chegou por deep-link ainda
+    // não tinha filtro nenhum.
     if (chamadoIdInicial && typeof window !== "undefined" && window.location.search) {
-      window.history.replaceState(null, "", "/chamados");
+      router.replace("/chamados", { scroll: false });
     }
   }
 

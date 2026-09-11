@@ -21,6 +21,9 @@ export default async function ChamadosPage(props: PageProps<"/chamados">) {
   // direto o modal de detalhe desse chamado.
   const searchParams = await props.searchParams;
   const chamadoIdInicial = typeof searchParams.chamado === "string" ? searchParams.chamado : null;
+  // Carimbo do clique no toast (ver app/novas-respostas-toast.tsx): entra na
+  // `key` pra reabrir o modal quando o MESMO chamado chega de novo.
+  const aberturaInicial = typeof searchParams.t === "string" ? searchParams.t : "";
 
   const {
     data: { user },
@@ -177,7 +180,7 @@ export default async function ChamadosPage(props: PageProps<"/chamados">) {
       </header>
 
       <ChamadosManager
-        key={chamadoIdInicial ?? "lista"}
+        key={chamadoIdInicial ? `${chamadoIdInicial}-${aberturaInicial}` : "lista"}
         chamados={chamados}
         rts={rts}
         podeCriar={podeCriar}

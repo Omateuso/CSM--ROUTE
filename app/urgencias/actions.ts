@@ -50,7 +50,12 @@ export type ChamadoParaUrgencia = {
 };
 
 export async function buscarChamadosParaUrgencia(query: string): Promise<ChamadoParaUrgencia[]> {
-  const termo = query.trim();
+  // Vírgula, parênteses e aspas são sintaxe do `.or(...)` do PostgREST (separam
+  // as cláusulas) — vindo do campo de busca elas quebravam a consulta em 400
+  // e a tela devolvia "nenhum chamado" em silêncio. "vazamento, banheiro"
+  // passa a buscar "vazamento banheiro". `%`/`_` são curingas do ilike e
+  // seguem valendo de propósito.
+  const termo = query.replace(/[,()"\\]/g, " ").replace(/\s+/g, " ").trim();
   if (termo.length < 2) return [];
 
   const supabase = await createClient();

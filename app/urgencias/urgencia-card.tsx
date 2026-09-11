@@ -37,11 +37,14 @@ export function UrgenciaCard({ urgencia }: { urgencia: UrgenciaRow }) {
     return () => clearInterval(id);
   }, [urgencia.criadoEm]);
 
+  // O card inteiro leva pro detalhe, mas NÃO é um <Link> envolvendo tudo: o
+  // protocolo dentro dele também é um link (TomTicket), e <a> dentro de <a> é
+  // HTML inválido — o navegador reestrutura o DOM e a hidratação do React
+  // falha na tela inteira (aconteceu: erro em /urgencias nos dois perfis,
+  // 11/09/2026). Padrão "stretched link": o <Link> fica no título e um
+  // ::after dele cobre o card; o link do protocolo sobe com z-10 por cima.
   return (
-    <Link
-      href={`/urgencias/${urgencia.id}`}
-      className={`block rounded-[var(--radius-md)] border border-border bg-surface p-4 transition-colors hover:border-border-strong ${FOCUS_RING}`}
-    >
+    <article className="relative rounded-[var(--radius-md)] border border-border bg-surface p-4 transition-colors hover:border-border-strong focus-within:border-border-strong">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-xs text-text-secondary">{urgencia.codigo}</span>
         <span className="font-mono text-xs text-text-tertiary">{urgencia.rtCodigo}</span>
@@ -50,8 +53,7 @@ export function UrgenciaCard({ urgencia }: { urgencia: UrgenciaRow }) {
             href={tomticketSearchUrl(urgencia.tomticketId)}
             target="_blank"
             rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className={`font-mono text-xs text-accent hover:text-accent-hover ${FOCUS_RING}`}
+            className={`relative z-10 font-mono text-xs text-accent hover:text-accent-hover ${FOCUS_RING}`}
           >
             #{urgencia.tomticketId}
           </a>
@@ -61,7 +63,14 @@ export function UrgenciaCard({ urgencia }: { urgencia: UrgenciaRow }) {
         </span>
       </div>
 
-      <p className="mt-2 text-sm font-medium text-text-primary">{urgencia.chamadoAssunto}</p>
+      <p className="mt-2 text-sm font-medium text-text-primary">
+        <Link
+          href={`/urgencias/${urgencia.id}`}
+          className={`after:absolute after:inset-0 after:rounded-[var(--radius-md)] after:content-[''] ${FOCUS_RING}`}
+        >
+          {urgencia.chamadoAssunto}
+        </Link>
+      </p>
       <p className="mt-1 text-sm text-text-secondary">{urgencia.motivo}</p>
       <p className="mt-1 text-xs text-text-tertiary">
         {urgencia.rtEndereco} · {urgencia.regiaoNome}
@@ -82,7 +91,10 @@ export function UrgenciaCard({ urgencia }: { urgencia: UrgenciaRow }) {
         <span>
           {URGENCIA_ORIGEM_LABEL[urgencia.origem]} · {urgencia.solicitante}
         </span>
-        <span>
+        {/* "N min atrás" depende do relógio: servidor e cliente podem cair em
+            minutos diferentes, e isso NÃO é erro — é o único texto da tela
+            que muda sozinho, por desenho. */}
+        <span suppressHydrationWarning>
           {formatoHora.format(new Date(urgencia.criadoEm))} — {tempoDecorrido}
         </span>
         {urgencia.equipeMaisProxima && (
@@ -92,6 +104,6 @@ export function UrgenciaCard({ urgencia }: { urgencia: UrgenciaRow }) {
           </span>
         )}
       </div>
-    </Link>
+    </article>
   );
 }
