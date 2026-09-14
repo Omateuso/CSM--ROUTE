@@ -1,0 +1,33 @@
+name: Sincronizar TomTicket
+
+# Netlify (diferente da Vercel) não tem um "cron" nativo embutido no
+# netlify.toml — o equivalente do vercel.json daqui é este workflow, batendo
+# em POST /api/tomticket/sync a cada 5 min (mesmo intervalo do agendador
+# interno do instrumentation.ts, que só funciona em processo persistente —
+# não vale pra serverless, ver CLAUDE.md). Funciona com qualquer host, não
+# só Netlify.
+#
+# Configuração necessária (Settings > Secrets and variables > Actions,
+# neste repositório do GitHub):
+#   SYNC_URL    — URL do site publicado, ex.: https://csm-route.netlify.app
+#   SYNC_SECRET — o MESMO valor de SYNC_SECRET configurado no site (Netlify
+#                 Environment variables) — é o que autentica a chamada sem
+#                 sessão de usuário.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {} # permite disparar manualmente pra testar
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /api/tomticket/sync
+        run: |
+          if [ -z "${{ secrets.SYNC_URL }}" ] || [ -z "${{ secrets.SYNC_SECRET }}" ]; then
+            echo "SYNC_URL/SYNC_SECRET não configurados nos secrets do repositório — pulando."
+            exit 0
+          fi
+          curl --fail --silent --show-error \
+            -X POST "${{ secrets.SYNC_URL }}/api/tomticket/sync" \
+            -H "x-sync-secret: ${{ secrets.SYNC_SECRET }}"

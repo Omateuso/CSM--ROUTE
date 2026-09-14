@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# netlify (estado local de `netlify link`/`netlify dev`)
+.netlify
+
 # dados reais sensíveis (endereços de RTs) — só local, nunca no histórico do git
 zonas-regioes-rts-final.xlsx
 ~$zonas-regioes-rts-final.xlsx

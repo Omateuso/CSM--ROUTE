@@ -89,8 +89,37 @@ node scripts/seed-test-users.mjs            # cria os usuários de teste
 
 Os chamados chegam sozinhos, a cada 5 minutos, pela API v2.0 — o agendador vive
 em `instrumentation.ts` e roda dentro do processo do servidor, sem depender de
-ninguém estar logado. Em serverless (Vercel) quem assume é o cron do
-`vercel.json`, batendo em `POST /api/tomticket/sync`.
+ninguém estar logado. Em serverless (Vercel ou Netlify) ninguém mantém um
+processo vivo entre requisições, então quem assume é um agendador externo
+batendo em `POST /api/tomticket/sync` com o header `x-sync-secret`: o cron do
+`vercel.json` na Vercel, ou o workflow
+`.github/workflows/tomticket-sync.yml` (GitHub Actions) em qualquer outro
+host, Netlify incluído.
+
+## Deploy
+
+### Netlify
+
+Next.js 16 é auto-detectado pelo adaptador oficial da Netlify — não precisa
+declarar o plugin no `netlify.toml` (a própria Netlify recomenda não fixar a
+versão dele; atualiza sozinha a cada build).
+
+1. No painel da Netlify: **Add new site → Import an existing project**,
+   escolha o repositório (`Omateuso/CSM--ROUTE` no GitHub, ou o Gitea).
+2. Build command `npm run build` e Node 20 já vêm do `netlify.toml`.
+3. Em **Site settings → Environment variables**, preencha as mesmas
+   variáveis do `.env.example` (Supabase, TomTicket, provedor de rotas).
+4. Depois do primeiro deploy, configure a sincronização automática — a
+   Netlify não tem cron nativo pra rotas do Next: em **Settings → Secrets
+   and variables → Actions** deste repositório no GitHub, crie
+   `SYNC_URL` (a URL do site publicado) e `SYNC_SECRET` (o mesmo valor
+   configurado no site) — o workflow já commitado assume daí, rodando a
+   cada 5 minutos.
+
+### Vercel
+
+`vercel.json` já traz o cron de sincronização pronto — importe o repositório
+normalmente e preencha as mesmas variáveis de ambiente do `.env.example`.
 
 Sincronizar traz **chamado**, não cria **rota**: quem gera serviço para o
 técnico é a confirmação de uma rota pelo gerente.

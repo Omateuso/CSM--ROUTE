@@ -4,10 +4,12 @@
 // onde o timer da sincronização é armado. Vale pro `next dev` e pra qualquer
 // host de processo longo (VPS, container, `next start`).
 //
-// NÃO vale pra serverless (Vercel), onde não existe processo vivo entre as
-// requisições — lá o caminho é o Vercel Cron batendo em
-// `POST /api/tomticket/sync` com o header `x-sync-secret`. O `vercel.json`
-// já deixa isso pronto; este arquivo cobre o "enquanto roda na máquina".
+// NÃO vale pra serverless (Vercel, Netlify — nenhum dos dois mantém um
+// processo vivo entre requisições), onde o caminho é um agendador externo
+// batendo em `POST /api/tomticket/sync` com o header `x-sync-secret`. O
+// `vercel.json` (Vercel Cron) e `.github/workflows/tomticket-sync.yml`
+// (GitHub Actions, funciona com qualquer host — inclui Netlify) já deixam
+// isso pronto; este arquivo cobre o "enquanto roda na máquina" (dev/VPS).
 
 const PADRAO_MINUTOS = 5;
 

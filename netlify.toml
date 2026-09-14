@@ -1,0 +1,16 @@
+# Deploy no Netlify (14/09/2026) — ao lado do vercel.json (plano original,
+# adiado). Next.js 16 é auto-detectado pelo adaptador oficial da Netlify
+# (Next.js Runtime v5, via @netlify/plugin-nextjs) sem precisar declarar o
+# plugin aqui: a própria Netlify recomenda NÃO fixar a versão do adaptador
+# manualmente — ela atualiza sozinha a cada build. https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/
+#
+# Variáveis de ambiente NÃO ficam aqui (arquivo versionado) — configure em
+# Site settings > Environment variables no painel da Netlify, usando
+# .env.example como lista do que precisa preencher.
+[build]
+  command = "npm run build"
+
+[build.environment]
+  # Next.js 16 exige Node 20.9+; sem isso a Netlify pode usar um LTS mais
+  # velho por padrão.
+  NODE_VERSION = "20"
