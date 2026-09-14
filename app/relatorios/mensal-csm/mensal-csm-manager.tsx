@@ -11,11 +11,16 @@ const formatoData = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2
 
 export function MensalCsmManager({
   mesInicial,
+  mesMaximo,
   previewInicial,
   caps,
   regioes,
 }: {
   mesInicial: string;
+  /** Teto do seletor — normalmente igual a `mesInicial` (só mês fechado);
+   *  relaxado pro mês corrente a pedido do usuário (11/09/2026), pra dar
+   *  pra testar o relatório sem esperar o mês fechar. */
+  mesMaximo: string;
   previewInicial: Preview;
   caps: Opcao[];
   regioes: Opcao[];
@@ -83,7 +88,7 @@ export function MensalCsmManager({
           <input
             type="month"
             value={mes}
-            max={mesInicial}
+            max={mesMaximo}
             onChange={(e) => trocarMes(e.target.value)}
             className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />

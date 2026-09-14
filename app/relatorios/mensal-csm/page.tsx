@@ -5,7 +5,7 @@ import {
   buscarServicosValidados,
   resumoDoPeriodo,
 } from "@/lib/relatorio-mensal/consulta";
-import { mesFechadoAnterior, mesParaPeriodo } from "@/lib/relatorio-mensal/periodo";
+import { mesAtual, mesFechadoAnterior, mesParaPeriodo } from "@/lib/relatorio-mensal/periodo";
 import { MensalCsmManager } from "./mensal-csm-manager";
 
 export const metadata = {
@@ -52,6 +52,7 @@ export default async function RelatorioMensalCsmPage() {
 
       <MensalCsmManager
         mesInicial={mesInicial}
+        mesMaximo={mesAtual()}
         previewInicial={{
           resumo: resumoDoPeriodo(servicosIniciais),
           alertas: alertasDoPeriodo(servicosIniciais),

@@ -18,6 +18,17 @@ export function mesFechadoAnterior(hoje = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// Teto do seletor de mês (11/09/2026, a pedido do usuário) — relaxado
+// temporariamente pra permitir testar o relatório com um serviço validado
+// AINDA no mês corrente, sem esperar o mês fechar. O default continua sendo
+// `mesFechadoAnterior()` (o gerente não escolhe "mês corrente" sem querer);
+// isto só afeta o `max` do `<input type="month">`. Reverter pra
+// `mesFechadoAnterior()` quando o teste acabar, se quiser voltar a travar
+// geração só de mês já fechado.
+export function mesAtual(hoje = new Date()): string {
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export function rotularMes(mesISO: string): string {
   const [ano, mes] = mesISO.split("-").map(Number);
   const nome = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date(ano, mes - 1, 1));
