@@ -29,7 +29,13 @@ export function NovasRespostasToast() {
       remover(t.id);
       // router.push (não <Link>): funciona mesmo já estando em /chamados, onde
       // navegar pra mesma pathname sem query não faria nada.
-      router.push(`/chamados?chamado=${t.chamadoId}`);
+      //
+      // `t=` é um carimbo por clique. Sem ele, o MESMO chamado aberto duas vezes
+      // (o cliente responde, o gerente abre e fecha, o cliente responde de novo)
+      // não reabria: fechar o modal limpa a URL por replaceState, sem o router
+      // saber, e o push seguinte pra `?chamado=<mesmo id>` caía na mesma `key`
+      // do ChamadosManager — sem remontar, o modal ficava fechado.
+      router.push(`/chamados?chamado=${t.chamadoId}&t=${Date.now()}`);
     },
     [remover, router],
   );

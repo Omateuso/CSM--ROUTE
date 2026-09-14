@@ -470,10 +470,18 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
       reconciliou = true;
 
       const resolvidosSet = new Set(resolvidos);
+      // Só quem a PRÓPRIA sincronização trouxe (tem o id interno do TomTicket,
+      // gravado em `tomticket_ticket_id` em todo insert/update daqui). A
+      // premissa da reconciliação é "estava no TomTicket e sumiu" — e isso só
+      // se afirma sobre chamado que comprovadamente esteve lá. Sem este
+      // filtro, os chamados fictícios de teste (protocolo 900000+, que nunca
+      // existiram no TomTicket) eram cancelados sozinhos a cada hora —
+      // aconteceu de verdade em 11/09/2026 com 3 deles.
       const { data: nossosAbertos } = await supabase
         .from("chamados")
         .select("id, tomticket_id")
-        .in("status", ["aberto", "em_andamento"]);
+        .in("status", ["aberto", "em_andamento"])
+        .not("tomticket_ticket_id", "is", null);
 
       const sumiram = (nossosAbertos ?? []).filter((c) => {
         const proto = String(c.tomticket_id ?? "").trim();
