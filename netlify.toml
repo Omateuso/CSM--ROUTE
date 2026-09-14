@@ -14,3 +14,13 @@
   # Next.js 16 exige Node 20.9+; sem isso a Netlify pode usar um LTS mais
   # velho por padrão.
   NODE_VERSION = "20"
+  # Achado real (14/09/2026): o scanner de segredos da Netlify falha o build
+  # inteiro se o valor de QUALQUER variável configurada aparece em algum
+  # arquivo do repo ou do output do build. Pras variáveis NEXT_PUBLIC_* isso
+  # é sempre falso positivo — elas são feitas pra virar texto público no
+  # bundle do navegador (é o que o prefixo NEXT_PUBLIC_ do Next.js
+  # significa), então aparecer no output de `.next` é o comportamento
+  # correto, não um vazamento. Sem isso, um deploy quebra sempre que uma
+  # dessas chaves aparecer em qualquer lugar do build (já aconteceu com um
+  # trecho do CLAUDE.md).
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,NEXT_PUBLIC_TILES_URL,NEXT_PUBLIC_TILES_ATRIBUICAO"

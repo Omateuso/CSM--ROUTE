@@ -40,6 +40,9 @@ yarn-error.log*
 # netlify (estado local de `netlify link`/`netlify dev`)
 .netlify
 
+# supabase CLI (estado local de `npx supabase ...`)
+supabase/.temp
+
 # dados reais sensíveis (endereços de RTs) — só local, nunca no histórico do git
 zonas-regioes-rts-final.xlsx
 ~$zonas-regioes-rts-final.xlsx
