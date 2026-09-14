@@ -21,6 +21,7 @@ const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", {
 export type ServicoItem = {
   id: string;
   status: StatusServico;
+  categoria: "concluir_hoje" | "revisao_tecnica";
   reexecucao: boolean;
   ordem: number;
   rotaData: string;
@@ -140,55 +141,106 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                 </p>
               )}
               <ul className="flex flex-col gap-3">
-                {rts.map(([rtCodigo, doRt]) => (
-                  <RtGrupo
-                    key={rtCodigo}
-                    codigo={rtCodigo}
-                    endereco={doRt[0]?.rtEndereco ?? ""}
-                    quantidade={doRt.length}
-                    urlNavegacao={
-                      doRt[0]?.rtLat != null && doRt[0]?.rtLng != null
-                        ? linkGoogleMapsDestino({ lat: doRt[0].rtLat, lng: doRt[0].rtLng })
-                        : null
-                    }
-                  >
-                    {doRt.map((s, indice) => (
-                      <li key={s.id}>
-                        <Link
-                          href={`/servico/${s.id}`}
-                          className="block rounded-[var(--radius-md)] border border-border bg-surface p-3 transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white">
-                              {indice + 1}
-                            </span>
-                            {s.protocolo && (
-                              <span className="font-mono text-xs text-text-tertiary">#{s.protocolo}</span>
+                {rts.map(([rtCodigo, doRt]) => {
+                  // Categoria escolhida pelo gerente ao confirmar a rota
+                  // (migration 0046) — calculado aqui, fora do corpo fechado
+                  // do RtGrupo, pra aparecer no resumo mesmo com o grupo
+                  // FECHADO (pedido do usuário, 10/09/2026): sem isso, a
+                  // distinção "do dia" vs "para revisão" ficava escondida
+                  // atrás de um clique extra — o próprio motivo do bug
+                  // relatado (14/09/2026).
+                  const doDia = doRt.filter((s) => s.categoria === "concluir_hoje");
+                  const paraRevisao = doRt.filter((s) => s.categoria === "revisao_tecnica");
+                  const misto = doDia.length > 0 && paraRevisao.length > 0;
+
+                  return (
+                    <RtGrupo
+                      key={rtCodigo}
+                      codigo={rtCodigo}
+                      endereco={doRt[0]?.rtEndereco ?? ""}
+                      quantidade={doRt.length}
+                      paraRevisaoQuantidade={paraRevisao.length}
+                      urlNavegacao={
+                        doRt[0]?.rtLat != null && doRt[0]?.rtLng != null
+                          ? linkGoogleMapsDestino({ lat: doRt[0].rtLat, lng: doRt[0].rtLng })
+                          : null
+                      }
+                    >
+                      {(() => {
+                        let numero = 0;
+
+                        const cartao = (s: ServicoItem) => {
+                          numero += 1;
+                          return (
+                            <li key={s.id}>
+                              <Link
+                                href={`/servico/${s.id}`}
+                                className={`block rounded-[var(--radius-md)] border p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                  s.categoria === "concluir_hoje"
+                                    ? "border-sla-dentro/30 bg-sla-dentro/5 hover:border-sla-dentro/50"
+                                    : "border-sla-proximo/30 bg-sla-proximo/5 hover:border-sla-proximo/50"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white">
+                                    {numero}
+                                  </span>
+                                  {s.protocolo && (
+                                    <span className="font-mono text-xs text-text-tertiary">#{s.protocolo}</span>
+                                  )}
+                                  {s.criadoEm && (
+                                    <span className="text-xs text-text-tertiary">
+                                      criado em {formatoDataCurta.format(new Date(s.criadoEm))}
+                                    </span>
+                                  )}
+                                  {s.reexecucao && (
+                                    <span className="rounded-full bg-priority-alta/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-priority-alta uppercase">
+                                      ↩ Retorno
+                                    </span>
+                                  )}
+                                  <span className="ml-auto">
+                                    <StatusServicoBadge status={s.status} />
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-sm font-medium text-text-primary">{s.assunto}</p>
+                                <div className="mt-2 flex flex-wrap items-center gap-3">
+                                  <PrioridadeBadge prioridade={s.prioridade} />
+                                  <SlaBadge slaPrazo={s.slaPrazo} status={s.chamadoStatus} />
+                                  {s.categoria === "concluir_hoje" ? (
+                                    <span className="rounded-full bg-sla-dentro/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-dentro uppercase">
+                                      Hoje
+                                    </span>
+                                  ) : (
+                                    <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-proximo uppercase">
+                                      Para revisão
+                                    </span>
+                                  )}
+                                </div>
+                              </Link>
+                            </li>
+                          );
+                        };
+
+                        return (
+                          <>
+                            {misto && doDia.length > 0 && (
+                              <li className="px-1 text-[11px] font-semibold tracking-wide text-sla-dentro uppercase">
+                                Chamados do dia
+                              </li>
                             )}
-                            {s.criadoEm && (
-                              <span className="text-xs text-text-tertiary">
-                                criado em {formatoDataCurta.format(new Date(s.criadoEm))}
-                              </span>
+                            {doDia.map(cartao)}
+                            {misto && paraRevisao.length > 0 && (
+                              <li className="px-1 pt-1 text-[11px] font-semibold tracking-wide text-sla-proximo uppercase">
+                                Chamados para revisão
+                              </li>
                             )}
-                            {s.reexecucao && (
-                              <span className="rounded-full bg-priority-alta/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-priority-alta uppercase">
-                                ↩ Retorno
-                              </span>
-                            )}
-                            <span className="ml-auto">
-                              <StatusServicoBadge status={s.status} />
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm font-medium text-text-primary">{s.assunto}</p>
-                          <div className="mt-2 flex flex-wrap items-center gap-3">
-                            <PrioridadeBadge prioridade={s.prioridade} />
-                            <SlaBadge slaPrazo={s.slaPrazo} status={s.chamadoStatus} />
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </RtGrupo>
-                ))}
+                            {paraRevisao.map(cartao)}
+                          </>
+                        );
+                      })()}
+                    </RtGrupo>
+                  );
+                })}
               </ul>
             </section>
           ))}

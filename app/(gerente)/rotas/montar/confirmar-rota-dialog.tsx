@@ -2,10 +2,11 @@
 
 import { useActionState, useId, useMemo, useState } from "react";
 import Link from "next/link";
-import { confirmarRota, type ActionState } from "./actions";
+import { confirmarRota, type ActionState, type ChamadoElegivel } from "./actions";
 import { Modal } from "@/lib/ui/modal";
 import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
 import { FOCUS_RING, FIELD_INPUT, FIELD_LABEL } from "@/lib/ui/styles";
+import { PrioridadeBadge } from "@/app/chamados/prioridade-badge";
 
 type Equipe = { id: string; nome: string };
 type RtResumo = { id: string; codigo: string; endereco: string };
@@ -13,13 +14,17 @@ type Tecnico = { id: string; nome: string; equipeId: string | null; ativo: boole
 
 const hoje = new Date().toISOString().slice(0, 10);
 
-// A seleção manual de chamados por técnico (checkbox por RT, migration 0033)
-// foi removida a pedido do usuário (09/09/2026): o técnico recebe TODOS os
-// chamados em aberto da RT. `fn_confirmar_rota` sem `p_chamado_ids` = todos os
-// elegíveis (comportamento de sempre). A 0033 continua no banco, inofensiva.
+// Categorização por chamado (migration 0046, pedido do usuário 14/09/2026):
+// diferente da seleção manual da 0033 (revertida em 09/09/2026 — lá, o
+// chamado fora da lista NÃO ganhava serviço, o técnico nunca via), aqui todo
+// chamado elegível SEMPRE ganha serviço — a marcação decide só a categoria.
+// Marcado = "concluir hoje" (cobrança de fechar no dia); desmarcado =
+// "revisão técnica" (o técnico passa o olho, sem cobrança). Tudo marcado por
+// padrão — desmarcar é a exceção.
 export function ConfirmarRotaDialog({
   open,
   rtsNaRota,
+  chamadosElegiveis,
   equipes,
   tecnicos,
   onClose,
@@ -27,6 +32,7 @@ export function ConfirmarRotaDialog({
 }: {
   open: boolean;
   rtsNaRota: RtResumo[];
+  chamadosElegiveis: ChamadoElegivel[];
   equipes: Equipe[];
   tecnicos: Tecnico[];
   onClose: () => void;
@@ -39,6 +45,54 @@ export function ConfirmarRotaDialog({
     onConfirmado();
     onClose();
   });
+
+  const chamadosPorRt = useMemo(() => {
+    const mapa = new Map<string, ChamadoElegivel[]>();
+    for (const c of chamadosElegiveis) {
+      const lista = mapa.get(c.rtId) ?? [];
+      lista.push(c);
+      mapa.set(c.rtId, lista);
+    }
+    return mapa;
+  }, [chamadosElegiveis]);
+
+  // Marcados = "chamados do dia" (concluir_hoje). NENHUM marcado por padrão
+  // (pedido do usuário, 14/09/2026) — marcar é a escolha ativa do gerente, o
+  // resto vira "revisão técnica" sozinho. Conjunto, não uma variável única
+  // por RT — cada RT abre/fecha por conta própria (mesmo motivo já
+  // documentado na 0033: uma variável só fazia abrir a segunda RT fechar a
+  // primeira).
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  const [rtsAbertas, setRtsAbertas] = useState<Set<string>>(new Set());
+
+  function alternarRt(rtId: string) {
+    setRtsAbertas((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(rtId)) proximo.delete(rtId);
+      else proximo.add(rtId);
+      return proximo;
+    });
+  }
+
+  function alternarChamado(chamadoId: string) {
+    setMarcados((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(chamadoId)) proximo.delete(chamadoId);
+      else proximo.add(chamadoId);
+      return proximo;
+    });
+  }
+
+  // Presente (mesmo vazio) só quando há chamados pra categorizar de verdade —
+  // ausente = a busca não achou nada (falhou, ou nenhum chamado elegível) e
+  // `confirmarRota` cai no fallback de sempre (tudo concluir_hoje). Com
+  // `marcados` vazio por padrão, uma rota confirmada sem nenhuma marcação
+  // manda `"[]"` pro servidor — escolha explícita e válida (0046): a RT
+  // inteira nasce revisão técnica até o gerente marcar algo.
+  const chamadosDiaValue =
+    chamadosElegiveis.length > 0
+      ? JSON.stringify(chamadosElegiveis.map((c) => c.id).filter((id) => marcados.has(id)))
+      : "";
 
   const uid = useId();
   const idData = `${uid}-data`;
@@ -84,6 +138,7 @@ export function ConfirmarRotaDialog({
             name="tecnicoIds"
             value={JSON.stringify(rtsNaRota.map((rt) => tecnicoPorRt[rt.id] ?? ""))}
           />
+          <input type="hidden" name="chamadosDia" value={chamadosDiaValue} />
 
           <div className="flex flex-col gap-1">
             <label htmlFor={idData} className={FIELD_LABEL}>
@@ -127,7 +182,9 @@ export function ConfirmarRotaDialog({
               RTs da rota e técnico responsável ({rtsNaRota.length})
             </span>
             <p className="text-xs text-text-tertiary">
-              O técnico fica com todos os chamados em aberto de cada RT.
+              {chamadosElegiveis.length > 0
+                ? "Toque numa RT e marque os chamados que o técnico precisa concluir hoje. Nenhum vem marcado por padrão — os demais entram como revisão técnica (o técnico visita, mas sem cobrança de fechar no dia)."
+                : "O técnico fica com todos os chamados em aberto de cada RT."}
             </p>
             {equipeId && tecnicosDaEquipe.length === 0 ? (
               <div className="mt-1 rounded-[var(--radius-sm)] border border-dashed border-border-strong bg-surface-input p-3 text-xs text-text-tertiary">
@@ -140,16 +197,45 @@ export function ConfirmarRotaDialog({
               <ol className="mt-1 flex flex-col gap-2">
                 {rtsNaRota.map((rt, indice) => {
                   const idTecnico = `${uid}-tecnico-${rt.id}`;
+                  const chamados = chamadosPorRt.get(rt.id) ?? [];
+                  const marcadosNaRt = chamados.filter((c) => marcados.has(c.id)).length;
+                  const aberta = rtsAbertas.has(rt.id);
                   return (
                     <li key={rt.id} className="rounded-[var(--radius-sm)] border border-border p-2">
                       <div className="flex items-center gap-2">
                         <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-white">
                           {indice + 1}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-xs">
-                          <span className="font-mono font-semibold text-text-primary">{rt.codigo}</span>{" "}
-                          <span className="text-text-tertiary">{rt.endereco}</span>
-                        </span>
+                        {chamados.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => alternarRt(rt.id)}
+                            aria-expanded={aberta}
+                            className={`flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-sm)] py-0.5 text-left ${FOCUS_RING}`}
+                          >
+                            <span aria-hidden="true" className="text-xs text-text-tertiary">
+                              {aberta ? "▾" : "▸"}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-xs">
+                              <span className="font-mono font-semibold text-text-primary">{rt.codigo}</span>{" "}
+                              <span className="text-text-tertiary">{rt.endereco}</span>
+                            </span>
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                                marcadosNaRt > 0
+                                  ? "bg-sla-dentro/15 text-sla-dentro"
+                                  : "text-text-tertiary"
+                              }`}
+                            >
+                              {marcadosNaRt}/{chamados.length} hoje
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="min-w-0 flex-1 truncate text-xs">
+                            <span className="font-mono font-semibold text-text-primary">{rt.codigo}</span>{" "}
+                            <span className="text-text-tertiary">{rt.endereco}</span>
+                          </span>
+                        )}
                       </div>
                       <label htmlFor={idTecnico} className="sr-only">
                         Técnico responsável por {rt.codigo}
@@ -173,6 +259,47 @@ export function ConfirmarRotaDialog({
                           </option>
                         ))}
                       </select>
+
+                      {aberta && chamados.length > 0 && (
+                        <ul className="mt-2 flex flex-col gap-1 border-t border-border pt-2">
+                          {chamados.map((c) => {
+                            const idCheck = `${uid}-ch-${c.id}`;
+                            const marcado = marcados.has(c.id);
+                            return (
+                              <li
+                                key={c.id}
+                                className={`flex items-start gap-2 rounded-[var(--radius-sm)] p-1 ${
+                                  marcado ? "bg-sla-dentro/10" : ""
+                                }`}
+                              >
+                                <input
+                                  id={idCheck}
+                                  type="checkbox"
+                                  checked={marcado}
+                                  onChange={() => alternarChamado(c.id)}
+                                  className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--sla-dentro)]"
+                                />
+                                <label
+                                  htmlFor={idCheck}
+                                  className={`min-w-0 flex-1 cursor-pointer text-xs ${
+                                    marcado ? "font-medium text-sla-dentro" : "text-text-primary"
+                                  }`}
+                                >
+                                  {c.tomticketId && (
+                                    <span
+                                      className={`font-mono ${marcado ? "text-sla-dentro/80" : "text-text-tertiary"}`}
+                                    >
+                                      #{c.tomticketId}{" "}
+                                    </span>
+                                  )}
+                                  {c.assunto}
+                                </label>
+                                <PrioridadeBadge prioridade={c.prioridade} />
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </li>
                   );
                 })}

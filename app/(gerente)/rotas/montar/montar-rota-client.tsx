@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { MontarRotaMapa } from "./montar-rota-mapa";
 import { ConfirmarRotaDialog } from "./confirmar-rota-dialog";
+import { buscarChamadosElegiveis, type ChamadoElegivel } from "./actions";
 import { RaioProximidadePicker } from "./raio-proximidade-picker";
 import { RaioProximidadeButton } from "./raio-proximidade-button";
 import { Modal } from "@/lib/ui/modal";
@@ -76,6 +77,14 @@ export function MontarRotaClient({
   const [erro, setErro] = useState<string | null>(null);
   const [confirmarAberto, setConfirmarAberto] = useState(false);
   const [confirmarInstancia, setConfirmarInstancia] = useState(0);
+  // Carregado ANTES de abrir o diálogo (não via useEffect lá dentro) — busca
+  // pontual, disparada pelo clique em "Confirmar rota do dia", mesmo padrão
+  // de "server data as props" que o resto do arquivo já segue pra sugestão de
+  // rota. Vazio (fetch falhou ou nenhum chamado elegível de verdade) = o
+  // diálogo não mostra o checklist e a confirmação segue o comportamento de
+  // sempre (todo chamado elegível nasce "concluir hoje").
+  const [chamadosElegiveis, setChamadosElegiveis] = useState<ChamadoElegivel[]>([]);
+  const [carregandoChamados, setCarregandoChamados] = useState(false);
   const [rotaConfirmada, setRotaConfirmada] = useState(false);
   const [buscaCandidata, setBuscaCandidata] = useState("");
   const [raioModalAberto, setRaioModalAberto] = useState(false);
@@ -367,13 +376,21 @@ export function MontarRotaClient({
           {rotaIds.length > 0 && (
             <button
               type="button"
-              onClick={() => {
-                setConfirmarInstancia((n) => n + 1);
-                setConfirmarAberto(true);
+              disabled={carregandoChamados}
+              onClick={async () => {
+                setCarregandoChamados(true);
+                try {
+                  const chamados = await buscarChamadosElegiveis(rotaIds);
+                  setChamadosElegiveis(chamados);
+                } finally {
+                  setCarregandoChamados(false);
+                  setConfirmarInstancia((n) => n + 1);
+                  setConfirmarAberto(true);
+                }
               }}
-              className={`mt-3 w-full rounded-[var(--radius-sm)] bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+              className={`mt-3 w-full rounded-[var(--radius-sm)] bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
             >
-              Confirmar rota do dia
+              {carregandoChamados ? "Carregando chamados..." : "Confirmar rota do dia"}
             </button>
           )}
         </section>
@@ -452,12 +469,14 @@ export function MontarRotaClient({
         key={confirmarInstancia}
         open={confirmarAberto}
         rtsNaRota={rotaIds.map((id) => rtsPorId.get(id)).filter((rt): rt is RtParaRota => Boolean(rt))}
+        chamadosElegiveis={chamadosElegiveis}
         equipes={equipes}
         tecnicos={tecnicos}
         onClose={() => setConfirmarAberto(false)}
         onConfirmado={() => {
           setRotaConfirmada(true);
           setRotaIds([]);
+          setChamadosElegiveis([]);
           buscarSugestao(null, regiaoId, [], raioKm);
         }}
       />

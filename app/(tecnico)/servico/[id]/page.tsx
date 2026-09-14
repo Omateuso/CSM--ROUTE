@@ -65,7 +65,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
   const { data: servicoRaw } = await supabase
     .from("servicos")
     .select(
-      "id, status, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
+      "id, status, categoria, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
     )
     .eq("id", id)
     .eq("tecnico_id", user.id)
@@ -215,6 +215,15 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
               ↩ Retorno
             </span>
           )}
+          {servicoRaw.categoria === "concluir_hoje" ? (
+            <span className="rounded-full bg-sla-dentro/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-dentro uppercase">
+              Hoje
+            </span>
+          ) : (
+            <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-proximo uppercase">
+              Para revisão
+            </span>
+          )}
           <StatusServicoBadge status={status} />
         </div>
         <h1 className="mt-1 text-lg font-semibold text-text-primary">{rt?.nome}</h1>
@@ -258,6 +267,12 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
           </p>
           {slaPrazo && (
             <p className="mt-3 text-xs text-text-tertiary">Prazo: {formatoDataHora.format(new Date(slaPrazo))}</p>
+          )}
+          {servicoRaw.categoria === "revisao_tecnica" && (
+            <p className="mt-3 text-xs text-sla-proximo">
+              Marcado pelo gerente como revisão — dê uma passada e registre o que encontrar, sem a
+              mesma cobrança de fechar hoje que os chamados do dia têm.
+            </p>
           )}
         </section>
 

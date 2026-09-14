@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { Prioridade } from "@/app/chamados/prioridade-badge";
 
 export type ActionState = { error: string | null; rotaId?: string };
 
@@ -20,6 +21,58 @@ function traduzErro(error: { code?: string; message: string }): string {
   return `Não foi possível confirmar a rota (${error.message}).`;
 }
 
+// -----------------------------------------------------------------------------
+// Categorização por chamado — "concluir hoje" vs "revisão técnica" (pedido do
+// usuário, 11/09/2026, migration 0046). Busca os chamados elegíveis de cada RT
+// pra alimentar o checklist do diálogo de confirmação — MESMA regra de
+// elegibilidade que `fn_confirmar_rota` usa no servidor (status ainda não
+// fechado no TomTicket + sem serviço ativo já criado); se as duas listas
+// divergirem por uma corrida rara (chamado fechado entre a busca e o clique em
+// "Confirmar"), a função do banco é quem decide de fato — isto aqui só
+// alimenta a tela.
+// -----------------------------------------------------------------------------
+export type ChamadoElegivel = {
+  id: string;
+  rtId: string;
+  tomticketId: string | null;
+  assunto: string;
+  prioridade: Prioridade;
+};
+
+export async function buscarChamadosElegiveis(rtIds: string[]): Promise<ChamadoElegivel[]> {
+  if (rtIds.length === 0) return [];
+
+  const supabase = await createClient();
+
+  const { data: chamadosRaw, error } = await supabase
+    .from("chamados")
+    .select("id, rt_id, tomticket_id, assunto, prioridade")
+    .in("rt_id", rtIds)
+    .not("status", "in", "(finalizado,cancelado)")
+    .order("criado_em", { ascending: true });
+
+  if (error || !chamadosRaw || chamadosRaw.length === 0) return [];
+
+  const chamadoIds = chamadosRaw.map((c) => c.id as string);
+  const { data: servicosAtivosRaw } = await supabase
+    .from("servicos")
+    .select("chamado_id")
+    .in("chamado_id", chamadoIds)
+    .neq("status", "cancelado");
+
+  const comServicoAtivo = new Set((servicosAtivosRaw ?? []).map((s) => s.chamado_id as string));
+
+  return chamadosRaw
+    .filter((c) => !comServicoAtivo.has(c.id as string))
+    .map((c) => ({
+      id: c.id as string,
+      rtId: c.rt_id as string,
+      tomticketId: (c.tomticket_id as string | null) ?? null,
+      assunto: c.assunto as string,
+      prioridade: c.prioridade as Prioridade,
+    }));
+}
+
 // Grava rotas + rota_rts numa transação só via fn_confirmar_rota (migration
 // 0011) — nunca dois inserts separados aqui, senão uma falha no segundo
 // deixaria uma `rotas` órfã sem nenhuma RT.
@@ -28,6 +81,11 @@ export async function confirmarRota(_prev: ActionState, formData: FormData): Pro
   const equipeId = String(formData.get("equipeId") ?? "");
   const rtIdsRaw = String(formData.get("rtIds") ?? "");
   const tecnicoIdsRaw = String(formData.get("tecnicoIds") ?? "");
+  // Presente = o gerente teve a chance de categorizar (o diálogo carregou os
+  // chamados elegíveis); ausente = a busca falhou e o diálogo confirmou sem
+  // categorização, comportamento de sempre (tudo concluir_hoje) — ver
+  // ConfirmarRotaDialog.
+  const chamadosDiaRaw = formData.get("chamadosDia");
 
   if (!data) return { error: "Selecione a data da rota." };
   if (!equipeId) return { error: "Selecione a equipe." };
@@ -56,16 +114,32 @@ export async function confirmarRota(_prev: ActionState, formData: FormData): Pro
     return { error: "Escolha um técnico responsável para cada RT da rota." };
   }
 
+  let chamadosDia: string[] | null = null;
+  if (typeof chamadosDiaRaw === "string" && chamadosDiaRaw.length > 0) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(chamadosDiaRaw);
+    } catch {
+      return { error: "Seleção de chamados do dia inválida." };
+    }
+    if (!Array.isArray(parsed) || !parsed.every((v) => typeof v === "string")) {
+      return { error: "Seleção de chamados do dia inválida." };
+    }
+    chamadosDia = parsed;
+  }
+
   const supabase = await createClient();
 
-  // Sem `p_chamado_ids`: `fn_confirmar_rota` gera um serviço por chamado
-  // elegível de cada RT (o técnico recebe todos os chamados em aberto). A
-  // escolha manual por chamado (0033) foi removida em 09/09/2026.
+  // `p_chamados_dia` NULL = todo chamado elegível nasce concluir_hoje (fallback
+  // de quando o diálogo não conseguiu carregar os chamados pra categorizar).
+  // Lista (mesmo vazia) = o que estiver nela vira concluir_hoje, o resto da
+  // mesma RT vira revisao_tecnica — nunca exclui ninguém (migration 0046).
   const { data: rotaId, error } = await supabase.rpc("fn_confirmar_rota", {
     p_data: data,
     p_equipe_id: equipeId,
     p_rt_ids: rtIds,
     p_tecnico_ids: tecnicoIds,
+    p_chamados_dia: chamadosDia,
   });
 
   if (error) return { error: traduzErro(error) };

@@ -17,12 +17,20 @@ export function RtGrupo({
   codigo,
   endereco,
   quantidade,
+  paraRevisaoQuantidade = 0,
   urlNavegacao,
   children,
 }: {
   codigo: string;
   endereco: string;
   quantidade: number;
+  /** Quantos dos `quantidade` chamados nasceram "revisão técnica" (migration
+   * 0046). Precisa aparecer no resumo mesmo com o grupo FECHADO — achado
+   * real (14/09/2026): sem isso, a distinção "do dia" vs "para revisão"
+   * ficava invisível atrás do clique de expandir, e foi reportado como bug
+   * ("não está aparecendo a lista com chamados"), quando na verdade os dados
+   * estavam corretos — só escondidos. */
+  paraRevisaoQuantidade?: number;
   /** Link pro app de mapa do técnico. Ausente quando a RT não tem coordenada. */
   urlNavegacao?: string | null;
   children: ReactNode;
@@ -47,9 +55,24 @@ export function RtGrupo({
             <span className="block font-mono text-sm font-semibold text-text-primary">{codigo}</span>
             <span className="block truncate text-xs text-text-tertiary">{endereco}</span>
           </span>
-          <span className="shrink-0 rounded-full bg-surface-input px-2 py-0.5 text-xs font-medium text-text-secondary">
-            {quantidade} chamado{quantidade === 1 ? "" : "s"}
-          </span>
+          {paraRevisaoQuantidade > 0 && paraRevisaoQuantidade < quantidade ? (
+            <span className="flex shrink-0 items-center gap-1">
+              <span className="rounded-full bg-sla-dentro/15 px-2 py-0.5 text-[10px] font-semibold text-sla-dentro">
+                {quantidade - paraRevisaoQuantidade} hoje
+              </span>
+              <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold text-sla-proximo">
+                {paraRevisaoQuantidade} revisão
+              </span>
+            </span>
+          ) : paraRevisaoQuantidade > 0 && paraRevisaoQuantidade === quantidade ? (
+            <span className="shrink-0 rounded-full bg-sla-proximo/15 px-2 py-0.5 text-xs font-medium text-sla-proximo">
+              {quantidade} para revisão
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-full bg-surface-input px-2 py-0.5 text-xs font-medium text-text-secondary">
+              {quantidade} chamado{quantidade === 1 ? "" : "s"}
+            </span>
+          )}
         </button>
 
         {urlNavegacao && (

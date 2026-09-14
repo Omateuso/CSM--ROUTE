@@ -35,7 +35,7 @@ export default async function ServicosDoDiaPage() {
   const { data: servicosRaw, error: servicosError } = await supabase
     .from("servicos")
     .select(
-      "id, status, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
+      "id, status, categoria, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
     )
     .eq("tecnico_id", user.id)
     // Hoje EM DIANTE (não só hoje): o técnico precisa enxergar a rota de
@@ -92,6 +92,7 @@ export default async function ServicosDoDiaPage() {
       return {
         id: s.id as string,
         status: s.status as StatusServico,
+        categoria: (s.categoria as ServicoItem["categoria"]) ?? "concluir_hoje",
         reexecucao: chamadosComTentativaAnterior.has(s.chamado_id as string),
         ordem: ordemPorParada.get(`${s.rota_id}-${s.rt_id}`) ?? 999,
         rotaData: unwrapOne(s.rotas)?.data as string,
