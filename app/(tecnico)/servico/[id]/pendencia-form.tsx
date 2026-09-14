@@ -3,6 +3,7 @@
 import { useActionState, useId, useState } from "react";
 import { reportarPendencia, type ActionState } from "./actions";
 import { CameraCaptureField } from "./camera-capture-field";
+import { CampoTranscricao } from "@/lib/ui/campo-transcricao";
 import { PENDENCIA_CATEGORIA_OPTIONS } from "@/lib/ui/pendencia-categoria";
 import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
 
@@ -51,19 +52,14 @@ export function PendenciaForm({ servicoId }: { servicoId: string }) {
         </select>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor={idDescricao} className={FIELD_LABEL}>
-          O que já foi feito e detalhes da pendência
-        </label>
-        <textarea
-          id={idDescricao}
-          name="descricao"
-          required
-          rows={4}
-          placeholder="Ex.: troquei o registro, mas falta a peça X pra fechar..."
-          className={`${FIELD_INPUT} resize-none`}
-        />
-      </div>
+      <CampoTranscricao
+        id={idDescricao}
+        name="descricao"
+        label="O que já foi feito e detalhes da pendência"
+        required
+        rows={4}
+        placeholder="Ex.: troquei o registro, mas falta a peça X pra fechar..."
+      />
 
       <CameraCaptureField name="fotoParcial" label="Foto do que já foi feito" onReadyChange={setFotoPronta} />
 

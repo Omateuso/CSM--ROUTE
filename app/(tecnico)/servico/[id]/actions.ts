@@ -275,3 +275,56 @@ export async function avaliarServico(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/validacao");
   return { error: null };
 }
+
+// Fluxo leve de revisão (migration 0047, 14/09/2026) — só pra serviço
+// `revisao_tecnica` ainda `planejado`. 1 foto do local + descrição, sem foto
+// "antes"/"depois" nem OS, sem passar por `em_execucao`. Vai direto pra
+// `concluido_tecnico` (fn_revisar_servico revalida a categoria/status de
+// novo no servidor), aparecendo em "Aguardando validação" igual a qualquer
+// conclusão — quem distingue é a `categoria` do serviço.
+export async function revisarServico(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const servicoId = String(formData.get("servicoId") ?? "");
+  const descricao = String(formData.get("descricao") ?? "").trim();
+  if (!servicoId) return { error: "Serviço inválido." };
+  if (!descricao) return { error: "Descreva a situação encontrada e o que falta pra concluir." };
+
+  const fotoEntry = formData.get("fotoRevisao");
+  const foto = fotoEntry instanceof File && fotoEntry.size > 0 ? fotoEntry : null;
+  if (!foto) return { error: "Tire uma foto do local." };
+
+  const latitude = parseCoord(formData.get("fotoRevisaoLat"));
+  const longitude = parseCoord(formData.get("fotoRevisaoLng"));
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sessão expirada — faça login de novo." };
+
+  const path = `${servicoId}/foto-revisao-${Date.now()}-${sanitizeFileName(foto.name)}`;
+  const { error: uploadError } = await supabase.storage.from("evidencias").upload(path, foto);
+  if (uploadError) return { error: `Falha ao enviar a foto (${uploadError.message}).` };
+
+  const { error: insertError } = await supabase.from("evidencias").insert({
+    servico_id: servicoId,
+    tipo: "foto",
+    momento: "revisao",
+    storage_path: path,
+    latitude,
+    longitude,
+    hash_arquivo: await hashArquivo(foto),
+    criado_por: user.id,
+  });
+  if (insertError) return { error: `Falha ao registrar a foto (${insertError.message}).` };
+
+  const { error } = await supabase.rpc("fn_revisar_servico", {
+    p_servico_id: servicoId,
+    p_descricao: descricao,
+  });
+  if (error) return { error: traduzErro(error) };
+
+  revalidatePath(`/servico/${servicoId}`);
+  revalidatePath("/servicos-do-dia");
+  revalidatePath("/validacao");
+  return { error: null };
+}

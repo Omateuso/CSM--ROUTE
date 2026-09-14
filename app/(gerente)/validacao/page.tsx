@@ -8,8 +8,9 @@ import { PendenciasLinkButton } from "./pendencias-link-button";
 import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
 import { type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { detectarHashesDuplicados, avaliarIntegridadeOs, type OsIntegridadeInfo } from "./integridade";
-import { mensagemConclusao } from "@/lib/tomticket/mensagens";
+import { saudacao } from "@/lib/tomticket/mensagens";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
+import { ValidacaoRealtime } from "./validacao-realtime";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -57,7 +58,7 @@ export default async function ValidacaoPage() {
     supabase
       .from("servicos")
       .select(
-        "id, chamado_id, concluido_em, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco, latitude, longitude), conclusoes(observacao), evidencias(tipo, momento, storage_path, latitude, longitude, hash_arquivo)",
+        "id, chamado_id, categoria, concluido_em, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco, latitude, longitude), conclusoes(observacao), evidencias(tipo, momento, storage_path, latitude, longitude, hash_arquivo)",
       )
       .eq("status", "concluido_tecnico")
       .order("concluido_em", { ascending: true }),
@@ -70,7 +71,7 @@ export default async function ValidacaoPage() {
     supabase
       .from("validacoes")
       .select(
-        "id, validado_em, servicos(id, chamado_id, concluido_em, tomticket_resposta_id, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco, latitude, longitude), conclusoes(observacao), evidencias(tipo, momento, storage_path, latitude, longitude, hash_arquivo))",
+        "id, validado_em, servicos(id, chamado_id, categoria, concluido_em, tomticket_resposta_id, tecnico:tecnico_id(nome), chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome, endereco, latitude, longitude), conclusoes(observacao), evidencias(tipo, momento, storage_path, latitude, longitude, hash_arquivo))",
       )
       .order("validado_em", { ascending: false })
       .limit(20),
@@ -234,6 +235,7 @@ export default async function ValidacaoPage() {
     }));
     return {
       servicoId: s.id as string,
+      categoria: (s.categoria as "concluir_hoje" | "revisao_tecnica" | null) ?? "concluir_hoje",
       concluidoEm: s.concluido_em as string | null,
       tecnicoNome: unwrapOne(s.tecnico)?.nome ?? "—",
       rtCodigo: rt?.codigo ?? "—",
@@ -300,6 +302,7 @@ export default async function ValidacaoPage() {
     return {
       validacaoId: v.id as string,
       servicoId: (servico?.id as string | undefined) ?? "",
+      categoria: (servico?.categoria as "concluir_hoje" | "revisao_tecnica" | null) ?? "concluir_hoje",
       // Recibo do envio ao TomTicket (migration 0028) — preenchido vira estado
       // "Respondido", some o botão.
       tomticketRespostaId: (servico?.tomticket_resposta_id as string | null) ?? null,
@@ -353,6 +356,93 @@ export default async function ValidacaoPage() {
     };
   });
 
+  // Sem nada pra decidir (nem aguardando validação, nem apontamento) — o
+  // arquivo de "Validados recentemente" é o único conteúdo real da página,
+  // então ele sobe pra primeira posição em vez de ficar escondido depois de
+  // duas seções vazias (pedido do usuário, 14/09/2026). "Travados" continua
+  // depois dele nesse caso — é sobre rota passada, não é o motivo da troca.
+  const semPendencias = concluidos.length === 0 && apontamentos.length === 0;
+
+  const secaoAguardando = (
+    <section id="aguardando-validacao" className="mt-10 scroll-mt-24">
+      <h2 className="text-sm font-semibold text-text-primary">
+        Aguardando validação <span className="font-normal text-text-tertiary">({concluidos.length})</span>
+      </h2>
+      {concluidos.length === 0 ? (
+        <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+          Nenhum serviço concluído aguardando validação.
+        </p>
+      ) : (
+        <div className="mt-3 flex flex-col gap-3">
+          {concluidos.map((s) => (
+            <ValidacaoCard key={s.servicoId} servico={s} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
+  const secaoApontados = (
+    <section id="apontados" className="mt-10 scroll-mt-24">
+      <h2 className="text-sm font-semibold text-text-primary">
+        Apontados pelo técnico <span className="font-normal text-text-tertiary">({apontamentos.length})</span>
+      </h2>
+      <p className="mt-1 text-xs text-text-tertiary">
+        Serviços ainda não iniciados em que o técnico apontou um problema (chamado já resolvido, RT
+        errada, escopo diferente...). O serviço segue na rota — reagende pra liberar o chamado, ou
+        ignore se o técnico deve seguir mesmo assim.
+      </p>
+      {apontamentos.length === 0 ? (
+        <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+          Nenhum apontamento em aberto.
+        </p>
+      ) : (
+        <div className="mt-3 flex flex-col gap-3">
+          {apontamentos.map((s) => (
+            <ApontamentoCard key={s.servicoId} servico={s} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
+  const secaoTravados = (
+    <section id="travados" className="mt-10 scroll-mt-24">
+      <h2 className="text-sm font-semibold text-text-primary">
+        Travados em rota já passada <span className="font-normal text-text-tertiary">({travados.length})</span>
+      </h2>
+      {travados.length === 0 ? (
+        <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+          Nenhum serviço travado.
+        </p>
+      ) : (
+        <div className="mt-3 flex flex-col gap-3">
+          {travados.map((s) => (
+            <ReagendamentoCard key={s.servicoId} servico={s} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
+  // Arquivo do que já foi fechado (Fase 6): não é decisão pendente, é
+  // consulta pra copiar/anexar de volta no TomTicket — por isso fica por
+  // último quando há algo pendente. Os cards de resumo levam direto aqui de
+  // qualquer posição.
+  const secaoValidados = (
+    <ValidadosRecentes
+      validados={validados}
+      id="validados-recentemente"
+      // Só a saudação vem do servidor (depende da hora — gerar o texto
+      // inteiro dos dois lados abriria descasamento de hidratação). O
+      // texto em si é montado no client, por card, porque agora depende
+      // da categoria do serviço (concluir_hoje -> mensagemConclusao,
+      // revisao_tecnica -> mensagemRevisao, migration 0047).
+      saudacaoAtual={saudacao()}
+      integracaoAtiva={tomticketConfigurado()}
+    />
+  );
+
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -364,13 +454,17 @@ export default async function ValidacaoPage() {
             que já passou.
           </p>
         </div>
-        <PendenciasLinkButton />
+        <div className="flex flex-col items-end gap-2">
+          <PendenciasLinkButton />
+          <ValidacaoRealtime />
+        </div>
       </header>
 
       {/* Resumo clicável (25/08/2026) — mesmo layout dos cards de "Operação
           de hoje" do Dashboard, cada um é âncora pra seção logo abaixo. A
-          ordem segue a prioridade de AÇÃO (Fase 6): o que precisa de decisão
-          primeiro, o arquivo de "Validados recentemente" por último. */}
+          ordem dos CARDS não muda (segue a prioridade de ação de sempre) —
+          só a ordem das SEÇÕES abaixo se inverte quando não há nada pendente
+          (ver `semPendencias`). */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <OperacaoHojeCard label="Aguardando validação" value={concluidos.length} href="#aguardando-validacao" />
         <OperacaoHojeCard label="Apontados pelo técnico" value={apontamentos.length} href="#apontados" />
@@ -378,73 +472,21 @@ export default async function ValidacaoPage() {
         <OperacaoHojeCard label="Validados recentemente" value={validados.length} href="#validados-recentemente" />
       </div>
 
-      <section id="aguardando-validacao" className="mt-10 scroll-mt-24">
-        <h2 className="text-sm font-semibold text-text-primary">
-          Aguardando validação <span className="font-normal text-text-tertiary">({concluidos.length})</span>
-        </h2>
-        {concluidos.length === 0 ? (
-          <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
-            Nenhum serviço concluído aguardando validação.
-          </p>
-        ) : (
-          <div className="mt-3 flex flex-col gap-3">
-            {concluidos.map((s) => (
-              <ValidacaoCard key={s.servicoId} servico={s} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section id="apontados" className="mt-10 scroll-mt-24">
-        <h2 className="text-sm font-semibold text-text-primary">
-          Apontados pelo técnico <span className="font-normal text-text-tertiary">({apontamentos.length})</span>
-        </h2>
-        <p className="mt-1 text-xs text-text-tertiary">
-          Serviços ainda não iniciados em que o técnico apontou um problema (chamado já resolvido, RT
-          errada, escopo diferente...). O serviço segue na rota — reagende pra liberar o chamado, ou
-          ignore se o técnico deve seguir mesmo assim.
-        </p>
-        {apontamentos.length === 0 ? (
-          <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
-            Nenhum apontamento em aberto.
-          </p>
-        ) : (
-          <div className="mt-3 flex flex-col gap-3">
-            {apontamentos.map((s) => (
-              <ApontamentoCard key={s.servicoId} servico={s} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section id="travados" className="mt-10 scroll-mt-24">
-        <h2 className="text-sm font-semibold text-text-primary">
-          Travados em rota já passada <span className="font-normal text-text-tertiary">({travados.length})</span>
-        </h2>
-        {travados.length === 0 ? (
-          <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
-            Nenhum serviço travado.
-          </p>
-        ) : (
-          <div className="mt-3 flex flex-col gap-3">
-            {travados.map((s) => (
-              <ReagendamentoCard key={s.servicoId} servico={s} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Arquivo do que já foi fechado — fica por último (Fase 6): não é
-          decisão pendente, é consulta pra copiar/anexar de volta no
-          TomTicket. Os cards de resumo acima levam direto aqui. */}
-      <ValidadosRecentes
-        validados={validados}
-        id="validados-recentemente"
-        // Texto montado no servidor: a saudação depende da hora, e gerar dos
-        // dois lados abriria descasamento de hidratação.
-        mensagemPadrao={mensagemConclusao()}
-        integracaoAtiva={tomticketConfigurado()}
-      />
+      {semPendencias ? (
+        <>
+          {secaoValidados}
+          {secaoAguardando}
+          {secaoApontados}
+          {secaoTravados}
+        </>
+      ) : (
+        <>
+          {secaoAguardando}
+          {secaoApontados}
+          {secaoTravados}
+          {secaoValidados}
+        </>
+      )}
     </div>
   );
 }

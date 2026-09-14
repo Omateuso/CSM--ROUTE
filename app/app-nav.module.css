@@ -133,6 +133,14 @@
   height: 44px;
 }
 
+/* Wrapper de nav+rodapé (pra reagrupar os dois como uma unidade só na barra
+   do topo, em tela estreita — ver a media query lá embaixo). Em tela larga é
+   um no-op puro: os filhos ficam expostos direto na coluna da `.sidebar`,
+   exatamente como se este `<div>` não existisse. */
+.menuFlutuante {
+  display: contents;
+}
+
 /* ---------- lista ---------- */
 /* Barra de rolagem escondida (não desligada): com a lista alta ela ainda
    rola, mas uma barra clara cortando a calha de 68px do menu recolhido é
@@ -393,27 +401,114 @@
   outline-offset: 2px;
 }
 
-/* Tela estreita: a calha de ícones fica sempre visível e o menu aberto passa
-   a COBRIR o conteúdo em vez de empurrá-lo — com 244px de menu num celular
-   não sobraria página. */
+/* Tela estreita (pedido do usuário, 14/09/2026): a barra vira HORIZONTAL,
+   no topo — antes a calha de ícones (68px) ficava reservada na LATERAL o
+   tempo todo, mesmo fechada, comendo largura de uma tela que já é estreita.
+   Altura no topo é muito mais barata que largura na lateral num celular.
+   Menu/rodapé (`.menuFlutuante`) vira um painel que desce da barra, por
+   cima do conteúdo (não empurra — mesmo espírito "cobrir, não empurrar" da
+   versão anterior). */
 @media (max-width: 860px) {
+  .app {
+    flex-direction: column;
+  }
+
   .sidebar {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
+    position: relative;
+    z-index: 20;
+    width: 100%;
+    height: 56px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px;
+    overflow: visible; /* o painel do menu precisa escapar pra baixo da barra */
+    transition: none; /* era a transição de largura do trilho — não se aplica mais */
   }
+  .fechado .sidebar,
   .aberto .sidebar {
+    width: 100%;
+  }
+
+  /* Marca (logo + nome + botão de menu) SEMPRE visível na barra, aberta ou
+     fechada — as regras `.fechado .marca...` de cima são pro trilho vertical
+     recolhido, que não existe mais aqui. */
+  .marca {
+    height: auto;
+    margin-bottom: 0;
+  }
+  .fechado .marca,
+  .aberto .marca {
+    justify-content: flex-start;
+    padding: 0 4px 0 6px;
+    gap: 10px;
+  }
+  .fechado .marcaLogo,
+  .aberto .marcaLogo {
+    display: inline-flex;
+  }
+  .fechado .marcaNome,
+  .aberto .marcaNome {
+    display: inline;
+  }
+  .fechado .toggle,
+  .aberto .toggle {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Painel: nav + rodapé descem juntos, como um dropdown fixado no topo —
+     por cima do conteúdo (`position:absolute`), nunca empurrando `.paper`. */
+  .menuFlutuante {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
     background: #4b4c45;
-    box-shadow: 14px 0 34px -12px rgba(0, 0, 0, 0.55);
+    border-radius: 0 0 var(--r-item) var(--r-item);
+    box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.55);
+    transition:
+      max-height var(--dur) var(--ease),
+      opacity var(--dur) var(--ease);
   }
+  .aberto .menuFlutuante {
+    max-height: calc(100dvh - 56px - 2 * var(--inset));
+    opacity: 1;
+    overflow-y: auto;
+  }
+  /* Fechado, o painel nem deveria ser alcançável por Tab — só reaparece
+     quando `aberto` (mesmo padrão de foco que `.fechado .rotulo` já segue
+     pro resto do menu recolhido). */
+  .fechado .menuFlutuante {
+    visibility: hidden;
+  }
+
+  /* Só espaçamento vertical — `.item`/`.usuario` já cuidam do próprio
+     padding horizontal, duplicar aqui deslocaria o conteúdo pra dentro em
+     relação à barra do topo. */
+  .nav {
+    padding-top: 6px;
+  }
+  .rodape {
+    margin-top: 8px;
+    padding-bottom: 6px;
+  }
+
   .paper {
-    margin-left: var(--w-fechado);
+    margin: var(--inset) var(--inset) var(--inset);
   }
+
   .aberto .backdrop {
     display: block;
     position: absolute;
-    inset: 0;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 15;
     border: 0;
     padding: 0;

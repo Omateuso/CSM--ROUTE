@@ -83,6 +83,20 @@ export function mensagemPendencia(
   ]);
 }
 
+// Revisão (0047) é um terceiro ato de fala, diferente dos dois de cima: a
+// equipe esteve lá, mas foi uma VISTORIA — o serviço em si ainda não foi
+// executado, e o chamado não pode ser finalizado no TomTicket junto (mesma
+// regra da pendência: fechar seria mentira, o trabalho continua em aberto).
+export function mensagemRevisao(descricao?: string | null, comSaudacao: Saudacao = saudacao()): string {
+  const detalhe = descricao?.trim();
+  return montar([
+    `${comSaudacao}.`,
+    "Informo que a equipe esteve na residência e fez a vistoria do chamado. O serviço será realizado em breve — segue o registro da visita em anexo.",
+    detalhe ? `Observação da equipe: ${detalhe}` : null,
+    ASSINATURA,
+  ]);
+}
+
 // Reagendamento não tem categoria (o serviço nem chegou a ser executado, ou foi
 // cancelado pelo gerente antes da conclusão). Texto genérico — ponto de partida
 // editável igual aos outros. Usado na tela de Pendências, que passou a incluir

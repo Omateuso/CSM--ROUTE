@@ -86,6 +86,9 @@ export async function confirmarRota(_prev: ActionState, formData: FormData): Pro
   // categorização, comportamento de sempre (tudo concluir_hoje) — ver
   // ConfirmarRotaDialog.
   const chamadosDiaRaw = formData.get("chamadosDia");
+  // Mais de um atendente por parada (migration 0050, 14/09/2026) —
+  // {"<rtId>": ["<tecnicoId>", ...]}, só as RTs que ganharam algum extra.
+  const tecnicosExtraRaw = formData.get("tecnicosExtra");
 
   if (!data) return { error: "Selecione a data da rota." };
   if (!equipeId) return { error: "Selecione a equipe." };
@@ -128,6 +131,34 @@ export async function confirmarRota(_prev: ActionState, formData: FormData): Pro
     chamadosDia = parsed;
   }
 
+  // Só vira `p_tecnicos_extra` quando de fato veio algo — vazio ou ausente
+  // caem em `null`, que é exatamente "nenhuma RT tem técnico extra"
+  // (fn_confirmar_rota trata os dois casos do mesmo jeito).
+  let tecnicosExtra: Record<string, string[]> | null = null;
+  if (typeof tecnicosExtraRaw === "string" && tecnicosExtraRaw.length > 0) {
+    let parsedExtra: unknown;
+    try {
+      parsedExtra = JSON.parse(tecnicosExtraRaw);
+    } catch {
+      return { error: "Seleção de técnicos extras inválida." };
+    }
+    if (
+      typeof parsedExtra !== "object" ||
+      parsedExtra === null ||
+      Array.isArray(parsedExtra) ||
+      !Object.entries(parsedExtra as Record<string, unknown>).every(
+        ([rtId, ids]) =>
+          typeof rtId === "string" &&
+          Array.isArray(ids) &&
+          ids.every((v) => typeof v === "string" && v.length > 0),
+      )
+    ) {
+      return { error: "Seleção de técnicos extras inválida." };
+    }
+    const objeto = parsedExtra as Record<string, string[]>;
+    if (Object.keys(objeto).length > 0) tecnicosExtra = objeto;
+  }
+
   const supabase = await createClient();
 
   // `p_chamados_dia` NULL = todo chamado elegível nasce concluir_hoje (fallback
@@ -140,6 +171,7 @@ export async function confirmarRota(_prev: ActionState, formData: FormData): Pro
     p_rt_ids: rtIds,
     p_tecnico_ids: tecnicoIds,
     p_chamados_dia: chamadosDia,
+    p_tecnicos_extra: tecnicosExtra,
   });
 
   if (error) return { error: traduzErro(error) };

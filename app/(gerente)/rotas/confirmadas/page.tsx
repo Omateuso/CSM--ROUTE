@@ -34,6 +34,7 @@ export default async function RotasConfirmadasPage() {
     { data: rotaRtsRaw, error: rotaRtsError },
     { data: regioesRaw, error: regioesError },
     { data: servicosRaw, error: servicosError },
+    { data: extrasRaw, error: extrasError },
   ] = await Promise.all([
     supabase
       .from("rotas")
@@ -44,18 +45,24 @@ export default async function RotasConfirmadasPage() {
       .order("confirmada_em", { ascending: false }),
     supabase
       .from("rota_rts")
-      .select("rota_id, ordem, rts(codigo, endereco), tecnico:tecnico_id(nome)")
+      .select("rota_id, rt_id, ordem, tecnico_id, rts(codigo, endereco), tecnico:tecnico_id(nome)")
       .order("ordem", { ascending: true }),
     supabase.from("regioes").select("id, nome, zonas(nome)").order("nome", { ascending: true }),
     supabase.from("servicos").select("rota_id, status"),
+    // Atendentes além do principal (migration 0050, 14/09/2026) — a query de
+    // `rota_rts` acima só traz `tecnico_id` (o principal); isto complementa
+    // com quem mais foi vinculado à mesma parada.
+    supabase.from("rota_rts_tecnicos").select("rota_id, rt_id, tecnico_id, tecnico:tecnico_id(nome)"),
   ]);
 
-  if (rotasError || rotaRtsError || regioesError || servicosError) {
+  if (rotasError || rotaRtsError || regioesError || servicosError || extrasError) {
     return (
       <div className="flex flex-1 items-center justify-center px-4">
         <p className="text-sm text-danger">
           Não foi possível carregar os dados (
-          {rotasError?.message ?? rotaRtsError?.message ?? regioesError?.message ?? servicosError?.message}).
+          {rotasError?.message ?? rotaRtsError?.message ?? regioesError?.message ?? servicosError?.message ??
+            extrasError?.message}
+          ).
         </p>
       </div>
     );
@@ -76,16 +83,35 @@ export default async function RotasConfirmadasPage() {
     zonaNome: unwrapOne(r.zonas)?.nome ?? "—",
   }));
 
-  const rtsPorRota = new Map<string, { codigo: string; endereco: string; tecnicoNome: string | null }[]>();
+  // Atendentes além do principal, agrupados por parada (rota_id + rt_id) —
+  // o principal (mesmo id) é filtrado na hora de montar cada linha, abaixo.
+  const extrasPorParada = new Map<string, { id: string; nome: string }[]>();
+  for (const e of extrasRaw ?? []) {
+    const chave = `${e.rota_id}-${e.rt_id}`;
+    const lista = extrasPorParada.get(chave) ?? [];
+    const nome = unwrapOne(e.tecnico)?.nome;
+    if (nome) lista.push({ id: e.tecnico_id as string, nome });
+    extrasPorParada.set(chave, lista);
+  }
+
+  const rtsPorRota = new Map<
+    string,
+    { codigo: string; endereco: string; tecnicoNome: string | null; tecnicosExtraNomes: string[] }[]
+  >();
   for (const rr of rotaRtsRaw ?? []) {
     const rt = unwrapOne(rr.rts);
     if (!rt) continue;
     const chave = rr.rota_id as string;
     const lista = rtsPorRota.get(chave) ?? [];
+    const principalId = rr.tecnico_id as string | null;
+    const extras = (extrasPorParada.get(`${rr.rota_id}-${rr.rt_id}`) ?? []).filter(
+      (t) => t.id !== principalId,
+    );
     lista.push({
       codigo: rt.codigo as string,
       endereco: rt.endereco as string,
       tecnicoNome: unwrapOne(rr.tecnico)?.nome ?? null,
+      tecnicosExtraNomes: extras.map((t) => t.nome),
     });
     rtsPorRota.set(chave, lista);
   }

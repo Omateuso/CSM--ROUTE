@@ -18,7 +18,13 @@ export type RotaRow = {
   zonaNome: string;
   equipeNome: string;
   responsavelNome: string;
-  rts: { codigo: string; endereco: string; tecnicoNome: string | null }[];
+  rts: {
+    codigo: string;
+    endereco: string;
+    tecnicoNome: string | null;
+    /** Atendentes além do principal (migration 0050, 14/09/2026). */
+    tecnicosExtraNomes: string[];
+  }[];
   podeCorrigirData: boolean;
 };
 
@@ -280,8 +286,16 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
                         <span className="truncate text-xs text-text-tertiary">{rt.endereco}</span>
                       </div>
                     </div>
-                    <span className="shrink-0 text-xs text-text-tertiary">
+                    <span className="flex shrink-0 items-center gap-1.5 text-xs text-text-tertiary">
                       {rt.tecnicoNome ?? "— (rota anterior à atribuição por RT)"}
+                      {rt.tecnicosExtraNomes.length > 0 && (
+                        <span
+                          className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold text-accent"
+                          title={`Também vinculados: ${rt.tecnicosExtraNomes.join(", ")}`}
+                        >
+                          +{rt.tecnicosExtraNomes.length}
+                        </span>
+                      )}
                     </span>
                   </li>
                 ))}

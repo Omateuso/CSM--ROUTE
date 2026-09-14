@@ -16,6 +16,7 @@ export function rotuloEvidencia(e: { tipo: string; momento?: string | null }): s
   if (e.momento === "antes") return "Foto antes";
   if (e.momento === "depois") return "Foto depois";
   if (e.momento === "parcial") return "Foto parcial";
+  if (e.momento === "revisao") return "Foto da revisão";
   return "Foto";
 }
 

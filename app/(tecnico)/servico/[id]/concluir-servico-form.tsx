@@ -3,7 +3,8 @@
 import { useActionState, useId, useState } from "react";
 import { concluirServico, type ActionState } from "./actions";
 import { CameraCaptureField } from "./camera-capture-field";
-import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
+import { CampoTranscricao } from "@/lib/ui/campo-transcricao";
+import { FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
 
 export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(concluirServico, {
@@ -25,19 +26,14 @@ export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="servicoId" value={servicoId} />
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor={idObservacao} className={FIELD_LABEL}>
-          O que foi feito
-        </label>
-        <textarea
-          id={idObservacao}
-          name="observacao"
-          required
-          rows={4}
-          placeholder="Descreva o serviço realizado..."
-          className={`${FIELD_INPUT} resize-none`}
-        />
-      </div>
+      <CampoTranscricao
+        id={idObservacao}
+        name="observacao"
+        label="O que foi feito"
+        required
+        rows={4}
+        placeholder="Descreva o serviço realizado..."
+      />
 
       {/* Migration 0023 (auditoria de segurança): foto "depois" voltou a
           ser obrigatória (reverte a 0017) — mesmo componente da tela de

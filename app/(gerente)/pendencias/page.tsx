@@ -8,6 +8,7 @@ import { ResponderTomticket } from "../responder-tomticket";
 import { ProgramarReexecucao, type RotaParaReexecucao } from "./programar-reexecucao";
 import { mensagemPendencia, mensagemReagendamento } from "@/lib/tomticket/mensagens";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
+import { PendenciasRealtime } from "./pendencias-realtime";
 
 // Página própria desde 22/08/2026 (pedido do usuário) — antes era um modal
 // dentro de /validacao. Mesma consulta que vivia lá: `historico` com
@@ -178,13 +179,16 @@ export default async function PendenciasPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Execução</p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary uppercase">Pendências</h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Atendimentos que ficaram para trás — o técnico não concluiu, ou o serviço foi reagendado.
-          Some sozinha daqui assim que o chamado entrar numa rota nova.
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Execução</p>
+          <h1 className="mt-1 text-2xl font-semibold text-text-primary uppercase">Pendências</h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            Atendimentos que ficaram para trás — o técnico não concluiu, ou o serviço foi reagendado.
+            Some sozinha daqui assim que o chamado entrar numa rota nova.
+          </p>
+        </div>
+        <PendenciasRealtime />
       </header>
 
       {pendencias.length === 0 ? (

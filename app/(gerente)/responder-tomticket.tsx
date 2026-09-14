@@ -26,7 +26,7 @@ const formatoDataHora = new Intl.DateTimeFormat("pt-BR", {
 
 export type ResponderTomticketProps = {
   servicoId: string;
-  tipo: "conclusao" | "pendencia";
+  tipo: "conclusao" | "pendencia" | "revisao";
   mensagemPadrao: string;
   /** Rótulos dos arquivos que vão junto, ex.: ["Foto antes", "Foto depois", "OS"]. */
   anexos: string[];
@@ -39,6 +39,9 @@ export type ResponderTomticketProps = {
   /** Selo vermelho de localização: pede uma confirmação extra, mas não bloqueia. */
   localizacaoDivergente?: boolean;
   integracaoAtiva: boolean;
+  /** "amarelo" na aba Validação (pedido do usuário, 14/09/2026) — Pendências
+   * continua com o accent de sempre, sem passar essa prop. */
+  cor?: "accent" | "amarelo";
 };
 
 export function ResponderTomticket(props: ResponderTomticketProps) {
@@ -64,7 +67,11 @@ export function ResponderTomticket(props: ResponderTomticketProps) {
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+        className={`rounded-[var(--radius-sm)] px-4 py-2 text-sm font-medium transition-colors ${
+          props.cor === "amarelo"
+            ? "bg-sla-proximo text-white hover:opacity-90"
+            : "bg-accent text-white hover:bg-accent-hover"
+        } ${FOCUS_RING}`}
       >
         {props.rotuloBotao}
       </button>

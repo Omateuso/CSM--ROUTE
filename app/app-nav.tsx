@@ -140,73 +140,79 @@ export function AppNav({
             </button>
           </div>
 
-          <nav className={styles.nav} aria-label="Navegação principal">
-            <ul className={styles.lista}>
-              {links.map((link) => {
-                const atual = pathname === link.href;
-                return (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      // `aria-current="page"` é o que anuncia "você está
-                      // aqui" — cor sozinha nunca é sinal suficiente (mesma
-                      // regra do CLAUDE.md pros badges).
-                      aria-current={atual ? "page" : undefined}
-                      className={`${styles.item} ${atual ? styles.itemAtivo : ""}`}
-                      title={aberto ? undefined : link.label}
-                    >
-                      <span className={styles.icon} aria-hidden="true">
-                        {NavIcons[link.icon]}
-                      </span>
-                      <span className={styles.rotulo}>{link.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+          {/* Em tela estreita, este wrapper vira o painel que desce da barra
+              do topo (nav + rodapé juntos, como uma unidade só) — em tela
+              larga é `display:contents` (nenhum efeito), os filhos continuam
+              direto na coluna da `.sidebar` como sempre foram. */}
+          <div className={styles.menuFlutuante}>
+            <nav className={styles.nav} aria-label="Navegação principal">
+              <ul className={styles.lista}>
+                {links.map((link) => {
+                  const atual = pathname === link.href;
+                  return (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        // `aria-current="page"` é o que anuncia "você está
+                        // aqui" — cor sozinha nunca é sinal suficiente (mesma
+                        // regra do CLAUDE.md pros badges).
+                        aria-current={atual ? "page" : undefined}
+                        className={`${styles.item} ${atual ? styles.itemAtivo : ""}`}
+                        title={aberto ? undefined : link.label}
+                      >
+                        <span className={styles.icon} aria-hidden="true">
+                          {NavIcons[link.icon]}
+                        </span>
+                        <span className={styles.rotulo}>{link.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
 
-          <div className={styles.rodape}>
-            {respostasNaoVistas > 0 && (
-              <Link
-                href="/chamados"
-                className={`${styles.item} ${styles.sino}`}
-                title={aberto ? undefined : `${respostasNaoVistas} chamado(s) com resposta nova`}
-              >
-                <span className={styles.icon} aria-hidden="true">
-                  🔔
-                </span>
-                <span className={styles.rotulo}>Respostas novas</span>
-                <span className={styles.badge} aria-hidden="true">
-                  {respostasNaoVistas}
-                </span>
-                <span className="sr-only">
-                  {respostasNaoVistas} chamado(s) com resposta nova do cliente
-                </span>
-              </Link>
-            )}
+            <div className={styles.rodape}>
+              {respostasNaoVistas > 0 && (
+                <Link
+                  href="/chamados"
+                  className={`${styles.item} ${styles.sino}`}
+                  title={aberto ? undefined : `${respostasNaoVistas} chamado(s) com resposta nova`}
+                >
+                  <span className={styles.icon} aria-hidden="true">
+                    🔔
+                  </span>
+                  <span className={styles.rotulo}>Respostas novas</span>
+                  <span className={styles.badge} aria-hidden="true">
+                    {respostasNaoVistas}
+                  </span>
+                  <span className="sr-only">
+                    {respostasNaoVistas} chamado(s) com resposta nova do cliente
+                  </span>
+                </Link>
+              )}
 
-            <div className={styles.usuario}>
-              <span className={styles.avatar} aria-hidden="true">
-                {iniciais(nome)}
-              </span>
-              <span className={styles.usuarioTexto}>
-                <span className={styles.usuarioNome} title={nome}>
-                  {nome}
+              <div className={styles.usuario}>
+                <span className={styles.avatar} aria-hidden="true">
+                  {iniciais(nome)}
                 </span>
-                <span className={styles.usuarioPapel}>{ROLE_LABEL[role]}</span>
-              </span>
-              <button
-                type="button"
-                onClick={handleLogout}
-                aria-label="Sair da conta"
-                title="Sair"
-                className={styles.sair}
-              >
-                <span className={styles.icon} aria-hidden="true">
-                  <IconeSair />
+                <span className={styles.usuarioTexto}>
+                  <span className={styles.usuarioNome} title={nome}>
+                    {nome}
+                  </span>
+                  <span className={styles.usuarioPapel}>{ROLE_LABEL[role]}</span>
                 </span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  aria-label="Sair da conta"
+                  title="Sair"
+                  className={styles.sair}
+                >
+                  <span className={styles.icon} aria-hidden="true">
+                    <IconeSair />
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </aside>

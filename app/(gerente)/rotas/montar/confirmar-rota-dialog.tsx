@@ -105,6 +105,12 @@ export function ConfirmarRotaDialog({
   const [equipeId, setEquipeId] = useState("");
   const [tecnicoPorRt, setTecnicoPorRt] = useState<Record<string, string>>({});
 
+  // Mais de um atendente por parada (pedido do usuário, 14/09/2026) — o
+  // principal continua em `tecnicoPorRt` (obrigatório, sem mudança); aqui só
+  // os EXTRAS, além dele. Os chamados da RT aparecem pra todos.
+  const [extrasPorRt, setExtrasPorRt] = useState<Record<string, Set<string>>>({});
+  const [extrasAbertos, setExtrasAbertos] = useState<Set<string>>(new Set());
+
   const tecnicosDaEquipe = useMemo(
     () => tecnicos.filter((t) => t.ativo && t.equipeId === equipeId),
     [tecnicos, equipeId],
@@ -113,7 +119,40 @@ export function ConfirmarRotaDialog({
   function handleTrocarEquipe(novaEquipeId: string) {
     setEquipeId(novaEquipeId);
     setTecnicoPorRt({});
+    setExtrasPorRt({});
   }
+
+  function alternarExtrasAbertos(rtId: string) {
+    setExtrasAbertos((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(rtId)) proximo.delete(rtId);
+      else proximo.add(rtId);
+      return proximo;
+    });
+  }
+
+  function alternarExtra(rtId: string, tecnicoId: string) {
+    setExtrasPorRt((atual) => {
+      const atuais = new Set(atual[rtId] ?? []);
+      if (atuais.has(tecnicoId)) atuais.delete(tecnicoId);
+      else atuais.add(tecnicoId);
+      return { ...atual, [rtId]: atuais };
+    });
+  }
+
+  // {"<rtId>": ["<tecnicoId>", ...]} — só as RTs com pelo menos 1 extra.
+  // Filtra o próprio principal (se o gerente marcou um extra e depois trocou
+  // o principal pra essa mesma pessoa, ela não entra duas vezes — o servidor
+  // já ignora duplicata com `on conflict do nothing`, isso é só higiene).
+  const tecnicosExtraValue = useMemo(() => {
+    const objeto: Record<string, string[]> = {};
+    for (const rt of rtsNaRota) {
+      const principal = tecnicoPorRt[rt.id];
+      const ids = [...(extrasPorRt[rt.id] ?? [])].filter((id) => id !== principal);
+      if (ids.length > 0) objeto[rt.id] = ids;
+    }
+    return JSON.stringify(objeto);
+  }, [rtsNaRota, tecnicoPorRt, extrasPorRt]);
 
   return (
     <Modal open={open} title="Confirmar rota do dia" onClose={onClose}>
@@ -139,6 +178,7 @@ export function ConfirmarRotaDialog({
             value={JSON.stringify(rtsNaRota.map((rt) => tecnicoPorRt[rt.id] ?? ""))}
           />
           <input type="hidden" name="chamadosDia" value={chamadosDiaValue} />
+          <input type="hidden" name="tecnicosExtra" value={tecnicosExtraValue} />
 
           <div className="flex flex-col gap-1">
             <label htmlFor={idData} className={FIELD_LABEL}>
@@ -259,6 +299,45 @@ export function ConfirmarRotaDialog({
                           </option>
                         ))}
                       </select>
+
+                      {equipeId && tecnicosDaEquipe.length > 1 && (
+                        <div className="mt-1.5">
+                          <button
+                            type="button"
+                            onClick={() => alternarExtrasAbertos(rt.id)}
+                            aria-expanded={extrasAbertos.has(rt.id)}
+                            className={`text-[11px] font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}
+                          >
+                            {(extrasPorRt[rt.id]?.size ?? 0) > 0
+                              ? `+ ${extrasPorRt[rt.id]!.size} técnico${extrasPorRt[rt.id]!.size === 1 ? "" : "s"} extra`
+                              : "+ Vincular outro técnico"}
+                          </button>
+                          {extrasAbertos.has(rt.id) && (
+                            <ul className="mt-1.5 flex flex-col gap-1 rounded-[var(--radius-sm)] border border-dashed border-border-strong p-2">
+                              {tecnicosDaEquipe
+                                .filter((t) => t.id !== tecnicoPorRt[rt.id])
+                                .map((t) => {
+                                  const idExtra = `${uid}-extra-${rt.id}-${t.id}`;
+                                  const marcado = extrasPorRt[rt.id]?.has(t.id) ?? false;
+                                  return (
+                                    <li key={t.id} className="flex items-center gap-2">
+                                      <input
+                                        id={idExtra}
+                                        type="checkbox"
+                                        checked={marcado}
+                                        onChange={() => alternarExtra(rt.id, t.id)}
+                                        className="h-4 w-4 shrink-0 accent-[var(--accent)]"
+                                      />
+                                      <label htmlFor={idExtra} className="cursor-pointer text-xs text-text-primary">
+                                        {t.nome}
+                                      </label>
+                                    </li>
+                                  );
+                                })}
+                            </ul>
+                          )}
+                        </div>
+                      )}
 
                       {aberta && chamados.length > 0 && (
                         <ul className="mt-2 flex flex-col gap-1 border-t border-border pt-2">

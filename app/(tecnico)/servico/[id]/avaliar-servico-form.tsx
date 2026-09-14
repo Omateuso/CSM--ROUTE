@@ -3,7 +3,8 @@
 import { useActionState, useId, useState } from "react";
 import { avaliarServico, type ActionState } from "./actions";
 import { CameraCaptureField } from "./camera-capture-field";
-import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
+import { CampoTranscricao } from "@/lib/ui/campo-transcricao";
+import { FOCUS_RING } from "@/lib/ui/styles";
 
 // Fase 4 (seção 7, migration 0037) — "avaliação do serviço antes de
 // executar". O técnico aponta um problema no serviço (chamado já resolvido,
@@ -28,19 +29,14 @@ export function AvaliarServicoForm({ servicoId }: { servicoId: string }) {
         decide o que fazer.
       </p>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor={idDescricao} className={FIELD_LABEL}>
-          Qual é o problema?
-        </label>
-        <textarea
-          id={idDescricao}
-          name="descricao"
-          required
-          rows={4}
-          placeholder="Ex.: o morador diz que isso já foi resolvido pela equipe anterior; ou o endereço não confere; ou o chamado é de outra coisa..."
-          className={`${FIELD_INPUT} resize-none`}
-        />
-      </div>
+      <CampoTranscricao
+        id={idDescricao}
+        name="descricao"
+        label="Qual é o problema?"
+        required
+        rows={4}
+        placeholder="Ex.: o morador diz que isso já foi resolvido pela equipe anterior; ou o endereço não confere; ou o chamado é de outra coisa..."
+      />
 
       <CameraCaptureField name="fotoAvaliacao" label="Foto do local / do problema" onReadyChange={setFotoPronta} />
 

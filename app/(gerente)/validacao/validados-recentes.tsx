@@ -10,10 +10,12 @@ import { EvidenciaThumbs, rotuloEvidencia } from "@/lib/ui/evidencia-thumbs";
 import { IntegridadeBadge } from "./integridade-badge";
 import { ResponderTomticket } from "../responder-tomticket";
 import { avaliarLocalizacaoConclusao, type EvidenciaComGeo, type OsIntegridadeInfo } from "./integridade";
+import { mensagemConclusao, mensagemRevisao, type Saudacao } from "@/lib/tomticket/mensagens";
 
 export type ValidadoRow = {
   validacaoId: string;
   servicoId: string;
+  categoria: "concluir_hoje" | "revisao_tecnica";
   /** Recibo do envio ao TomTicket (migration 0028). Preenchido = já respondido. */
   tomticketRespostaId: string | null;
   respondidoEm: string | null;
@@ -52,11 +54,11 @@ const formatoDataCurta = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", mont
 // OS de volta no TomTicket (pedido do usuário, 19/08/2026).
 function ValidadoCard({
   servico,
-  mensagemPadrao,
+  saudacaoAtual,
   integracaoAtiva,
 }: {
   servico: ValidadoRow;
-  mensagemPadrao: string;
+  saudacaoAtual: Saudacao;
   integracaoAtiva: boolean;
 }) {
   const statusLocalizacao = avaliarLocalizacaoConclusao(servico.evidencias, {
@@ -64,11 +66,22 @@ function ValidadoCard({
     longitude: servico.rtLongitude,
   });
 
-  // Os mesmos arquivos que o server action vai anexar (conclusão = antes,
-  // depois e OS) — listados no diálogo pra o gerente ver o que vai junto.
-  const anexos = servico.evidencias
-    .filter((e) => e.tipo === "os" || e.momento === "antes" || e.momento === "depois")
-    .map((e) => (e.tipo === "os" ? "OS" : e.momento === "antes" ? "Foto antes" : "Foto depois"));
+  // Revisão (0047) é um ato de fala diferente de conclusão — mensagem e
+  // anexo próprios (só a foto da revisão, sem antes/depois/OS), e não
+  // finaliza o chamado no TomTicket (ResponderTomticket decide isso pelo
+  // `tipo`). `mensagens.ts` é puro (sem I/O), por isso dá pra montar aqui
+  // no client — só a saudação (que depende da hora) vem pronta do servidor.
+  const ehRevisao = servico.categoria === "revisao_tecnica";
+
+  const anexos = ehRevisao
+    ? servico.evidencias.filter((e) => e.momento === "revisao").map(() => "Foto da revisão")
+    : servico.evidencias
+        .filter((e) => e.tipo === "os" || e.momento === "antes" || e.momento === "depois")
+        .map((e) => (e.tipo === "os" ? "OS" : e.momento === "antes" ? "Foto antes" : "Foto depois"));
+
+  const mensagemPadrao = ehRevisao
+    ? mensagemRevisao(servico.observacao, saudacaoAtual)
+    : mensagemConclusao(saudacaoAtual);
 
   return (
     <article className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
@@ -86,6 +99,11 @@ function ValidadoCard({
         <div className="flex flex-wrap items-center gap-3">
           <PrioridadeBadge prioridade={servico.prioridade} />
           <SlaBadge slaPrazo={servico.slaPrazo} status={servico.chamadoStatus} />
+          {servico.categoria === "revisao_tecnica" && (
+            <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-proximo uppercase">
+              Revisão
+            </span>
+          )}
         </div>
       </div>
 
@@ -172,15 +190,16 @@ function ValidadoCard({
             </a>
             <ResponderTomticket
               servicoId={servico.servicoId}
-              tipo="conclusao"
+              tipo={ehRevisao ? "revisao" : "conclusao"}
               mensagemPadrao={mensagemPadrao}
               anexos={anexos}
-              rotuloBotao="Confirmar conclusão do chamado"
+              rotuloBotao={ehRevisao ? "Informar revisão ao cliente" : "Confirmar conclusão do chamado"}
               tituloModal="Responder o chamado no TomTicket"
               respondido={servico.tomticketRespostaId !== null}
               respondidoEm={servico.respondidoEm}
               localizacaoDivergente={statusLocalizacao === "fora_do_limite"}
               integracaoAtiva={integracaoAtiva}
+              cor={ehRevisao ? "amarelo" : "accent"}
             />
           </div>
         ) : (
@@ -194,12 +213,12 @@ function ValidadoCard({
 export function ValidadosRecentes({
   validados,
   id,
-  mensagemPadrao,
+  saudacaoAtual,
   integracaoAtiva,
 }: {
   validados: ValidadoRow[];
   id?: string;
-  mensagemPadrao: string;
+  saudacaoAtual: Saudacao;
   integracaoAtiva: boolean;
 }) {
   const [busca, setBusca] = useState("");
@@ -256,7 +275,7 @@ export function ValidadosRecentes({
             <ValidadoCard
               key={v.validacaoId}
               servico={v}
-              mensagemPadrao={mensagemPadrao}
+              saudacaoAtual={saudacaoAtual}
               integracaoAtiva={integracaoAtiva}
             />
           ))}

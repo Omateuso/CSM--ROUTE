@@ -5,9 +5,11 @@ import { PrioridadeBadge, type Prioridade } from "@/app/chamados/prioridade-badg
 import { SlaBadge } from "@/app/chamados/sla-badge";
 import { StatusServicoBadge, type StatusServico } from "../../status-servico-badge";
 import { IniciarServicoForm } from "./iniciar-servico-form";
+import { RevisaoOuAtendimento } from "./revisao-ou-atendimento";
 import { ConcluirServicoForm } from "./concluir-servico-form";
 import { PendenciaForm } from "./pendencia-form";
 import { AvaliarServicoForm } from "./avaliar-servico-form";
+import { ServicoRealtime } from "./servico-realtime";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { linkGoogleMapsDestino, linkWaze } from "@/lib/navegacao";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
@@ -59,16 +61,18 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
     );
   }
 
-  // RLS (servicos_select) já garante que só volta linha se for do próprio
-  // técnico ou de gerente/gestão — aqui o filtro por tecnico_id é só pra
-  // não mostrar o serviço de outro técnico pra este técnico.
+  // RLS (servicos_select, ampliada na 0050) já garante que só volta linha se
+  // o técnico for o `tecnico_id` do serviço OU um co-técnico vinculado à
+  // mesma parada (rota_rts_tecnicos), ou gerente/gestão — sem filtro
+  // adicional aqui de propósito (mais de um atendente por RT, 14/09/2026:
+  // um filtro por `tecnico_id = user.id` bloquearia o co-técnico de abrir
+  // o detalhe de um serviço que o colega é quem aparece como responsável).
   const { data: servicoRaw } = await supabase
     .from("servicos")
     .select(
       "id, status, categoria, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
     )
     .eq("id", id)
-    .eq("tecnico_id", user.id)
     .maybeSingle();
 
   if (!servicoRaw) {
@@ -193,6 +197,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
 
   return (
     <div className="flex flex-1 flex-col">
+      <ServicoRealtime />
       <header className="border-b border-border px-4 pt-6 pb-4">
         <Link
           href="/servicos-do-dia"
@@ -359,7 +364,11 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
         <div className="mt-5">
           {status === "planejado" && (
             <div className="flex flex-col gap-4">
-              <IniciarServicoForm servicoId={servicoRaw.id as string} />
+              {servicoRaw.categoria === "revisao_tecnica" ? (
+                <RevisaoOuAtendimento servicoId={servicoRaw.id as string} />
+              ) : (
+                <IniciarServicoForm servicoId={servicoRaw.id as string} />
+              )}
 
               {apontamentoDesteServico ? (
                 <p className="rounded-[var(--radius-md)] border border-border bg-surface-input p-3 text-xs text-text-secondary">

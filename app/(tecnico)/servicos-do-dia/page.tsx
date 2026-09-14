@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LogoutButton from "@/app/logout-button";
 import { ServicosDoDiaLista, type ServicoItem } from "./servicos-do-dia-lista";
+import { ServicosRealtime } from "./servicos-realtime";
 import type { Prioridade } from "@/app/chamados/prioridade-badge";
 import type { StatusServico } from "../status-servico-badge";
 
@@ -37,7 +38,12 @@ export default async function ServicosDoDiaPage() {
     .select(
       "id, status, categoria, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
     )
-    .eq("tecnico_id", user.id)
+    // Sem `.eq("tecnico_id", user.id)` de propósito (migration 0050, pedido
+    // do usuário 14/09/2026): a RLS de `servicos_select` já resolve isso via
+    // `fn_pode_atuar_servico` — o próprio serviço OU qualquer parada onde o
+    // técnico foi vinculado como um dos atendentes (`rota_rts_tecnicos`).
+    // Filtrar aqui de novo só duplicaria a regra, com risco de as duas
+    // ficarem dessincronizadas se uma mudar sem a outra.
     // Hoje EM DIANTE (não só hoje): o técnico precisa enxergar a rota de
     // amanhã pra se organizar, e a lista agrupa por dia. Rota passada fica de
     // fora — o que ficou parado lá vira reagendamento do gerente, não trabalho
@@ -121,7 +127,10 @@ export default async function ServicosDoDiaPage() {
           <h1 className="mt-1 text-xl font-semibold text-text-primary">Meus serviços</h1>
           <p className="mt-1 text-sm text-text-secondary">Olá, {profile?.nome ?? "técnico"}</p>
         </div>
-        <LogoutButton />
+        <div className="flex flex-col items-end gap-2">
+          <LogoutButton />
+          <ServicosRealtime />
+        </div>
       </header>
 
       <ServicosDoDiaLista servicos={servicos} hoje={hoje} />

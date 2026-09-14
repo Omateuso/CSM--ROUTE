@@ -4,6 +4,7 @@ import { ChamadosManager, type ChamadoRow } from "./chamados-manager";
 import { buscarDetalheChamado, type DetalheChamado } from "./actions";
 import { SyncTomticketButton, type SyncInfo } from "./sync-tomticket-button";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
+import { ChamadosRealtime } from "./chamados-realtime";
 
 // Mesma situação do app/(gestao)/rts/page.tsx: sem Database types gerados
 // ainda, embeds aninhados (chamados.rts / rts.regioes / regioes.zonas)
@@ -174,9 +175,12 @@ export default async function ChamadosPage(props: PageProps<"/chamados">) {
             Sincronizar traz os chamados novos e atualiza o status dos que já estão aqui.
           </p>
         </div>
-        {role === "gerente" && (
-          <SyncTomticketButton info={syncInfo} ativo={tomticketConfigurado()} />
-        )}
+        <div className="flex flex-col items-end gap-2">
+          {role === "gerente" && (
+            <SyncTomticketButton info={syncInfo} ativo={tomticketConfigurado()} />
+          )}
+          <ChamadosRealtime />
+        </div>
       </header>
 
       <ChamadosManager

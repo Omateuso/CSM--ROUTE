@@ -14,6 +14,7 @@ import { avaliarLocalizacaoConclusao, type EvidenciaComGeo, type OsIntegridadeIn
 
 export type ServicoConcluidoRow = {
   servicoId: string;
+  categoria: "concluir_hoje" | "revisao_tecnica";
   concluidoEm: string | null;
   tecnicoNome: string;
   rtCodigo: string;
@@ -69,6 +70,11 @@ export function ValidacaoCard({ servico }: { servico: ServicoConcluidoRow }) {
         <div className="flex flex-wrap items-center gap-3">
           <PrioridadeBadge prioridade={servico.prioridade} />
           <SlaBadge slaPrazo={servico.slaPrazo} status={servico.chamadoStatus} />
+          {servico.categoria === "revisao_tecnica" && (
+            <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-proximo uppercase">
+              Revisão
+            </span>
+          )}
         </div>
       </div>
 

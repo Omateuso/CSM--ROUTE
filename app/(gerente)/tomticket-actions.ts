@@ -17,6 +17,7 @@ import {
   mensagemConclusao,
   mensagemPendencia,
   mensagemReagendamento,
+  mensagemRevisao,
   SAUDACOES,
   type Saudacao,
 } from "@/lib/tomticket/mensagens";
@@ -25,7 +26,7 @@ import type { PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 // Responder o chamado no TomTicket direto daqui — o último passo que ainda era
 // manual (o gerente abria outra aba, copiava o texto e anexava a OS na mão).
 //
-// Dois caminhos, decididos pelo tipo:
+// Três caminhos, decididos pelo tipo:
 //
 //   conclusão -> vincula o atendente e FINALIZA o chamado, já entregando a
 //                mensagem e os anexos numa chamada só (/ticket/finish aceita
@@ -33,13 +34,16 @@ import type { PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 //                de nunca finalizar.
 //   pendência -> vincula o atendente e só RESPONDE (/ticket/reply/operator):
 //                o trabalho não terminou, fechar seria mentira.
+//   revisão    -> mesmo caminho da pendência (só RESPONDE, sem finalizar) —
+//                 chamado revisado (0047) é uma vistoria, não uma conclusão;
+//                 o serviço de verdade ainda vai ser feito.
 
 export type RespostaState = { error: string | null; aviso: string | null; ok: boolean };
 
 // Mesma regra: "use server" só exporta função assíncrona. O estado inicial
 // fica no componente que o consome.
 
-type TipoResposta = "conclusao" | "pendencia";
+type TipoResposta = "conclusao" | "pendencia" | "revisao";
 
 // TomTicket guarda a conversa com marcação; comparar texto cru daria falso
 // negativo por causa de uma tag. Normaliza dos dois lados antes de comparar.
@@ -122,11 +126,12 @@ function ehTextoPadrao(mensagem: string, gerarPadrao: (s: Saudacao) => string): 
 type EvidenciaRow = { tipo: string; momento: string | null; storage_path: string };
 
 function ordenarEvidencias(evidencias: EvidenciaRow[], tipo: TipoResposta): EvidenciaParaAnexo[] {
-  const relevantes = evidencias.filter((e) =>
-    tipo === "conclusao"
-      ? e.tipo === "os" || e.momento === "antes" || e.momento === "depois"
-      : e.tipo === "os" || e.momento === "parcial",
-  );
+  const relevantes = evidencias.filter((e) => {
+    if (tipo === "conclusao") return e.tipo === "os" || e.momento === "antes" || e.momento === "depois";
+    // Revisão (0047) não tem OS nem foto antes/depois — só a foto do local.
+    if (tipo === "revisao") return e.momento === "revisao";
+    return e.tipo === "os" || e.momento === "parcial"; // pendência
+  });
 
   // Ordem em que o cliente vê no chamado: o antes/parcial, o depois, a OS.
   const peso = (e: EvidenciaRow) => {
@@ -153,7 +158,7 @@ export async function responderChamadoTomticket(
   const mensagem = String(formData.get("mensagem") ?? "").trim();
 
   if (!servicoId) return { aviso: null, ok: false, error: "Serviço inválido." };
-  if (tipo !== "conclusao" && tipo !== "pendencia") {
+  if (tipo !== "conclusao" && tipo !== "pendencia" && tipo !== "revisao") {
     return { aviso: null, ok: false, error: "Tipo de resposta inválido." };
   }
   if (!mensagem) return { aviso: null, ok: false, error: "A mensagem não pode ficar vazia." };
@@ -188,7 +193,7 @@ export async function responderChamadoTomticket(
   const { data: servico } = await supabase
     .from("servicos")
     .select(
-      "id, status, chamado_id, tomticket_resposta_id, chamados(tomticket_id, tomticket_ticket_id), evidencias(tipo, momento, storage_path), execucoes(iniciado_em, concluido_em)",
+      "id, status, chamado_id, tomticket_resposta_id, chamados(tomticket_id, tomticket_ticket_id), evidencias(tipo, momento, storage_path), execucoes(iniciado_em, concluido_em), conclusoes(observacao)",
     )
     .eq("id", servicoId)
     .single();
@@ -208,6 +213,11 @@ export async function responderChamadoTomticket(
   let padrao = false;
   if (tipo === "conclusao") {
     padrao = ehTextoPadrao(mensagem, (s) => mensagemConclusao(s));
+  } else if (tipo === "revisao") {
+    // A descrição do técnico fica em `conclusoes.observacao` (fn_revisar_servico
+    // grava lá, mesma tabela que fn_concluir_servico usa).
+    const conclusao = Array.isArray(servico.conclusoes) ? servico.conclusoes[0] : servico.conclusoes;
+    padrao = ehTextoPadrao(mensagem, (s) => mensagemRevisao(conclusao?.observacao ?? null, s));
   } else {
     // Pendência de verdade (`servico_pendente`, com categoria) ou reagendamento
     // (`servico_reagendado`, sem categoria — texto genérico). Só define o rótulo

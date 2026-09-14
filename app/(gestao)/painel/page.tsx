@@ -5,6 +5,7 @@ import { StatCard } from "@/lib/ui/stat-card";
 import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
 import { RegiaoSection } from "./regiao-section";
 import { RtsSection } from "./rts-section";
+import { PainelRealtime } from "./painel-realtime";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -160,12 +161,15 @@ export default async function PainelGestaoPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Visão geral</p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary">Painel da gestão</h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Panorama consolidado, só leitura — chamados, execução e rotas.
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Visão geral</p>
+          <h1 className="mt-1 text-2xl font-semibold text-text-primary">Painel da gestão</h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            Panorama consolidado, só leitura — chamados, execução e rotas.
+          </p>
+        </div>
+        <PainelRealtime />
       </header>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

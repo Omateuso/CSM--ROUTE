@@ -20,6 +20,9 @@ const EVENTO_LABEL: Record<string, string> = {
   servico_planejado: "Incluído na rota",
   servico_iniciado: "Atendimento iniciado",
   servico_concluido_tecnico: "Concluído pelo técnico",
+  // Fluxo leve de revisão (0047, 14/09/2026) — chamado `revisao_tecnica`
+  // fechado com 1 foto + descrição, sem passar por `em_execucao`.
+  servico_revisado: "Revisado pelo técnico",
   servico_reagendado: "Reagendado",
   servico_reexecucao_programada: "Nova execução programada",
   servico_validado: "Validado pelo gerente",

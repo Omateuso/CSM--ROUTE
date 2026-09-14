@@ -3,7 +3,7 @@ import { EVIDENCIA_DISTANCIA_LIMITE_KM } from "@/lib/routing/config";
 
 export type EvidenciaComGeo = {
   tipo: "foto" | "os" | "documento";
-  momento: "antes" | "depois" | null;
+  momento: "antes" | "depois" | "revisao" | null;
   latitude: number | null;
   longitude: number | null;
   hashArquivo: string | null;
@@ -12,22 +12,26 @@ export type EvidenciaComGeo = {
 
 export type StatusLocalizacaoFoto = "sem_foto" | "sem_localizacao" | "confere" | "fora_do_limite";
 
-// Compara a geolocalização capturada na foto "depois" com a RT cadastrada.
-// "sem_foto" cobre serviço concluído antes da migration 0023 (não tem foto
-// de conclusão nenhuma) — não é sinal de nada, só ausência de dado antigo.
+// Compara a geolocalização capturada na foto de fechamento com a RT
+// cadastrada — "depois" pro atendimento completo, "revisao" pro fluxo leve
+// de revisão (0047, sem foto "depois"). "sem_foto" cobre serviço concluído
+// antes da migration 0023 (não tem foto de conclusão nenhuma) — não é sinal
+// de nada, só ausência de dado antigo.
 export function avaliarLocalizacaoConclusao(
   evidencias: EvidenciaComGeo[],
   rt: { latitude: number | null; longitude: number | null },
 ): StatusLocalizacaoFoto {
-  const fotoDepois = evidencias.find((e) => e.tipo === "foto" && e.momento === "depois");
-  if (!fotoDepois) return "sem_foto";
+  const fotoFinal = evidencias.find(
+    (e) => e.tipo === "foto" && (e.momento === "depois" || e.momento === "revisao"),
+  );
+  if (!fotoFinal) return "sem_foto";
 
-  if (fotoDepois.latitude == null || fotoDepois.longitude == null || rt.latitude == null || rt.longitude == null) {
+  if (fotoFinal.latitude == null || fotoFinal.longitude == null || rt.latitude == null || rt.longitude == null) {
     return "sem_localizacao";
   }
 
   const distanciaKm = haversineKm(
-    { lat: fotoDepois.latitude, lng: fotoDepois.longitude },
+    { lat: fotoFinal.latitude, lng: fotoFinal.longitude },
     { lat: rt.latitude, lng: rt.longitude },
   );
 
