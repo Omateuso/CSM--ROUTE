@@ -33,6 +33,8 @@ export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
         required
         rows={4}
         placeholder="Descreva o serviço realizado..."
+        gravarAudio
+        nomeAudio="audioObservacao"
       />
 
       {/* Migration 0023 (auditoria de segurança): foto "depois" voltou a

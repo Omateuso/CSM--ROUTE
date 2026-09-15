@@ -37,6 +37,8 @@ export function RevisarServicoForm({ servicoId }: { servicoId: string }) {
         required
         rows={4}
         placeholder="Ex.: o vazamento é pequeno, precisa de um encanador pra trocar o registro; ou já foi resolvido por conta própria pelo morador..."
+        gravarAudio
+        nomeAudio="audioRelato"
       />
 
       {state.error && (

@@ -150,7 +150,7 @@ export function MensalCsmManager({
           <p className="mt-3 text-sm text-danger">Não foi possível carregar a prévia ({erro}).</p>
         ) : (
           <div className={`mt-3 space-y-4 ${carregando ? "opacity-50" : ""}`}>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Numero rotulo="Serviços validados" valor={preview.resumo.totalServicos} destaque />
               <Numero rotulo="Residências" valor={preview.resumo.totalRts} />
               <Numero rotulo="CAPS" valor={preview.resumo.totalCaps} />

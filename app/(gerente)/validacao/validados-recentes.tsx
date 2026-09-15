@@ -128,7 +128,11 @@ function ValidadoCard({
             <EvidenciaThumbs
               itens={servico.evidencias
                 .filter((e) => e.url)
-                .map((e) => ({ url: e.url, label: rotuloEvidencia(e) }))}
+                .map((e) => ({
+                  url: e.url,
+                  label: rotuloEvidencia(e),
+                  tipo: e.tipo === "audio" ? "audio" : "imagem",
+                }))}
             />
           </div>
         )}

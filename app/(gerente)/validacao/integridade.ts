@@ -2,7 +2,7 @@ import { haversineKm } from "@/lib/routing/proximity";
 import { EVIDENCIA_DISTANCIA_LIMITE_KM } from "@/lib/routing/config";
 
 export type EvidenciaComGeo = {
-  tipo: "foto" | "os" | "documento";
+  tipo: "foto" | "os" | "documento" | "audio";
   momento: "antes" | "depois" | "revisao" | null;
   latitude: number | null;
   longitude: number | null;

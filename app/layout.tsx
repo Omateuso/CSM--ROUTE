@@ -22,13 +22,28 @@ export const metadata: Metadata = {
   description: "Plataforma de gestão operacional de manutenção das Residências Terapêuticas.",
   manifest: "/manifest.json",
   icons: {
-    icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
-    apple: "/apple-touch-icon.png",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // iOS não lê o manifest.json pra decidir se "Adicionar à Tela de Início"
+  // abre em standalone (sem a barra de endereço) — só essas duas meta tags
+  // fazem isso lá. Sem `capable`, o atalho do iPhone abre dentro do Safari
+  // normal, sem parecer um app instalado de verdade. `statusBarStyle:
+  // "default"` (barra clara) porque o app não usa viewport-fit=cover — o
+  // conteúdo já nasce abaixo da barra de status, sem precisar compensar
+  // notch com safe-area.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Gestão RTs",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1e293b",
+  themeColor: "#008a83",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

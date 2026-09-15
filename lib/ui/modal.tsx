@@ -48,7 +48,14 @@ export function Modal({
       onClose={onClose}
       onClick={handleBackdropClick}
       aria-labelledby={titleId}
-      className="fixed top-1/2 left-1/2 m-0 max-h-[90vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-lg)] border border-border bg-surface p-0 text-text-primary backdrop:bg-text-primary/40"
+      // `w-[min(32rem,calc(100%-2rem))]` (não `w-full max-w-lg`): num celular
+      // mais estreito que 32rem, `w-full` sozinho vencia `max-w-lg` e o
+      // diálogo tocava as duas bordas da tela, sem gutter nenhum — todo
+      // modal do app usa este componente, então isso valia pra qualquer um
+      // deles (confirmar rota, correção, reagendamento, urgência, etc). Pra
+      // `position:fixed`, `%` resolve contra o viewport, então `calc(100%-2rem)`
+      // já garante 1rem (16px) de respiro de cada lado.
+      className="fixed top-1/2 left-1/2 m-0 max-h-[90vh] w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-lg)] border border-border bg-surface p-0 text-text-primary backdrop:bg-text-primary/40"
     >
       <div className="p-6">
         <h2 id={titleId} className="mb-4 text-base font-semibold text-text-primary">

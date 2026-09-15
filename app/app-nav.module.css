@@ -431,8 +431,15 @@
 
   /* Marca (logo + nome + botão de menu) SEMPRE visível na barra, aberta ou
      fechada — as regras `.fechado .marca...` de cima são pro trilho vertical
-     recolhido, que não existe mais aqui. */
+     recolhido, que não existe mais aqui. `flex:1` é o que faltava pro
+     `margin-left:auto` do `.toggle` (herdado do layout de coluna, onde
+     `.marca` já esticava sozinha por `align-items:stretch`) continuar
+     empurrando o botão até a borda direita da barra — sem isso, `.marca` só
+     ocupa a largura do próprio conteúdo numa linha `flex-direction:row`, e o
+     hambúrguer fica flutuando colado no nome em vez de na ponta da tela. */
   .marca {
+    flex: 1 1 auto;
+    min-width: 0;
     height: auto;
     margin-bottom: 0;
   }

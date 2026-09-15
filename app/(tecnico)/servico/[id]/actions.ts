@@ -34,6 +34,40 @@ async function hashArquivo(file: File): Promise<string> {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
+// Áudio do relato (migration 0051, 15/09/2026) — reforço ao lado do texto
+// (transcrito ou digitado) quando o técnico relata o que foi feito no
+// atendimento/revisão (lib/ui/campo-transcricao.tsx, prop `gravarAudio`).
+// BEST-EFFORT de propósito: nem toda gravação chega aqui (o técnico pode
+// digitar sem usar "Falar", ou o navegador pode não suportar/negar o
+// microfone) — nesse caso o campo simplesmente não vem no FormData, e o
+// texto (já validado por fn_concluir_servico/fn_revisar_servico) é o que
+// importa. Falha de upload aqui NUNCA derruba a ação principal.
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+async function subirAudioRelato(
+  supabase: SupabaseServerClient,
+  servicoId: string,
+  userId: string,
+  formData: FormData,
+  campo: string,
+): Promise<void> {
+  const entry = formData.get(campo);
+  const audio = entry instanceof File && entry.size > 0 ? entry : null;
+  if (!audio) return;
+
+  const path = `${servicoId}/audio-${Date.now()}-${sanitizeFileName(audio.name)}`;
+  const { error: uploadError } = await supabase.storage.from("evidencias").upload(path, audio);
+  if (uploadError) return;
+
+  await supabase.from("evidencias").insert({
+    servico_id: servicoId,
+    tipo: "audio",
+    storage_path: path,
+    hash_arquivo: await hashArquivo(audio),
+    criado_por: userId,
+  });
+}
+
 // Migration 0023 (auditoria de segurança, 21/08/2026): iniciar atendimento
 // passou a exigir foto "antes" (câmera + geolocalização, ver
 // camera-capture-field.tsx) — sobe a evidência primeiro, só then chama
@@ -136,6 +170,8 @@ export async function concluirServico(_prev: ActionState, formData: FormData): P
     criado_por: user.id,
   });
   if (osInsertError) return { error: `Falha ao registrar a OS (${osInsertError.message}).` };
+
+  await subirAudioRelato(supabase, servicoId, user.id, formData, "audioObservacao");
 
   const { error: concluirError } = await supabase.rpc("fn_concluir_servico", {
     p_servico_id: servicoId,
@@ -316,6 +352,8 @@ export async function revisarServico(_prev: ActionState, formData: FormData): Pr
     criado_por: user.id,
   });
   if (insertError) return { error: `Falha ao registrar a foto (${insertError.message}).` };
+
+  await subirAudioRelato(supabase, servicoId, user.id, formData, "audioRelato");
 
   const { error } = await supabase.rpc("fn_revisar_servico", {
     p_servico_id: servicoId,

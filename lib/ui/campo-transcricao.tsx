@@ -13,9 +13,15 @@ import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "./styles";
 // a API ou têm parcial — nesse caso o botão de microfone simplesmente não
 // aparece (degradação graciosa, o técnico ainda digita normalmente).
 //
-// Tipagem própria em vez de depender do `lib.dom.d.ts` do TypeScript ter (ou
-// não) `SpeechRecognition`/o prefixo `webkit` — isso varia por versão do TS
-// instalado e não é o suficiente pra confiar sozinho.
+// Áudio + transcrição (pedido do usuário, 15/09/2026, `gravarAudio`): pra
+// relatar o que foi feito (atendimento/revisão), além do texto, a GRAVAÇÃO em
+// si também é guardada — o gerente pode ouvir o relato original, não só ler o
+// que a transcrição entendeu (que erra nome próprio, jargão, etc.). Grava com
+// `MediaRecorder` (getUserMedia próprio, independente do que o
+// SpeechRecognition já usa por baixo — os dois coexistem sem conflito nos
+// navegadores testados) ao mesmo tempo que a transcrição roda. É reforço, não
+// substituto: falha silenciosa de áudio (sem suporte, permissão negada) nunca
+// bloqueia a transcrição nem o campo de texto, que continuam funcionando.
 type ResultadoFala = { transcript: string };
 type EventoResultadoFala = {
   resultIndex: number;
@@ -58,6 +64,18 @@ function snapshotSuporteNoServidor(): boolean {
   return false;
 }
 
+// Extensão/tipo MIME que o MediaRecorder consegue de fato produzir varia por
+// navegador — webm/opus (Chrome/Edge/Firefox, o caso comum em Android) ou
+// mp4/aac (Safari/iOS). Pede em ordem de preferência e deixa o navegador
+// escolher o que ele suporta; sem nenhum dos dois, grava sem `mimeType`
+// explícito (o padrão do navegador, ainda assim funcional).
+const MIME_AUDIO_PREFERIDOS = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+
+function escolherMimeAudio(): string | undefined {
+  if (typeof MediaRecorder === "undefined") return undefined;
+  return MIME_AUDIO_PREFERIDOS.find((t) => MediaRecorder.isTypeSupported(t));
+}
+
 type Props = {
   id?: string;
   name: string;
@@ -65,28 +83,93 @@ type Props = {
   required?: boolean;
   rows?: number;
   placeholder?: string;
+  /** Além de transcrever, guarda a gravação em si como evidência (migration
+   * 0051) — pro relato do que foi feito no atendimento/revisão. */
+  gravarAudio?: boolean;
+  /** Nome do campo oculto que carrega o arquivo de áudio no FormData. Default
+   * `${name}Audio`. Só importa quando `gravarAudio` é true. */
+  nomeAudio?: string;
 };
 
-export function CampoTranscricao({ id, name, label, required, rows = 4, placeholder }: Props) {
+export function CampoTranscricao({
+  id,
+  name,
+  label,
+  required,
+  rows = 4,
+  placeholder,
+  gravarAudio = false,
+  nomeAudio,
+}: Props) {
   const uid = useId();
   const campoId = id ?? uid;
+  const campoNomeAudio = nomeAudio ?? `${name}Audio`;
 
   const [valor, setValor] = useState("");
   const [gravando, setGravando] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const suportado = useSyncExternalStore(inscreverSemEventos, snapshotSuporte, snapshotSuporteNoServidor);
   const reconhecimentoRef = useRef<ReconhecimentoDeFala | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const hiddenAudioInputRef = useRef<HTMLInputElement>(null);
 
-  // Só a limpeza (parar o microfone se o componente sair de tela gravando) —
-  // sem setState aqui, então não esbarra na mesma regra.
+  // Limpeza: parar o microfone (dos dois lados) e liberar a URL de preview
+  // se o componente sair de tela gravando — sem setState aqui, não esbarra
+  // na regra de state-in-effect.
   useEffect(() => {
     return () => {
       reconhecimentoRef.current?.stop();
+      mediaRecorderRef.current?.stop();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só limpeza no unmount, não deve re-rodar a cada troca de audioUrl
   }, []);
+
+  async function iniciarGravacaoAudio() {
+    if (!gravarAudio) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = escolherMimeAudio();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 32000 } : undefined);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const extensao = blob.type.includes("mp4") ? "m4a" : "webm";
+        const arquivo = new File([blob], `relato-${Date.now()}.${extensao}`, { type: blob.type });
+
+        const dt = new DataTransfer();
+        dt.items.add(arquivo);
+        if (hiddenAudioInputRef.current) hiddenAudioInputRef.current.files = dt.files;
+
+        setAudioUrl((old) => {
+          if (old) URL.revokeObjectURL(old);
+          return URL.createObjectURL(blob);
+        });
+
+        stream.getTracks().forEach((t) => t.stop());
+      };
+
+      streamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+    } catch {
+      // Sem permissão de microfone (separada da que o SpeechRecognition já
+      // usa) ou sem MediaRecorder no navegador — a transcrição continua
+      // funcionando normalmente, só não sobra gravação pra anexar.
+    }
+  }
 
   function alternarGravacao() {
     if (gravando) {
       reconhecimentoRef.current?.stop();
+      mediaRecorderRef.current?.stop();
       return;
     }
 
@@ -113,6 +196,7 @@ export function CampoTranscricao({ id, name, label, required, rows = 4, placehol
     reconhecimentoRef.current = reconhecimento;
     reconhecimento.start();
     setGravando(true);
+    void iniciarGravacaoAudio();
   }
 
   return (
@@ -151,6 +235,20 @@ export function CampoTranscricao({ id, name, label, required, rows = 4, placehol
         <p role="status" className="text-xs text-accent">
           🎙️ Ouvindo... fale e toque em &ldquo;Parar&rdquo; quando terminar.
         </p>
+      )}
+
+      {gravarAudio && (
+        <>
+          {/* Recebe o Blob gravado via DataTransfer (mesmo truque do
+              CameraCaptureField) — viaja no FormData junto com o texto. */}
+          <input ref={hiddenAudioInputRef} type="file" name={campoNomeAudio} className="hidden" tabIndex={-1} aria-hidden="true" />
+          {audioUrl && !gravando && (
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xs text-text-tertiary">🎧 Áudio do relato:</span>
+              <audio src={audioUrl} controls className="h-8 max-w-[220px]" />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
