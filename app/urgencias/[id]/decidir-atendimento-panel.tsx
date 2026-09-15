@@ -118,7 +118,12 @@ export function DecidirAtendimentoPanel({
                 </p>
                 {o.distanciaEstimadaAtualKm != null && (
                   <p className="mt-0.5 text-xs text-text-tertiary">
-                    📍 Localização estimada: ~{o.distanciaEstimadaAtualKm.toFixed(1)} km em linha reta
+                    📍{" "}
+                    {o.origemRtCodigo
+                      ? `Última atividade: ${o.origemRtCodigo}`
+                      : "Localização estimada"}
+                    {" — ~"}
+                    {o.distanciaEstimadaAtualKm.toFixed(1)} km em linha reta
                     {o.localizacaoAtualizadaEm && ` · ${formatarIdade(o.localizacaoAtualizadaEm)}`}
                   </p>
                 )}

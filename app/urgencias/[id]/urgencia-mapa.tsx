@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { MapaBase, type MarcadorMapa } from "@/lib/ui/mapa/mapa-base";
 
 export type CandidatoMapa = {
+  rotaId: string;
   equipeId: string;
   equipeNome: string;
   lat: number;
@@ -34,7 +35,11 @@ export function UrgenciaMapa({
       zIndex: 40,
     };
     const candidatosMarcadores: MarcadorMapa[] = candidatos.map((c) => ({
-      id: `equipe-${c.equipeId}`,
+      // Chave por ROTA, não por equipe — uma equipe pode ter mais de uma
+      // rota confirmada no mesmo dia (ex.: uma rota normal + uma avulsa
+      // aberta por um despacho de urgência anterior), e `equipe-${id}`
+      // sozinho colidia nesse caso (achado real, 16/09/2026).
+      id: `equipe-${c.equipeId}-${c.rotaId}`,
       posicao: { lat: c.lat, lng: c.lng },
       espec: {
         cor: c.recomendada ? "var(--sla-dentro)" : "var(--text-tertiary)",

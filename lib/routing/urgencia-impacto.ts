@@ -48,7 +48,12 @@ export type DisponibilidadeTecnico = { ocupadoAgora: boolean; restantesHoje: num
 // Nunca decide sozinho (mesma regra de sempre: recomendação nunca impede
 // escolha manual) — a idade da leitura viaja junto (`atualizadoEm`) pro
 // gerente julgar se ainda vale confiar nela.
-export type LocalizacaoEstimada = PontoGeografico & { atualizadoEm: string };
+// `rtCodigo` só vem preenchido quando a leitura é derivada da ÚLTIMA
+// ATIVIDADE real do técnico hoje (RT de um serviço iniciado/concluído,
+// ver page.tsx) — ausente quando a leitura é pura localização por GPS
+// (0057). Quem monta o Map decide qual das duas fontes usar por técnico
+// (a mais recente das duas vence — nenhuma é fixa por cima da outra).
+export type LocalizacaoEstimada = PontoGeografico & { atualizadoEm: string; rtCodigo?: string };
 
 export type RotaAtivaHoje = {
   rotaId: string;
@@ -108,6 +113,10 @@ export type OpcaoAtendimentoUrgencia = {
   // inserção/fim de rota (essa continua ancorada na rota planejada).
   distanciaEstimadaAtualKm: number | null;
   localizacaoAtualizadaEm: string | null;
+  // Código da RT da última atividade real, quando é essa a fonte da
+  // leitura acima (não GPS) — deixa explícito pro gerente de onde veio o
+  // número, em vez de um "localização estimada" genérico.
+  origemRtCodigo: string | null;
 };
 
 async function distanciasOuFallback(
@@ -278,6 +287,7 @@ export async function calcularImpactoUrgencia(
       tecnicoServicosRestantesHoje: disponibilidade?.restantesHoje ?? 0,
       distanciaEstimadaAtualKm: localizacao ? haversineKm(localizacao, urgenciaRt) : null,
       localizacaoAtualizadaEm: localizacao?.atualizadoEm ?? null,
+      origemRtCodigo: localizacao?.rtCodigo ?? null,
     });
   }
 

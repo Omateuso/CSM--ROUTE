@@ -179,7 +179,14 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
           supabase.from("servicos").select("rota_id, rt_id, status").in("rota_id", rotaIds),
           // Carga de trabalho de hoje, de TODOS os técnicos (não só os das
           // rotas acima) — é o sinal de "disponibilidade" sem GPS ao vivo.
-          supabase.from("servicos").select("tecnico_id, status, rotas!inner(data)").eq("rotas.data", hoje),
+          // Também traz rt_id/iniciado_em/concluido_em/coordenadas — é daqui
+          // que vem "onde o técnico REALMENTE esteve por último hoje",
+          // abaixo (ultimaAtividadePorTecnico), em vez de só assumir que ele
+          // está na próxima parada planejada por ordem.
+          supabase
+            .from("servicos")
+            .select("tecnico_id, status, rt_id, iniciado_em, concluido_em, rotas!inner(data), rts(codigo, latitude, longitude)")
+            .eq("rotas.data", hoje),
           // Localização ESTIMADA (migration 0057, 15/09/2026) — sinal extra,
           // não substitui a matemática de rota. Tabela pequena (1 linha por
           // técnico), sem filtro de data — a idade da leitura vai junto pro
@@ -242,6 +249,33 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
         });
       }
 
+      // "Onde o técnico esteve por último de verdade" (pedido do usuário,
+      // 16/09/2026: a distância de despacho não considerava isso — só a
+      // PRÓXIMA parada planejada por ordem, que pode não ser onde ele
+      // fisicamente está agora se ele atendeu fora de ordem). Pega, por
+      // técnico, o serviço de HOJE com o carimbo mais recente
+      // (concluído — ou iniciado, se ainda em campo) e usa a RT dele como
+      // origem. Sobrescreve a localização estimada por GPS (0057) quando
+      // for mais recente — as duas competem pelo sinal mais fresco, não uma
+      // fixa por cima da outra.
+      for (const s of servicosHojeRaw ?? []) {
+        const tecnicoId = s.tecnico_id as string | null;
+        if (!tecnicoId) continue;
+        const quando = (s.concluido_em as string | null) ?? (s.iniciado_em as string | null);
+        if (!quando) continue; // só "planejado" — técnico nunca chegou a ir
+        const rtServico = unwrapOne(s.rts);
+        if (!rtServico) continue;
+        const atual = localizacaoPorTecnico.get(tecnicoId);
+        if (!atual || new Date(quando).getTime() > new Date(atual.atualizadoEm).getTime()) {
+          localizacaoPorTecnico.set(tecnicoId, {
+            lat: Number(rtServico.latitude),
+            lng: Number(rtServico.longitude),
+            atualizadoEm: quando,
+            rtCodigo: rtServico.codigo as string,
+          });
+        }
+      }
+
       const rotasAtivas: RotaAtivaHoje[] = rotaIds
         .map((rotaId) => {
           const info = rotasPorId.get(rotaId);
@@ -269,6 +303,7 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
           const referencia = ordenadas.find((p) => !p.feita) ?? ordenadas[ordenadas.length - 1];
           if (!referencia) return null;
           return {
+            rotaId: rota.rotaId,
             equipeId: rota.equipeId,
             equipeNome: rota.equipeNome,
             lat: referencia.lat,
