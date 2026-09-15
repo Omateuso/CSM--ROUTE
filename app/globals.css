@@ -30,8 +30,12 @@
   /* Contraparte positiva genérica do --danger (mesma ideia: sinal de
      feedback de UI, não uma das "cores operacionais" reservadas pra
      prioridade/SLA abaixo) — usado pelo selo de integridade quando a
-     localização da evidência confere com a RT (25/08/2026). */
+     localização da evidência confere com a RT (25/08/2026), e desde
+     15/09/2026 também pelos botões de ação primária "totalmente verdes"
+     do app do técnico (Iniciar/Concluir atendimento, gravar áudio) — ver
+     PRIMARY_ACTION_BUTTON em lib/ui/styles.ts. */
   --success: #15803d;
+  --success-hover: #116c32;
 
   /* Preenchimento dos esqueletos de carregamento (loading.tsx). Alpha, não
      cor sólida, de propósito: o mesmo bloco precisa ler bem sobre o branco
@@ -76,6 +80,7 @@
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
   --color-success: var(--success);
+  --color-success-hover: var(--success-hover);
   --color-skeleton: var(--skeleton);
 
   --color-priority-emergencial: var(--priority-emergencial);

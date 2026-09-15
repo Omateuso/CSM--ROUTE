@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { iniciarServico, type ActionState } from "./actions";
 import { CameraCaptureField } from "./camera-capture-field";
-import styles from "./iniciar-servico-form.module.css";
+import { PRIMARY_ACTION_BUTTON } from "@/lib/ui/styles";
 
 // Antes era só um botão ("Iniciar atendimento"). Migration 0023 (auditoria
 // de segurança) passou a exigir foto "antes" pra liberar a transição
@@ -27,7 +27,7 @@ export function IniciarServicoForm({ servicoId }: { servicoId: string }) {
         </p>
       )}
 
-      <button type="submit" disabled={isPending || !fotoPronta} className={styles.button}>
+      <button type="submit" disabled={isPending || !fotoPronta} className={PRIMARY_ACTION_BUTTON}>
         {isPending ? "Iniciando..." : "Iniciar atendimento"}
       </button>
     </form>

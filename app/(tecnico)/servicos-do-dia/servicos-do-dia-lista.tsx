@@ -7,8 +7,8 @@ import { SlaBadge } from "@/app/chamados/sla-badge";
 import { RtGrupo } from "./rt-grupo";
 import { StatusServicoBadge, type StatusServico } from "../status-servico-badge";
 import { MapaDoDia } from "./mapa-do-dia";
+import { BotaoRotaOtimizada } from "./botao-rota-otimizada";
 import { linkGoogleMapsDestino, linkGoogleMapsRota, paradasNavegaveis } from "@/lib/navegacao";
-import { FOCUS_RING } from "@/lib/ui/styles";
 
 // Com ano: sem ele, um chamado de 2025 e um de 2026 aparecem como "08/09" e
 // "12/11" e o técnico lê fora de ordem, sem ter como perceber.
@@ -121,17 +121,7 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                 )}
               </h2>
 
-              {navegacao && (
-                <a
-                  href={navegacao.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`mb-3 flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-accent bg-accent/5 px-4 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 ${FOCUS_RING}`}
-                >
-                  <span aria-hidden="true">➤</span>
-                  Abrir rota no Google Maps
-                </a>
-              )}
+              {navegacao && <BotaoRotaOtimizada paradas={paradasComCodigo} linkPadrao={navegacao} />}
               <MapaDoDia paradas={paradasComCodigo} />
 
               {navegacao?.truncada && (

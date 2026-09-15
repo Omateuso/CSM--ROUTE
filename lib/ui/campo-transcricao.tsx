@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "./styles";
+import { FIELD_INPUT, FIELD_LABEL } from "./styles";
 
 // Campo de texto com opção de ditado por voz (pedido do usuário, 14/09/2026):
 // em todo campo de escrever do técnico, ele pode falar em vez de digitar — o
@@ -62,6 +62,37 @@ function snapshotSuporte(): boolean {
 }
 function snapshotSuporteNoServidor(): boolean {
   return false;
+}
+
+// Ícones do botão de gravação — inline (viewBox 24x24, mesmo estilo de
+// traço de app/nav-icons.tsx) em vez de emoji: num botão de 56px (pedido
+// do usuário, 15/09/2026: "algo como o botão de gravar áudio do
+// whatsapp"), emoji renderiza inconsistente entre plataformas/fontes num
+// tamanho grande — um ícone vetorial fica nítido em qualquer uma.
+function IconeMicrofone() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-full w-full"
+    >
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3M9 21h6" />
+    </svg>
+  );
+}
+
+function IconeParar() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-full w-full">
+      <rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" />
+    </svg>
+  );
 }
 
 // Extensão/tipo MIME que o MediaRecorder consegue de fato produzir varia por
@@ -206,18 +237,33 @@ export function CampoTranscricao({
           {label}
         </label>
         {suportado && (
+          // Grande e redondo — "algo como o botão de gravar áudio do
+          // whatsapp" (pedido do usuário, 15/09/2026): antes era uma pílula
+          // de 11px de texto, fácil de errar o toque com o celular na mão
+          // em campo. Verde sólido parado (mesmo `--success` do botão de
+          // Iniciar/Concluir — reforça UMA linguagem visual de "ação
+          // positiva" no app do técnico), vermelho com anel pulsando
+          // gravando (mesmo padrão de "atenção" que `--danger` já carrega
+          // no resto do produto).
           <button
             type="button"
             onClick={alternarGravacao}
             aria-pressed={gravando}
-            className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-              gravando
-                ? "bg-priority-emergencial/15 text-priority-emergencial"
-                : "bg-accent/10 text-accent hover:bg-accent/15"
-            } ${FOCUS_RING}`}
+            aria-label={gravando ? "Parar gravação" : "Gravar por voz"}
+            title={gravando ? "Parar gravação" : "Gravar por voz"}
+            className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full p-3.5 text-white shadow-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent ${
+              gravando ? "bg-danger" : "bg-success hover:bg-success-hover"
+            }`}
           >
-            <span aria-hidden="true">{gravando ? "⏹" : "🎤"}</span>
-            {gravando ? "Parar" : "Falar"}
+            {gravando && (
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 rounded-full bg-danger motion-safe:animate-ping motion-safe:opacity-75"
+              />
+            )}
+            <span aria-hidden="true" className="relative h-full w-full">
+              {gravando ? <IconeParar /> : <IconeMicrofone />}
+            </span>
           </button>
         )}
       </div>

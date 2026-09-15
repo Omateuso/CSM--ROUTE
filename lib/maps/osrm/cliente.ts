@@ -79,6 +79,32 @@ export const provedorOsrm: ProvedorRotas = {
     }) satisfies ElementoMatrizRota[];
   },
 
+  async matrizCompleta(pontos) {
+    if (pontos.length === 0) return [];
+    if (pontos.length === 1) return [[{ distanciaKm: 0, duracaoMin: 0, rotaEncontrada: true }]];
+
+    // Sem `sources`/`destinations`, o `/table` do OSRM já devolve a matriz
+    // completa (todos os pontos como origem E destino).
+    const url = `${baseUrl()}/table/v1/driving/${coordenadas(pontos)}?annotations=distance,duration`;
+
+    const json = await buscarJson(url);
+    const distancias = (json.distances as (number | null)[][] | undefined) ?? [];
+    const duracoes = (json.durations as (number | null)[][] | undefined) ?? [];
+
+    return pontos.map((_, i) =>
+      pontos.map((_, j) => {
+        const metros = distancias[i]?.[j];
+        const segundos = duracoes[i]?.[j];
+        if (metros == null) return { distanciaKm: null, duracaoMin: null, rotaEncontrada: false };
+        return {
+          distanciaKm: metros / 1000,
+          duracaoMin: segundos == null ? null : Math.round(segundos / 60),
+          rotaEncontrada: true,
+        };
+      }),
+    ) satisfies ElementoMatrizRota[][];
+  },
+
   async tracado(pontos) {
     if (pontos.length < 2) return null;
     const url =

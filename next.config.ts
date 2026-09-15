@@ -4,14 +4,15 @@ const nextConfig: NextConfig = {
   experimental: {
     // Padrão do Next é 1 MB — muito pouco pra uma foto de câmera de
     // celular real indo pra fn_iniciar_servico/fn_concluir_servico/
-    // fn_reportar_pendencia (app/(tecnico)/servico/[id]/actions.ts).
-    // "Concluir" soma DUAS evidências (foto + OS) numa única Server
-    // Action, e o bucket `evidencias` (migration 0014) já permite até
-    // 10 MB por arquivo — 20mb cobre as duas com folga, sem abrir demais
-    // (a foto em si já foi reduzida em camera-capture-field.tsx; sobra
-    // principalmente pra OS, que pode ser PDF ou foto sem compressão).
+    // fn_reportar_pendencia/fn_revisar_servico (app/(tecnico)/servico/[id]/
+    // actions.ts). "Concluir" soma até TRÊS evidências numa única Server
+    // Action (foto + OS + áudio do relato, 0051) — o bucket `evidencias`
+    // (migration 0052) permite até 25MB por arquivo; 60mb cobre a foto
+    // (comprimida no cliente, tipicamente <2MB) + a OS (sem compressão,
+    // pode chegar nos 25MB do teto) + áudio (pequeno) com folga real, sem
+    // abrir demais o corpo da requisição.
     serverActions: {
-      bodySizeLimit: "20mb",
+      bodySizeLimit: "60mb",
     },
   },
 };

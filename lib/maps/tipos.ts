@@ -39,6 +39,17 @@ export interface ProvedorRotas {
   nome: string;
   /** Distância/duração de carro de UMA origem pra vários destinos, na mesma ordem de `destinos`. */
   matriz(origem: PontoGeografico, destinos: PontoGeografico[]): Promise<ElementoMatrizRota[]>;
+  /**
+   * Distância/duração entre TODOS os pares de `pontos`, numa requisição só —
+   * `matriz[i][j]` é de `pontos[i]` até `pontos[j]`. Usado pra otimizar a
+   * ordem de visita de uma rota inteira (nearest-neighbor a partir da
+   * posição atual do técnico, `lib/routing/otimizar-visita.ts`): sem isso,
+   * otimizar N paradas custaria N-1 chamadas sequenciais ao provedor (uma
+   * por passo do algoritmo) em vez de uma matriz só — tanto ORS
+   * (`sources`/`destinations` arbitrários) quanto OSRM (`/table` sem
+   * restrição já devolve a matriz completa) suportam isso nativamente.
+   */
+  matrizCompleta(pontos: PontoGeografico[]): Promise<ElementoMatrizRota[][]>;
   /** Traçado de rua passando pelos pontos na ordem dada. `null` quando não há rota. */
   tracado(pontos: PontoGeografico[]): Promise<TracadoRota | null>;
 }

@@ -83,6 +83,36 @@ export const provedorOrs: ProvedorRotas = {
     }) satisfies ElementoMatrizRota[];
   },
 
+  async matrizCompleta(pontos) {
+    if (pontos.length === 0) return [];
+    if (pontos.length === 1) return [[{ distanciaKm: 0, duracaoMin: 0, rotaEncontrada: true }]];
+
+    const indices = pontos.map((_, i) => i);
+    const json = await postar(`/v2/matrix/${PERFIL}`, {
+      locations: pontos.map(paraLngLat),
+      sources: indices,
+      destinations: indices,
+      metrics: ["distance", "duration"],
+      units: "m",
+    });
+
+    const distancias = (json.distances as (number | null)[][] | undefined) ?? [];
+    const duracoes = (json.durations as (number | null)[][] | undefined) ?? [];
+
+    return pontos.map((_, i) =>
+      pontos.map((_, j) => {
+        const metros = distancias[i]?.[j];
+        const segundos = duracoes[i]?.[j];
+        if (metros == null) return { distanciaKm: null, duracaoMin: null, rotaEncontrada: false };
+        return {
+          distanciaKm: metros / 1000,
+          duracaoMin: segundos == null ? null : Math.round(segundos / 60),
+          rotaEncontrada: true,
+        };
+      }),
+    ) satisfies ElementoMatrizRota[][];
+  },
+
   async tracado(pontos) {
     if (pontos.length < 2) return null;
 

@@ -4,7 +4,7 @@ import { useActionState, useId, useState } from "react";
 import { concluirServico, type ActionState } from "./actions";
 import { CameraCaptureField } from "./camera-capture-field";
 import { CampoTranscricao } from "@/lib/ui/campo-transcricao";
-import { FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
+import { FIELD_LABEL, PRIMARY_ACTION_BUTTON } from "@/lib/ui/styles";
 
 export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(concluirServico, {
@@ -64,11 +64,7 @@ export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending || !fotoPronta || !osPronta}
-        className={`mt-1 w-full rounded-[var(--radius-sm)] bg-accent px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
-      >
+      <button type="submit" disabled={isPending || !fotoPronta || !osPronta} className={PRIMARY_ACTION_BUTTON}>
         {isPending ? "Enviando..." : "Concluir serviço"}
       </button>
     </form>
