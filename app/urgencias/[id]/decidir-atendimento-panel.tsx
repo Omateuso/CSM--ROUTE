@@ -117,7 +117,13 @@ export function DecidirAtendimentoPanel({
                   · {o.tecnicoServicosRestantesHoje} atendimento(s) restante(s) hoje
                 </p>
                 {o.distanciaEstimadaAtualKm != null && (
-                  <p className="mt-0.5 text-xs text-text-tertiary">
+                  // suppressHydrationWarning: "atualizada há N min" depende
+                  // de Date.now() no momento do render — SSR e cliente
+                  // rodam em instantes diferentes (a página pode levar
+                  // segundos pra hidratar), então o minuto pode mudar entre
+                  // os dois e o React acusa mismatch à toa (mesmo padrão já
+                  // usado em urgencia-card.tsx pro "N min atrás").
+                  <p className="mt-0.5 text-xs text-text-tertiary" suppressHydrationWarning>
                     📍{" "}
                     {o.origemRtCodigo
                       ? `Última atividade: ${o.origemRtCodigo}`

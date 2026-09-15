@@ -119,23 +119,6 @@ export type OpcaoAtendimentoUrgencia = {
   origemRtCodigo: string | null;
 };
 
-async function distanciasOuFallback(
-  origem: PontoGeografico,
-  destinos: PontoGeografico[],
-): Promise<ImpactoDistancia[]> {
-  if (destinos.length === 0) return [];
-  try {
-    const matriz = await obterProvedor().matriz(origem, destinos);
-    return matriz.map((m, indice) => ({
-      distanciaKm: m.distanciaKm ?? haversineKm(origem, destinos[indice]),
-      duracaoMin: m.duracaoMin,
-    }));
-  } catch (err) {
-    console.warn("Provedor de rotas indisponível pro impacto de urgência, caindo pra Haversine:", err);
-    return destinos.map((d) => ({ distanciaKm: haversineKm(origem, d), duracaoMin: null }));
-  }
-}
-
 function somarImpacto(a: ImpactoDistancia, b: ImpactoDistancia, c: ImpactoDistancia): ImpactoDistancia {
   // (a + b) - c, sem deixar negativo por imprecisão de arredondamento.
   const distanciaKm = Math.max(0, a.distanciaKm + b.distanciaKm - c.distanciaKm);
@@ -146,29 +129,34 @@ function somarImpacto(a: ImpactoDistancia, b: ImpactoDistancia, c: ImpactoDistan
   return { distanciaKm, duracaoMin };
 }
 
-// `matrizCompleta` (1 requisição só, cobrindo todas as paradas restantes +
-// a urgência) em vez de repetir o padrão de `distanciasOuFallback` par-a-par
-// que `insercao`/`fimDeRota` usam — mesma técnica já usada em
-// lib/routing/otimizar-visita.ts pra rota otimizada do técnico.
-async function calcularMelhorInsercao(
-  urgenciaRt: PontoGeografico,
-  paradasRestantes: ParadaRota[],
-  origemAtual: LocalizacaoEstimada | null,
-): Promise<MelhorInsercao | null> {
-  const n = paradasRestantes.length;
-  if (n === 0) return null;
+// Resultado de UMA rota, calculado com UMA única chamada ao provedor
+// (matrizCompleta cobrindo todas as paradas da rota + a urgência + a
+// posição atual do técnico quando houver) — antes eram até 4 chamadas
+// separadas por rota (insercao, fimDeRota, e a matriz própria de
+// calcularMelhorInsercao), o que esgotava a cota diária do provedor
+// gratuito rápido demais numa única carga da tela (achado real, 16/09/2026:
+// "Quota exceeded" do ORS já na primeira visita do dia). Uma chamada por
+// rota resolve tudo — o resto é aritmética sobre a MESMA matriz.
+type ResultadoRota = {
+  insercao: ImpactoDistancia | null;
+  fimDeRota: ImpactoDistancia;
+  otimizada: MelhorInsercao | null;
+};
 
-  const idxUrgencia = n;
-  const idxOrigemAtual = origemAtual ? n + 1 : -1;
-  const pontos: PontoGeografico[] = origemAtual
-    ? [...paradasRestantes, urgenciaRt, origemAtual]
-    : [...paradasRestantes, urgenciaRt];
+async function calcularParaRota(
+  urgenciaRt: PontoGeografico,
+  paradas: ParadaRota[],
+  origemAtual: LocalizacaoEstimada | null,
+): Promise<ResultadoRota> {
+  const idxUrgencia = paradas.length;
+  const idxOrigemAtual = origemAtual ? paradas.length + 1 : -1;
+  const pontos: PontoGeografico[] = origemAtual ? [...paradas, urgenciaRt, origemAtual] : [...paradas, urgenciaRt];
 
   let matriz: ElementoMatrizRota[][] | null;
   try {
     matriz = await obterProvedor().matrizCompleta(pontos);
   } catch (err) {
-    console.warn("Provedor de rotas indisponível pra melhor inserção de urgência, caindo pra Haversine:", err);
+    console.warn("Provedor de rotas indisponível pro impacto de urgência, caindo pra Haversine:", err);
     matriz = null;
   }
 
@@ -184,50 +172,80 @@ async function calcularMelhorInsercao(
     return impacto.duracaoMin ?? impacto.distanciaKm;
   }
 
-  // Candidatos: um gap por parada restante — "depois de paradasRestantes[g]"
-  // (e "antes de paradasRestantes[g+1]", exceto no último gap, que é "no
-  // fim da rota"). n candidatos no total, todos dentro da MESMA matriz já
-  // calculada acima. Mais um candidato extra (g = -1, sentinel), só quando
-  // há localização estimada do técnico responsável: "antes da primeira
-  // parada pendente", medido a partir de onde ele está agora — é o único
-  // candidato que reflete posição REAL, não planejada.
-  let melhorG = 0;
-  let melhorCusto = Infinity;
-  for (let g = 0; g < n; g++) {
-    const c = g < n - 1 ? custo(g, idxUrgencia) + custo(idxUrgencia, g + 1) - custo(g, g + 1) : custo(g, idxUrgencia);
-    if (c < melhorCusto) {
-      melhorCusto = c;
-      melhorG = g;
+  const idxProxima = paradas.findIndex((p) => !p.feita);
+  const proxima = idxProxima >= 0 ? idxProxima : null;
+  const idxDepois =
+    proxima != null ? paradas.findIndex((p) => p.ordem === paradas[proxima].ordem + 1) : -1;
+  const depois = idxDepois >= 0 ? idxDepois : null;
+  const idxUltima = paradas.length - 1;
+
+  // `insercao` (desvio marginal entre a próxima parada planejada e a
+  // seguinte) e `fimDeRota` (distância da última parada até a urgência)
+  // continuam ancoradas na rota PLANEJADA, por desenho — ver comentário de
+  // `LocalizacaoEstimada` acima.
+  let insercao: ImpactoDistancia | null = null;
+  if (proxima != null) {
+    insercao =
+      depois != null
+        ? somarImpacto(impactoEntre(proxima, idxUrgencia), impactoEntre(idxUrgencia, depois), impactoEntre(proxima, depois))
+        : impactoEntre(proxima, idxUrgencia);
+  }
+  const fimDeRota = impactoEntre(idxUltima, idxUrgencia);
+
+  // "Otimizar para a rota atual" — cheapest insertion entre TODAS as
+  // paradas ainda não feitas, mais um candidato extra (só com localização
+  // atual conhecida) pra inserir antes da primeira, a partir de onde o
+  // técnico está de verdade.
+  const restantes = paradas.map((p, i) => ({ p, i })).filter(({ p }) => !p.feita);
+  let otimizada: MelhorInsercao | null = null;
+  if (restantes.length > 0) {
+    const n = restantes.length;
+    let melhorG = 0;
+    let melhorCusto = Infinity;
+    for (let g = 0; g < n; g++) {
+      const iG = restantes[g].i;
+      const c =
+        g < n - 1
+          ? custo(iG, idxUrgencia) + custo(idxUrgencia, restantes[g + 1].i) - custo(iG, restantes[g + 1].i)
+          : custo(iG, idxUrgencia);
+      if (c < melhorCusto) {
+        melhorCusto = c;
+        melhorG = g;
+      }
+    }
+    if (origemAtual) {
+      const iPrimeiro = restantes[0].i;
+      const c = custo(idxOrigemAtual, idxUrgencia) + custo(idxUrgencia, iPrimeiro) - custo(idxOrigemAtual, iPrimeiro);
+      if (c < melhorCusto) {
+        melhorCusto = c;
+        melhorG = -1;
+      }
+    }
+
+    if (melhorG === -1) {
+      const iPrimeiro = restantes[0].i;
+      const impacto = somarImpacto(
+        impactoEntre(idxOrigemAtual, idxUrgencia),
+        impactoEntre(idxUrgencia, iPrimeiro),
+        impactoEntre(idxOrigemAtual, iPrimeiro),
+      );
+      otimizada = { aposCodigo: null, antesCodigo: paradas[iPrimeiro].codigo, impacto };
+    } else {
+      const iG = restantes[melhorG].i;
+      const temDepois = melhorG < n - 1;
+      const impactoAntes = impactoEntre(iG, idxUrgencia);
+      const impacto = temDepois
+        ? somarImpacto(impactoAntes, impactoEntre(idxUrgencia, restantes[melhorG + 1].i), impactoEntre(iG, restantes[melhorG + 1].i))
+        : impactoAntes;
+      otimizada = {
+        aposCodigo: paradas[iG].codigo,
+        antesCodigo: temDepois ? paradas[restantes[melhorG + 1].i].codigo : null,
+        impacto,
+      };
     }
   }
-  if (origemAtual) {
-    const c = custo(idxOrigemAtual, idxUrgencia) + custo(idxUrgencia, 0) - custo(idxOrigemAtual, 0);
-    if (c < melhorCusto) {
-      melhorCusto = c;
-      melhorG = -1;
-    }
-  }
 
-  if (melhorG === -1) {
-    const impacto = somarImpacto(
-      impactoEntre(idxOrigemAtual, idxUrgencia),
-      impactoEntre(idxUrgencia, 0),
-      impactoEntre(idxOrigemAtual, 0),
-    );
-    return { aposCodigo: null, antesCodigo: paradasRestantes[0].codigo, impacto };
-  }
-
-  const impactoAntes = impactoEntre(melhorG, idxUrgencia);
-  const temDepois = melhorG < n - 1;
-  const impacto = temDepois
-    ? somarImpacto(impactoAntes, impactoEntre(idxUrgencia, melhorG + 1), impactoEntre(melhorG, melhorG + 1))
-    : impactoAntes;
-
-  return {
-    aposCodigo: paradasRestantes[melhorG].codigo,
-    antesCodigo: temDepois ? paradasRestantes[melhorG + 1].codigo : null,
-    impacto,
-  };
+  return { insercao, fimDeRota, otimizada };
 }
 
 export async function calcularImpactoUrgencia(
@@ -244,33 +262,12 @@ export async function calcularImpactoUrgencia(
     if (!ultima) continue; // rota sem nenhuma parada — não deveria acontecer, defensivo
 
     const proxima = paradas.find((p) => !p.feita) ?? null;
-    const depois = proxima ? (paradas.find((p) => p.ordem === proxima.ordem + 1) ?? null) : null;
-
-    let insercao: ImpactoDistancia | null = null;
-    let fimDeRota: ImpactoDistancia;
-
-    if (proxima) {
-      const destinos = depois ? [urgenciaRt, depois] : [urgenciaRt];
-      const [proximaParaUrgencia, proximaParaDepois] = await distanciasOuFallback(proxima, destinos);
-
-      if (depois && proximaParaDepois) {
-        const [urgenciaParaDepois] = await distanciasOuFallback(urgenciaRt, [depois]);
-        insercao = somarImpacto(proximaParaUrgencia, urgenciaParaDepois, proximaParaDepois);
-      } else {
-        insercao = proximaParaUrgencia;
-      }
-
-      fimDeRota =
-        proxima.rtId === ultima.rtId ? proximaParaUrgencia : (await distanciasOuFallback(ultima, [urgenciaRt]))[0];
-    } else {
-      fimDeRota = (await distanciasOuFallback(ultima, [urgenciaRt]))[0];
-    }
 
     const referencia = proxima ?? ultima;
     const disponibilidade = referencia.tecnicoId ? disponibilidadePorTecnico.get(referencia.tecnicoId) : undefined;
     const localizacao = referencia.tecnicoId ? localizacaoPorTecnico.get(referencia.tecnicoId) : undefined;
-    const paradasRestantes = paradas.filter((p) => !p.feita);
-    const otimizada = await calcularMelhorInsercao(urgenciaRt, paradasRestantes, localizacao ?? null);
+
+    const { insercao, fimDeRota, otimizada } = await calcularParaRota(urgenciaRt, paradas, localizacao ?? null);
 
     resultado.push({
       rotaId: rota.rotaId,
