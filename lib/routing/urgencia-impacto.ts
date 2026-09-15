@@ -66,9 +66,12 @@ export type ImpactoDistancia = { distanciaKm: number; duracaoMin: number | null 
 
 // `insercao` compara "ir direto da próxima parada pendente pra seguinte"
 // contra "desviar pela urgência no meio do caminho" — é o "Opção A: inserir
-// entre C e D" do fluxo. `fimDeRota` é sempre a distância da ÚLTIMA parada da
-// rota (feita ou não) até a urgência — "Opção B: atender depois de F". As
-// duas opções levam à MESMA ação no banco (a parada nova é sempre anexada ao
+// entre C e D" do fluxo. `fimDeRota` é a distância da última parada AINDA
+// PENDENTE até a urgência (não da última por `ordem` sem mais — corrigido
+// em 16/09/2026: uma parada já concluída fora de ordem, coincidentemente
+// perto da urgência, dava "Atender ao final" = 0km mesmo com trabalho
+// pendente bem mais longe) — "Opção B: atender depois de F". As duas
+// opções levam à MESMA ação no banco (a parada nova é sempre anexada ao
 // fim da rota — nunca há renumeração física de `ordem`, ver migration 0027);
 // a diferença é só qual comparação de impacto o gerente está olhando.
 // "Otimizar para a rota atual" (pedido do usuário, 15/09/2026) — em vez de
@@ -178,11 +181,11 @@ async function calcularParaRota(
     proxima != null ? paradas.findIndex((p) => p.ordem === paradas[proxima].ordem + 1) : -1;
   const depois = idxDepois >= 0 ? idxDepois : null;
   const idxUltima = paradas.length - 1;
+  const restantes = paradas.map((p, i) => ({ p, i })).filter(({ p }) => !p.feita);
 
   // `insercao` (desvio marginal entre a próxima parada planejada e a
-  // seguinte) e `fimDeRota` (distância da última parada até a urgência)
-  // continuam ancoradas na rota PLANEJADA, por desenho — ver comentário de
-  // `LocalizacaoEstimada` acima.
+  // seguinte) continua ancorada na rota PLANEJADA, por desenho — ver
+  // comentário de `LocalizacaoEstimada` acima.
   let insercao: ImpactoDistancia | null = null;
   if (proxima != null) {
     insercao =
@@ -190,13 +193,23 @@ async function calcularParaRota(
         ? somarImpacto(impactoEntre(proxima, idxUrgencia), impactoEntre(idxUrgencia, depois), impactoEntre(proxima, depois))
         : impactoEntre(proxima, idxUrgencia);
   }
-  const fimDeRota = impactoEntre(idxUltima, idxUrgencia);
+
+  // `fimDeRota`: distância da ÚLTIMA parada AINDA PENDENTE até a urgência —
+  // não da última por `ordem` sem mais (bug real, achado pelo usuário
+  // 16/09/2026: se o item de ordem mais alta já tinha sido concluído mais
+  // cedo — fora de ordem, ou por coincidência bem perto da urgência —,
+  // "Atender ao final" media a partir de um lugar onde o técnico não está
+  // mais, dando 0km enquanto ainda sobrava trabalho pendente bem mais longe
+  // — e batendo errado contra "Otimizar", que já corretamente só considera
+  // paradas pendentes). Só cai pra "última por ordem" quando a rota inteira
+  // já terminou (nenhuma parada pendente) — aí não existe "última pendente".
+  const idxFimEfetivo = restantes.length > 0 ? restantes[restantes.length - 1].i : idxUltima;
+  const fimDeRota = impactoEntre(idxFimEfetivo, idxUrgencia);
 
   // "Otimizar para a rota atual" — cheapest insertion entre TODAS as
   // paradas ainda não feitas, mais um candidato extra (só com localização
   // atual conhecida) pra inserir antes da primeira, a partir de onde o
   // técnico está de verdade.
-  const restantes = paradas.map((p, i) => ({ p, i })).filter(({ p }) => !p.feita);
   let otimizada: MelhorInsercao | null = null;
   if (restantes.length > 0) {
     const n = restantes.length;
