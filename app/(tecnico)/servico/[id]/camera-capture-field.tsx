@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { FIELD_LABEL } from "@/lib/ui/styles";
 import { capturarGeolocalizacao, type GeoCoords } from "@/lib/geolocalizacao";
+import { decodificarRedimensionada, carregarComoImagem } from "@/lib/ui/imagem-navegador";
 
 // Campo de foto pra Iniciar/Concluir atendimento — parte do pacote de
 // integridade operacional (auditoria de segurança, 21/08/2026). Diferente
@@ -17,13 +18,16 @@ import { capturarGeolocalizacao, type GeoCoords } from "@/lib/geolocalizacao";
 // navegadores/SO ainda pode aparecer a opção de galeria. Dificulta bastante
 // reaproveitar uma foto antiga, mas não é impossível de burlar.
 //
-// Truque de implementação: o input que o técnico toca NÃO tem `name` (não
-// participa do form). Depois de processar a foto (geolocalização + carimbo
-// no canvas), o arquivo final é injetado via DataTransfer num input de
-// arquivo oculto que É esse quem tem `name` e de fato viaja no FormData —
-// assim o restante do form (`<form action={formAction}>` do
-// useActionState) continua funcionando exatamente como antes, sem precisar
-// mexer no mecanismo de submit.
+// Truque de implementação: o input que dispara a captura NÃO tem `name`
+// (não participa do form) e fica oculto — quem o técnico vê é o botão
+// estilizado "📷 Tire uma foto" (pedido do usuário, 15/09/2026: o rótulo
+// padrão do navegador pro input nativo, "Escolher arquivo", não convida a
+// abrir a câmera). Depois de processar a foto (geolocalização + carimbo no
+// canvas), o arquivo final é injetado via DataTransfer num SEGUNDO input
+// oculto que É esse quem tem `name` e de fato viaja no FormData — assim o
+// restante do form (`<form action={formAction}>` do useActionState)
+// continua funcionando exatamente como antes, sem precisar mexer no
+// mecanismo de submit.
 //
 // Validação "de verdade" (bloquear iniciar/concluir sem a foto) fica nas
 // funções do banco (fn_iniciar_servico/fn_concluir_servico, migration
@@ -48,68 +52,11 @@ type Status = "vazio" | "processando" | "pronto" | "erro";
 // pelo usuário testando em celular de verdade, 27/08/2026: "Concluir" soma
 // essa foto + a OS numa única submissão). 2560px no lado maior (subido de
 // 1920px em 15/09/2026, pedido do usuário — só ficou seguro aumentar
-// depois que `decodificarRedimensionada`, abaixo, parou de decodificar em
-// resolução nativa antes de reduzir) mantém nitidez de sobra pra
-// evidência/documentação e ainda reduz o arquivo pra uma fração do
-// tamanho original — só reduz, nunca aumenta foto já pequena.
+// depois que `decodificarRedimensionada` (lib/ui/imagem-navegador.ts)
+// parou de decodificar em resolução nativa antes de reduzir) mantém
+// nitidez de sobra pra evidência/documentação e ainda reduz o arquivo pra
+// uma fração do tamanho original.
 const MAX_DIMENSAO_PX = 2560;
-
-function carregarImagem(file: File): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Não foi possível ler a foto."));
-    };
-    img.src = url;
-  });
-}
-
-// Bug real relatado pelo usuário (15/09/2026): "insuficiência de memória"
-// ao subir foto no celular. Causa — `carregarImagem` (acima) decodifica a
-// foto na resolução NATIVA da câmera antes de desenhar no canvas: uma foto
-// de 48MP decodificada crua ocupa ~48_000_000 × 4 bytes ≈ 180MB só o
-// buffer de pixels, e isso acontece ANTES de qualquer redimensionamento —
-// aumentar `MAX_DIMENSAO_PX` nunca ajudaria aqui, porque o estouro já
-// aconteceu na hora de decodificar, não na hora de desenhar.
-//
-// `createImageBitmap` com `resizeWidth`/`resizeHeight` deixa o PRÓPRIO
-// decodificador do navegador já produzir a imagem no tamanho final
-// (equivalente ao `inSampleSize` do Android) — o pico de memória nunca
-// passa pelo tamanho nativo. A spec NÃO preserva a proporção quando os
-// dois lados são dados ao mesmo tempo, então o primeiro passe (barato: o
-// decodificador já subamostra pro tamanho pedido, sem decodificar em
-// resolução nativa) usa só `resizeWidth` — isso também serve pra descobrir
-// a proporção real (já com a orientação EXIF aplicada via
-// `imageOrientation: "from-image"`, que também corrige uma foto retrato
-// aparecendo deitada, problema que a versão anterior nunca tratava
-// explicitamente). Se o resultado já cabe nos dois lados (paisagem ou
-// quadrada), é só isso — 1 decodificação só. Numa foto retrato, a altura
-// ainda passa do teto depois desse primeiro passe (só a largura foi
-// limitada) — um segundo passe com os dois lados já calculados certos
-// resolve, e mesmo esse segundo passe nunca decodifica em resolução
-// nativa (o primeiro já produziu um bitmap pequeno, é dele que o segundo
-// parte).
-//
-// Nem todo navegador aceita as opções de resize (Safari mais antigo,
-// principalmente) — nesse caso cai pro caminho antigo (`<img>` + canvas na
-// resolução nativa), que é exatamente o comportamento de antes desta
-// correção: sem regressão pra quem já funcionava, só melhoria pra quem
-// tinha esse travamento.
-async function decodificarRedimensionada(file: File): Promise<ImageBitmap> {
-  const opcoesBase = { imageOrientation: "from-image" as const, resizeQuality: "medium" as const };
-  const passe1 = await createImageBitmap(file, { ...opcoesBase, resizeWidth: MAX_DIMENSAO_PX });
-  if (passe1.height <= MAX_DIMENSAO_PX) return passe1;
-
-  const alvoLargura = Math.round(MAX_DIMENSAO_PX * (passe1.width / passe1.height));
-  passe1.close();
-  return createImageBitmap(file, { ...opcoesBase, resizeWidth: alvoLargura, resizeHeight: MAX_DIMENSAO_PX });
-}
 
 // Carimbo mostra só data/hora + um aviso neutro de localização, nunca a
 // coordenada crua (25/08/2026, pedido do gerente — abrir a foto e ver só
@@ -130,7 +77,7 @@ async function carimbarFoto(file: File, geo: GeoCoords | null): Promise<File> {
 
   if (typeof createImageBitmap === "function") {
     try {
-      bitmap = await decodificarRedimensionada(file);
+      bitmap = await decodificarRedimensionada(file, MAX_DIMENSAO_PX);
       largura = bitmap.width;
       altura = bitmap.height;
     } catch {
@@ -138,14 +85,14 @@ async function carimbarFoto(file: File, geo: GeoCoords | null): Promise<File> {
       // falha de decodificação) — cai pro caminho antigo, que redimensiona
       // DEPOIS de decodificar em resolução nativa (mesmo risco de memória
       // de antes desta correção, mas nunca pior do que já era).
-      const img = await carregarImagem(file);
+      const img = await carregarComoImagem(file);
       const escala = Math.min(1, MAX_DIMENSAO_PX / Math.max(img.naturalWidth, img.naturalHeight));
       largura = Math.round(img.naturalWidth * escala);
       altura = Math.round(img.naturalHeight * escala);
       bitmap = img;
     }
   } else {
-    const img = await carregarImagem(file);
+    const img = await carregarComoImagem(file);
     const escala = Math.min(1, MAX_DIMENSAO_PX / Math.max(img.naturalWidth, img.naturalHeight));
     largura = Math.round(img.naturalWidth * escala);
     altura = Math.round(img.naturalHeight * escala);
@@ -187,9 +134,27 @@ async function carimbarFoto(file: File, geo: GeoCoords | null): Promise<File> {
   return new File([blob], `${nomeBase}-carimbada.jpg`, { type: "image/jpeg" });
 }
 
+function IconeCamera() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5 shrink-0"
+    >
+      <path d="M4 8a2 2 0 0 1 2-2h1.3l1-1.5h7.4l1 1.5H18a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+      <circle cx="12" cy="12.8" r="3.4" />
+    </svg>
+  );
+}
+
 export function CameraCaptureField({ name, label, onReadyChange }: Props) {
   const uid = useId();
   const inputId = `${uid}-picker`;
+  const pickerRef = useRef<HTMLInputElement>(null);
   const hiddenFileRef = useRef<HTMLInputElement>(null);
 
   const [status, setStatus] = useState<Status>("vazio");
@@ -239,13 +204,16 @@ export function CameraCaptureField({ name, label, onReadyChange }: Props) {
         {label}
       </label>
 
+      {/* Oculto — o técnico nunca vê o input nativo nem o rótulo padrão do
+          navegador ("Escolher arquivo"), só o botão abaixo. */}
       <input
+        ref={pickerRef}
         id={inputId}
         type="file"
         accept="image/*"
         capture="environment"
         onChange={handlePick}
-        className="text-sm text-text-secondary file:mr-3 file:rounded-[var(--radius-sm)] file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+        className="hidden"
       />
 
       {/* Input oculto que de fato viaja no FormData — recebe o arquivo já
@@ -254,7 +222,18 @@ export function CameraCaptureField({ name, label, onReadyChange }: Props) {
       <input type="hidden" name={`${name}Lat`} value={lat} />
       <input type="hidden" name={`${name}Lng`} value={lng} />
 
-      {status === "processando" && <p className="text-xs text-text-tertiary">Processando foto...</p>}
+      <button
+        type="button"
+        onClick={() => pickerRef.current?.click()}
+        disabled={status === "processando"}
+        className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-accent bg-accent/5 px-4 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+      >
+        <span aria-hidden="true">
+          <IconeCamera />
+        </span>
+        {status === "processando" ? "Processando..." : status === "pronto" ? "Tirar outra foto" : "Tire uma foto"}
+      </button>
+
       {status === "erro" && erro && (
         <p role="alert" className="text-xs text-danger">
           {erro}

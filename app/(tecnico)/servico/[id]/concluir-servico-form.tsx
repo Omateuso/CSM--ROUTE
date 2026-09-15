@@ -3,8 +3,9 @@
 import { useActionState, useId, useState } from "react";
 import { concluirServico, type ActionState } from "./actions";
 import { CameraCaptureField } from "./camera-capture-field";
+import { OsAttachField } from "./os-attach-field";
 import { CampoTranscricao } from "@/lib/ui/campo-transcricao";
-import { FIELD_LABEL, PRIMARY_ACTION_BUTTON } from "@/lib/ui/styles";
+import { PRIMARY_ACTION_BUTTON } from "@/lib/ui/styles";
 
 export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(concluirServico, {
@@ -20,7 +21,6 @@ export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
 
   const uid = useId();
   const idObservacao = `${uid}-observacao`;
-  const idOs = `${uid}-os`;
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -42,21 +42,7 @@ export function ConcluirServicoForm({ servicoId }: { servicoId: string }) {
           Iniciar, com geolocalização e carimbo. */}
       <CameraCaptureField name="fotoDepois" label="Foto de depois do atendimento" onReadyChange={setFotoPronta} />
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor={idOs} className={FIELD_LABEL}>
-          OS (foto ou PDF)
-        </label>
-        <input
-          id={idOs}
-          name="os"
-          type="file"
-          accept="image/*,application/pdf"
-          capture="environment"
-          required
-          onChange={(e) => setOsPronta(!!e.target.files && e.target.files.length > 0)}
-          className="text-sm text-text-secondary file:mr-3 file:rounded-[var(--radius-sm)] file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
-        />
-      </div>
+      <OsAttachField name="os" onReadyChange={setOsPronta} />
 
       {state.error && (
         <p role="alert" className="text-sm text-danger">

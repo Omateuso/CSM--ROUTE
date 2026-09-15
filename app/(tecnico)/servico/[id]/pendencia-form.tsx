@@ -3,6 +3,7 @@
 import { useActionState, useId, useState } from "react";
 import { reportarPendencia, type ActionState } from "./actions";
 import { CameraCaptureField } from "./camera-capture-field";
+import { OsAttachField } from "./os-attach-field";
 import { CampoTranscricao } from "@/lib/ui/campo-transcricao";
 import { PENDENCIA_CATEGORIA_OPTIONS } from "@/lib/ui/pendencia-categoria";
 import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
@@ -25,7 +26,6 @@ export function PendenciaForm({ servicoId }: { servicoId: string }) {
   const uid = useId();
   const idCategoria = `${uid}-categoria`;
   const idDescricao = `${uid}-descricao-pendencia`;
-  const idOs = `${uid}-os-pendencia`;
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -63,21 +63,7 @@ export function PendenciaForm({ servicoId }: { servicoId: string }) {
 
       <CameraCaptureField name="fotoParcial" label="Foto do que já foi feito" onReadyChange={setFotoPronta} />
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor={idOs} className={FIELD_LABEL}>
-          OS (foto ou PDF)
-        </label>
-        <input
-          id={idOs}
-          name="os"
-          type="file"
-          accept="image/*,application/pdf"
-          capture="environment"
-          required
-          onChange={(e) => setOsPronta(!!e.target.files && e.target.files.length > 0)}
-          className="text-sm text-text-secondary file:mr-3 file:rounded-[var(--radius-sm)] file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
-        />
-      </div>
+      <OsAttachField name="os" onReadyChange={setOsPronta} />
 
       {state.error && (
         <p role="alert" className="text-sm text-danger">

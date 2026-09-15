@@ -1,6 +1,6 @@
 "use server";
 
-import { otimizarOrdemVisita } from "@/lib/routing/otimizar-visita";
+import { otimizarOrdemVisita, type ResultadoOtimizacao } from "@/lib/routing/otimizar-visita";
 import type { PontoGeografico } from "@/lib/routing/proximity";
 
 // Rota otimizada por tempo a partir de onde o técnico está (pedido do
@@ -13,6 +13,6 @@ export type ParadaParaOtimizar = PontoGeografico & { codigo: string };
 export async function otimizarRotaDoDia(
   origem: PontoGeografico,
   paradas: ParadaParaOtimizar[],
-): Promise<ParadaParaOtimizar[]> {
+): Promise<ResultadoOtimizacao<ParadaParaOtimizar>> {
   return otimizarOrdemVisita(origem, paradas);
 }

@@ -53,6 +53,19 @@ function ordenarPorMatriz(matriz: ElementoMatrizRota[][] | null, pontos: PontoGe
   return ordem;
 }
 
+export type ResultadoOtimizacao<T> = {
+  paradas: T[];
+  /** "provedor": tempo/distância de rua real (ORS/OSRM). "linha_reta":
+   * o provedor falhou ou não está configurado — a ordem ainda foi
+   * recalculada a partir da posição do técnico, só que por distância em
+   * linha reta (Haversine), não por rua/tempo real. Quem chama usa isso
+   * pra avisar o técnico do que realmente aconteceu, em vez de um sucesso
+   * silencioso indistinguível de uma falha silenciosa (achado real,
+   * 15/09/2026: sem esse retorno, um provedor fora do ar parecia
+   * "a otimização não funciona"). */
+  fonte: "provedor" | "linha_reta";
+};
+
 /**
  * Reordena `paradas` pra minimizar o deslocamento total a partir de
  * `origem` (a posição atual do técnico). Degrada pra Haversine se o
@@ -63,17 +76,19 @@ function ordenarPorMatriz(matriz: ElementoMatrizRota[][] | null, pontos: PontoGe
 export async function otimizarOrdemVisita<T extends PontoGeografico>(
   origem: PontoGeografico,
   paradas: T[],
-): Promise<T[]> {
-  if (paradas.length <= 1) return paradas;
+): Promise<ResultadoOtimizacao<T>> {
+  if (paradas.length <= 1) return { paradas, fonte: "provedor" };
 
   const pontos: PontoGeografico[] = [origem, ...paradas];
   let matriz: ElementoMatrizRota[][] | null = null;
+  let fonte: ResultadoOtimizacao<T>["fonte"] = "provedor";
   try {
     matriz = await obterProvedor().matrizCompleta(pontos);
   } catch (err) {
+    fonte = "linha_reta";
     console.warn("Provedor de rotas indisponível pra otimizar a ordem de visita — caindo pra linha reta:", err);
   }
 
   const ordem = ordenarPorMatriz(matriz, pontos);
-  return ordem.map((indice) => paradas[indice - 1]); // -1: desfaz o deslocamento de índice da origem
+  return { paradas: ordem.map((indice) => paradas[indice - 1]), fonte }; // -1: desfaz o deslocamento de índice da origem
 }
