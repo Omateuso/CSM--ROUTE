@@ -6,6 +6,7 @@ import { SlaBadge } from "@/app/chamados/sla-badge";
 import { StatusServicoBadge, type StatusServico } from "../../status-servico-badge";
 import { IniciarServicoForm } from "./iniciar-servico-form";
 import { RevisaoOuAtendimento } from "./revisao-ou-atendimento";
+import { RevisarServicoForm } from "./revisar-servico-form";
 import { ConcluirServicoForm } from "./concluir-servico-form";
 import { PendenciaForm } from "./pendencia-form";
 import { AvaliarServicoForm } from "./avaliar-servico-form";
@@ -389,6 +390,12 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
                   </div>
                 </details>
               )}
+            </div>
+          )}
+
+          {status === "em_revisao" && (
+            <div className="flex flex-col gap-4">
+              <RevisarServicoForm servicoId={servicoRaw.id as string} />
             </div>
           )}
 

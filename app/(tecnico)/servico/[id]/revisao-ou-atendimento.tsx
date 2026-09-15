@@ -2,14 +2,21 @@
 
 import { useState } from "react";
 import { IniciarServicoForm } from "./iniciar-servico-form";
-import { RevisarServicoForm } from "./revisar-servico-form";
+import { IniciarRevisaoForm } from "./iniciar-revisao-form";
 import { FOCUS_RING } from "@/lib/ui/styles";
 
 // Só pra serviço `revisao_tecnica` (0046) ainda `planejado` — pedido do
-// usuário, 14/09/2026. Duas formas de tratar o chamado: revisar (foto +
-// descrição, sem foto antes/depois nem OS, migration 0047 — atalho, aberto
-// por padrão) ou atender completo (o "Iniciar atendimento" de sempre, com
-// todos os passos padrão). O técnico escolhe, nunca as duas ao mesmo tempo.
+// usuário, 14/09/2026. Duas formas de tratar o chamado: revisar (atalho,
+// aberto por padrão) ou atender completo (o "Iniciar atendimento" de
+// sempre, com todos os passos padrão). O técnico escolhe, nunca as duas ao
+// mesmo tempo.
+//
+// 15/09/2026: o lado "revisar" passou a mostrar `IniciarRevisaoForm` (um
+// botão "Começar a revisar", sem foto) em vez de já abrir o formulário de
+// conclusão direto — o serviço precisa passar por `em_revisao` antes de
+// `fn_revisar_servico` aceitar a conclusão (migration 0053/0054). Quando o
+// status já é `em_revisao`, é `page.tsx` quem mostra `RevisarServicoForm`
+// direto (fora deste componente — aqui só existe a escolha inicial).
 export function RevisaoOuAtendimento({ servicoId }: { servicoId: string }) {
   const [modo, setModo] = useState<"revisar" | "atender">("revisar");
 
@@ -39,7 +46,7 @@ export function RevisaoOuAtendimento({ servicoId }: { servicoId: string }) {
       </div>
 
       {modo === "revisar" ? (
-        <RevisarServicoForm servicoId={servicoId} />
+        <IniciarRevisaoForm servicoId={servicoId} />
       ) : (
         <IniciarServicoForm servicoId={servicoId} />
       )}

@@ -67,7 +67,7 @@ export default async function ValidacaoPage() {
       .select(
         "id, chamado_id, status, tecnico:tecnico_id(nome), chamados(assunto, prioridade, sla_prazo, status, tomticket_id), rts(codigo, nome), rotas(data)",
       )
-      .in("status", ["planejado", "em_execucao"]),
+      .in("status", ["planejado", "em_execucao", "em_revisao"]),
     supabase
       .from("validacoes")
       .select(
@@ -271,7 +271,7 @@ export default async function ValidacaoPage() {
       const rota = unwrapOne(s.rotas);
       return {
         servicoId: s.id as string,
-        status: s.status as "planejado" | "em_execucao",
+        status: s.status as "planejado" | "em_execucao" | "em_revisao",
         rotaData: rota?.data as string,
         tecnicoNome: unwrapOne(s.tecnico)?.nome ?? "—",
         rtCodigo: rt?.codigo ?? "—",

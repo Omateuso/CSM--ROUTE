@@ -8,7 +8,7 @@ import type { OpcaoAtendimentoUrgencia } from "@/lib/routing/urgencia-impacto";
 
 type Equipe = { id: string; nome: string };
 type Tecnico = { id: string; nome: string; equipeId: string | null; ativo: boolean };
-type OpcaoLabel = "insercao_rota" | "fim_de_rota" | "outra_equipe" | "avulsa";
+type OpcaoLabel = "insercao_rota" | "fim_de_rota" | "otimizado" | "outra_equipe" | "avulsa";
 
 type Escolha = {
   equipeId: string;
@@ -23,6 +23,16 @@ type Escolha = {
 function formatarDistancia(km: number, min: number | null): string {
   const texto = `${km.toFixed(1)} km`;
   return min != null ? `${texto} · ~${min} min de carro` : `${texto} (linha reta — sem tempo de carro configurado)`;
+}
+
+// "atualizado há N min/h" pra localização estimada (0057) — o gerente
+// precisa saber se é uma leitura fresca ou velha antes de confiar nela.
+function formatarIdade(isoData: string): string {
+  const minutos = Math.max(0, Math.round((Date.now() - new Date(isoData).getTime()) / 60000));
+  if (minutos < 1) return "atualizada agora";
+  if (minutos < 60) return `atualizada há ${minutos} min`;
+  const horas = Math.round(minutos / 60);
+  return `atualizada há ${horas}h`;
 }
 
 // O "coração" do módulo (seções 10-13 do prompt): recomenda por proximidade
@@ -106,6 +116,12 @@ export function DecidirAtendimentoPanel({
                     : `rota concluída — última parada ${o.ultimaParadaCodigo}`}{" "}
                   · {o.tecnicoServicosRestantesHoje} atendimento(s) restante(s) hoje
                 </p>
+                {o.distanciaEstimadaAtualKm != null && (
+                  <p className="mt-0.5 text-xs text-text-tertiary">
+                    📍 Localização estimada: ~{o.distanciaEstimadaAtualKm.toFixed(1)} km em linha reta
+                    {o.localizacaoAtualizadaEm && ` · ${formatarIdade(o.localizacaoAtualizadaEm)}`}
+                  </p>
+                )}
 
                 <div className="mt-2 flex flex-wrap gap-2">
                   {recomendada && o.insercao && (
@@ -145,7 +161,31 @@ export function DecidirAtendimentoPanel({
                     >
                       Atender ao final da rota — {formatarDistancia(o.fimDeRota.distanciaKm, o.fimDeRota.duracaoMin)}
                     </button>
-                  ) : (
+                  ) : null}
+                  {recomendada && o.otimizada && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEscolha({
+                          equipeId: o.equipeId,
+                          equipeNome: o.equipeNome,
+                          rotaId: o.rotaId,
+                          opcaoLabel: "otimizado",
+                          impactoKm: o.otimizada!.impacto.distanciaKm,
+                          impactoMin: o.otimizada!.impacto.duracaoMin,
+                          tecnicoSugeridoId: o.tecnicoId,
+                        })
+                      }
+                      className={`rounded-[var(--radius-sm)] border border-border px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-accent hover:text-accent ${FOCUS_RING}`}
+                    >
+                      Otimizar para a rota atual — melhor encaixe{" "}
+                      {o.otimizada.antesCodigo
+                        ? `entre ${o.otimizada.aposCodigo} e ${o.otimizada.antesCodigo}`
+                        : `depois de ${o.otimizada.aposCodigo}`}{" "}
+                      — {formatarDistancia(o.otimizada.impacto.distanciaKm, o.otimizada.impacto.duracaoMin)}
+                    </button>
+                  )}
+                  {!recomendada && (
                     <button
                       type="button"
                       onClick={() =>

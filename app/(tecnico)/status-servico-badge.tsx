@@ -4,6 +4,7 @@ export type StatusServico =
   | "planejado"
   | "em_deslocamento"
   | "em_execucao"
+  | "em_revisao"
   | "concluido_tecnico"
   | "aguardando_validacao"
   | "validado"
@@ -24,6 +25,15 @@ const CONFIG: Record<StatusServico, { label: string; dotClass: string; textClass
     label: "Em execução",
     dotClass: "bg-priority-alta",
     textClass: "font-semibold text-priority-alta",
+  },
+  // Contraparte de "em_execucao" pro fluxo leve de revisão (migration
+  // 0053/0054, 15/09/2026) — mesma cor amarela já usada em toda a
+  // categoria "revisão técnica" desde 14/09, pra não introduzir uma cor
+  // nova pra um conceito que já tem uma cor estabelecida no produto.
+  em_revisao: {
+    label: "Em revisão",
+    dotClass: "bg-sla-proximo",
+    textClass: "font-semibold text-sla-proximo",
   },
   concluido_tecnico: { label: "Concluído", dotClass: "bg-sla-dentro", textClass: "text-sla-dentro" },
   aguardando_validacao: {

@@ -10,7 +10,7 @@ import { ReagendarDialog } from "./reagendar-dialog";
 
 export type ServicoTravadoRow = {
   servicoId: string;
-  status: "planejado" | "em_execucao";
+  status: "planejado" | "em_execucao" | "em_revisao";
   rotaData: string;
   tecnicoNome: string;
   rtCodigo: string;

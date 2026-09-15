@@ -56,7 +56,7 @@ export default async function PainelGestaoPage() {
     supabase
       .from("servicos")
       .select("id, rotas!inner(data)", { count: "exact", head: true })
-      .in("status", ["planejado", "em_execucao"])
+      .in("status", ["planejado", "em_execucao", "em_revisao"])
       .lt("rotas.data", hoje),
     supabase
       .from("rotas")
@@ -147,10 +147,14 @@ export default async function PainelGestaoPage() {
 
   let naoIniciadosHoje = 0;
   let emExecucaoHoje = 0;
+  let emRevisaoHoje = 0;
   let concluidosHoje = 0;
   for (const s of servicosHojeRaw ?? []) {
     if (s.status === "planejado") naoIniciadosHoje++;
     else if (s.status === "em_execucao") emExecucaoHoje++;
+    // Separado de "em execução" (pedido do usuário, 15/09/2026 — a
+    // conclusão dos dois é diferente, nunca somados).
+    else if (s.status === "em_revisao") emRevisaoHoje++;
     else if (s.status === "concluido_tecnico" || s.status === "validado") concluidosHoje++;
   }
 
@@ -184,9 +188,10 @@ export default async function PainelGestaoPage() {
           Retrato de agora: o que falta começar, o que está em campo e onde a operação trava — ação continua com o
           gerente.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <OperacaoHojeCard label="Não iniciados hoje" value={naoIniciadosHoje} />
           <OperacaoHojeCard label="Em execução hoje" value={emExecucaoHoje} />
+          <OperacaoHojeCard label="Em revisão hoje" value={emRevisaoHoje} />
           <OperacaoHojeCard label="Concluídos hoje" value={concluidosHoje} />
           <OperacaoHojeCard label="Aguardando validação" value={aguardandoValidacaoCount ?? 0} />
           <OperacaoHojeCard label="Travados em rota passada" value={travadosCount ?? 0} />

@@ -96,6 +96,20 @@ export default async function UrgenciasPage() {
     }
   }
 
+  // Localização ESTIMADA do técnico (migration 0057, 15/09/2026) também
+  // entra como candidato — mesmo indicador barato (Haversine), sem gasto de
+  // provedor de rotas aqui. Um técnico sem rota confirmada hoje (ou parado
+  // numa RT fora da rota planejada) ainda pode ser "a pessoa mais perto".
+  const { data: localizacoesRaw } = await supabase
+    .from("tecnico_localizacao_estimada")
+    .select("latitude, longitude, tecnico:tecnico_id(nome, equipes(nome))");
+  for (const l of localizacoesRaw ?? []) {
+    const tecnico = unwrapOne(l.tecnico);
+    const equipeNome = tecnico ? unwrapOne(tecnico.equipes)?.nome : null;
+    if (!equipeNome) continue; // técnico sem equipe não tem "equipe mais próxima" pra atribuir
+    pontosReferenciaHoje.push({ equipeNome, lat: Number(l.latitude), lng: Number(l.longitude) });
+  }
+
   function equipeMaisProxima(lat: number, lng: number): { nome: string; distanciaKm: number } | null {
     if (pontosReferenciaHoje.length === 0) return null;
     let melhor: { nome: string; distanciaKm: number } | null = null;

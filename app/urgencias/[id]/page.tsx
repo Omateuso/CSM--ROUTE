@@ -20,6 +20,7 @@ import {
   type RotaAtivaHoje,
   type ParadaRota,
   type DisponibilidadeTecnico,
+  type LocalizacaoEstimada,
 } from "@/lib/routing/urgencia-impacto";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -168,21 +169,30 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
     const rotaIds = (rotasRaw ?? []).map((r) => r.id as string);
 
     if (rotaIds.length > 0) {
-      const [{ data: paradasRaw }, { data: servicosRotasRaw }, { data: servicosHojeRaw }] = await Promise.all([
-        supabase
-          .from("rota_rts")
-          .select("rota_id, rt_id, ordem, rts(codigo, latitude, longitude), tecnico_id, tecnico:tecnico_id(nome)")
-          .in("rota_id", rotaIds)
-          .order("ordem", { ascending: true }),
-        supabase.from("servicos").select("rota_id, rt_id, status").in("rota_id", rotaIds),
-        // Carga de trabalho de hoje, de TODOS os técnicos (não só os das
-        // rotas acima) — é o sinal de "disponibilidade" sem GPS ao vivo.
-        supabase.from("servicos").select("tecnico_id, status, rotas!inner(data)").eq("rotas.data", hoje),
-      ]);
+      const [{ data: paradasRaw }, { data: servicosRotasRaw }, { data: servicosHojeRaw }, { data: localizacoesRaw }] =
+        await Promise.all([
+          supabase
+            .from("rota_rts")
+            .select("rota_id, rt_id, ordem, rts(codigo, latitude, longitude), tecnico_id, tecnico:tecnico_id(nome)")
+            .in("rota_id", rotaIds)
+            .order("ordem", { ascending: true }),
+          supabase.from("servicos").select("rota_id, rt_id, status").in("rota_id", rotaIds),
+          // Carga de trabalho de hoje, de TODOS os técnicos (não só os das
+          // rotas acima) — é o sinal de "disponibilidade" sem GPS ao vivo.
+          supabase.from("servicos").select("tecnico_id, status, rotas!inner(data)").eq("rotas.data", hoje),
+          // Localização ESTIMADA (migration 0057, 15/09/2026) — sinal extra,
+          // não substitui a matemática de rota. Tabela pequena (1 linha por
+          // técnico), sem filtro de data — a idade da leitura vai junto pro
+          // gerente julgar se ainda vale confiar nela.
+          supabase.from("tecnico_localizacao_estimada").select("tecnico_id, latitude, longitude, atualizado_em"),
+        ]);
 
+      // `em_revisao` (0053/0054) conta como "ainda não terminado" nos dois
+      // sentidos abaixo, mesmo espírito de `em_execucao` — só a forma de
+      // concluir é diferente, não o fato de estar em andamento.
       const paradasPendentes = new Set<string>();
       for (const s of servicosRotasRaw ?? []) {
-        if (s.status === "planejado" || s.status === "em_execucao") {
+        if (s.status === "planejado" || s.status === "em_execucao" || s.status === "em_revisao") {
           paradasPendentes.add(`${s.rota_id}-${s.rt_id}`);
         }
       }
@@ -192,8 +202,8 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
         const tecnicoId = s.tecnico_id as string | null;
         if (!tecnicoId) continue;
         const atual = disponibilidadePorTecnico.get(tecnicoId) ?? { ocupadoAgora: false, restantesHoje: 0 };
-        if (s.status === "em_execucao") atual.ocupadoAgora = true;
-        if (s.status === "planejado" || s.status === "em_execucao") atual.restantesHoje += 1;
+        if (s.status === "em_execucao" || s.status === "em_revisao") atual.ocupadoAgora = true;
+        if (s.status === "planejado" || s.status === "em_execucao" || s.status === "em_revisao") atual.restantesHoje += 1;
         disponibilidadePorTecnico.set(tecnicoId, atual);
       }
 
@@ -223,6 +233,15 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
         paradasPorRota.set(chave, lista);
       }
 
+      const localizacaoPorTecnico = new Map<string, LocalizacaoEstimada>();
+      for (const l of localizacoesRaw ?? []) {
+        localizacaoPorTecnico.set(l.tecnico_id as string, {
+          lat: Number(l.latitude),
+          lng: Number(l.longitude),
+          atualizadoEm: l.atualizado_em as string,
+        });
+      }
+
       const rotasAtivas: RotaAtivaHoje[] = rotaIds
         .map((rotaId) => {
           const info = rotasPorId.get(rotaId);
@@ -237,6 +256,7 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
           { lat: Number(rt.latitude), lng: Number(rt.longitude) },
           rotasAtivas,
           disponibilidadePorTecnico,
+          localizacaoPorTecnico,
         );
       } catch {
         opcoes = [];

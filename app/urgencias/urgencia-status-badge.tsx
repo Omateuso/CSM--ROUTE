@@ -64,7 +64,10 @@ type StatusGravado = "solicitada" | "em_analise" | "validada" | "nao_validada" |
 export function derivarStatusDisplay(status: StatusGravado, servicoStatus: string | null): UrgenciaStatus {
   if (status !== "em_atendimento") return status;
   if (servicoStatus === "planejado" || servicoStatus === null) return "tecnico_escalado";
-  if (servicoStatus === "em_execucao") return "em_atendimento";
+  // `em_revisao` (0053/0054) é a contraparte leve de `em_execucao` — pro
+  // status derivado da urgência, os dois significam a mesma coisa: "o
+  // técnico está atendendo agora".
+  if (servicoStatus === "em_execucao" || servicoStatus === "em_revisao") return "em_atendimento";
   if (servicoStatus === "cancelado") return "pendente_novo_despacho";
   return "concluida"; // concluido_tecnico | aguardando_validacao | validado
 }

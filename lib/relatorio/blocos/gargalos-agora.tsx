@@ -22,7 +22,11 @@ async function buscar(supabase: SupabaseServerClient): Promise<Dados> {
       supabase
         .from("servicos")
         .select("id, chamados(assunto, tomticket_id), rts(codigo), rotas!inner(data)")
-        .in("status", ["planejado", "em_execucao"])
+        // "travados" já era uma soma de planejado+em_execucao neste bloco
+        // (o relatório não distingue os dois, só "parado numa rota
+        // vencida") — em_revisao (0053/0054) entra na mesma soma por
+        // consistência com esse nível de granularidade do relatório.
+        .in("status", ["planejado", "em_execucao", "em_revisao"])
         .lt("rotas.data", hoje),
     ]);
 

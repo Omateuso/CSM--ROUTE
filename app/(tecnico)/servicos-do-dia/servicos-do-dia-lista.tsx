@@ -8,6 +8,7 @@ import { RtGrupo } from "./rt-grupo";
 import { StatusServicoBadge, type StatusServico } from "../status-servico-badge";
 import { MapaDoDia } from "./mapa-do-dia";
 import { BotaoRotaOtimizada } from "./botao-rota-otimizada";
+import { BotaoAtualizarLocalizacao } from "./botao-atualizar-localizacao";
 import { linkGoogleMapsDestino, linkGoogleMapsRota, paradasNavegaveis } from "@/lib/navegacao";
 
 // Com ano: sem ele, um chamado de 2025 e um de 2026 aparecem como "08/09" e
@@ -89,18 +90,21 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
   return (
     <div className="flex-1 px-4 py-4">
       {servicos.length > 0 && (
-        <div className="mb-4">
-          <label className="sr-only" htmlFor="busca-servicos">
-            Buscar serviços
-          </label>
-          <input
-            id="busca-servicos"
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por RT, endereço, assunto ou protocolo..."
-            className="w-full rounded-[var(--radius-md)] border border-border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-          />
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="min-w-[200px] flex-1">
+            <label className="sr-only" htmlFor="busca-servicos">
+              Buscar serviços
+            </label>
+            <input
+              id="busca-servicos"
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por RT, endereço, assunto ou protocolo..."
+              className="w-full rounded-[var(--radius-md)] border border-border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            />
+          </div>
+          <BotaoAtualizarLocalizacao />
         </div>
       )}
 

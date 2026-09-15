@@ -19,7 +19,9 @@ function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
 // finalizado/cancelado não entram nas métricas de volume atual.
 const STATUS_ABERTO = new Set(["aberto", "em_andamento"]);
 
-type BucketHoje = { pendente: number; emExecucao: number; concluido: number };
+// `emRevisao` separado de `emExecucao` (pedido do usuário, 15/09/2026 —
+// "a conclusão deles é diferente", contado à parte, nunca somado).
+type BucketHoje = { pendente: number; emExecucao: number; emRevisao: number; concluido: number };
 
 // Auditoria de design (23/08/2026): rótulo pequeno padronizado acima de
 // todo número — parte da escala tipográfica nova (Etapa 4 do plano),
@@ -127,7 +129,7 @@ export default async function DashboardPage() {
     supabase
       .from("servicos")
       .select("id, rotas!inner(data)", { count: "exact", head: true })
-      .in("status", ["planejado", "em_execucao"])
+      .in("status", ["planejado", "em_execucao", "em_revisao"])
       .lt("rotas.data", hoje),
   ]);
 
@@ -178,6 +180,7 @@ export default async function DashboardPage() {
 
   let naoIniciadosHoje = 0;
   let emExecucaoHoje = 0;
+  let emRevisaoHoje = 0;
   const porRegiaoHoje = new Map<string, BucketHoje>();
   const porTecnicoHoje = new Map<string, BucketHoje>();
 
@@ -185,20 +188,32 @@ export default async function DashboardPage() {
     const status = s.status as string;
     if (status === "planejado") naoIniciadosHoje++;
     if (status === "em_execucao") emExecucaoHoje++;
+    if (status === "em_revisao") emRevisaoHoje++;
     if (status === "cancelado") continue; // já reagendado — não entra na visão "operação de hoje"
 
+    // `em_revisao` (0053/0054) nunca deve cair no bucket "concluido" por
+    // omissão — precisa do próprio ramo, senão um serviço em revisão
+    // contaria (errado) como concluído nas tabelas por região/técnico.
     const bucket: keyof BucketHoje =
-      status === "planejado" ? "pendente" : status === "em_execucao" ? "emExecucao" : "concluido";
+      status === "planejado"
+        ? "pendente"
+        : status === "em_execucao"
+          ? "emExecucao"
+          : status === "em_revisao"
+            ? "emRevisao"
+            : "concluido";
 
     const rota = unwrapOne(s.rotas);
     const regiaoNome = unwrapOne(rota?.regioes)?.nome ?? "—";
     const tecnicoNome = unwrapOne(s.tecnico)?.nome ?? "—";
 
-    const atualRegiao = porRegiaoHoje.get(regiaoNome) ?? { pendente: 0, emExecucao: 0, concluido: 0 };
+    const bucketVazio = (): BucketHoje => ({ pendente: 0, emExecucao: 0, emRevisao: 0, concluido: 0 });
+
+    const atualRegiao = porRegiaoHoje.get(regiaoNome) ?? bucketVazio();
     atualRegiao[bucket]++;
     porRegiaoHoje.set(regiaoNome, atualRegiao);
 
-    const atualTecnico = porTecnicoHoje.get(tecnicoNome) ?? { pendente: 0, emExecucao: 0, concluido: 0 };
+    const atualTecnico = porTecnicoHoje.get(tecnicoNome) ?? bucketVazio();
     atualTecnico[bucket]++;
     porTecnicoHoje.set(tecnicoNome, atualTecnico);
   }
@@ -254,9 +269,10 @@ export default async function DashboardPage() {
         <p className="mt-1 text-xs text-text-tertiary">
           Serviços das rotas confirmadas pra hoje, por status.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
           <OperacaoHojeCard label="Não iniciados" value={naoIniciadosHoje} />
           <OperacaoHojeCard label="Em execução" value={emExecucaoHoje} />
+          <OperacaoHojeCard label="Em revisão" value={emRevisaoHoje} />
           <OperacaoHojeCard label="Concluídos" value={totalConcluidosHoje} />
           <OperacaoHojeCard label="Reagendados" value={totalReagendadosHoje} />
         </div>
@@ -267,19 +283,20 @@ export default async function DashboardPage() {
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Por região, hoje</h2>
             <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
-              <table className="w-full min-w-[380px] border-collapse text-sm">
+              <table className="w-full min-w-[460px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
                     <th scope="col" className="px-4 py-2.5 font-medium">Região</th>
                     <th scope="col" className="px-3 py-2.5 text-right font-medium">Pendente</th>
                     <th scope="col" className="px-3 py-2.5 text-right font-medium">Em exec.</th>
+                    <th scope="col" className="px-3 py-2.5 text-right font-medium">Em revisão</th>
                     <th scope="col" className="px-3 py-2.5 text-right font-medium">Concluído</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {regioesOrdenadas.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-4 py-6 text-center text-xs text-text-tertiary">
+                      <td colSpan={5} className="px-4 py-6 text-center text-xs text-text-tertiary">
                         Nenhuma rota confirmada pra hoje.
                       </td>
                     </tr>
@@ -289,6 +306,7 @@ export default async function DashboardPage() {
                         <td className="px-4 py-2 text-text-primary">{nome}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{b.pendente}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{b.emExecucao}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{b.emRevisao}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{b.concluido}</td>
                       </tr>
                     ))
@@ -301,19 +319,20 @@ export default async function DashboardPage() {
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Por técnico, hoje</h2>
             <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
-              <table className="w-full min-w-[380px] border-collapse text-sm">
+              <table className="w-full min-w-[460px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
                     <th scope="col" className="px-4 py-2.5 font-medium">Técnico</th>
                     <th scope="col" className="px-3 py-2.5 text-right font-medium">Pendente</th>
                     <th scope="col" className="px-3 py-2.5 text-right font-medium">Em exec.</th>
+                    <th scope="col" className="px-3 py-2.5 text-right font-medium">Em revisão</th>
                     <th scope="col" className="px-3 py-2.5 text-right font-medium">Concluído</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {tecnicosOrdenados.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-4 py-6 text-center text-xs text-text-tertiary">
+                      <td colSpan={5} className="px-4 py-6 text-center text-xs text-text-tertiary">
                         Nenhuma rota confirmada pra hoje.
                       </td>
                     </tr>
@@ -323,6 +342,7 @@ export default async function DashboardPage() {
                         <td className="px-4 py-2 text-text-primary">{nome}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{b.pendente}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{b.emExecucao}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{b.emRevisao}</td>
                         <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{b.concluido}</td>
                       </tr>
                     ))

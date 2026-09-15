@@ -22,6 +22,8 @@ const EVENTO_LABEL: Record<string, string> = {
   servico_concluido_tecnico: "Concluído pelo técnico",
   // Fluxo leve de revisão (0047, 14/09/2026) — chamado `revisao_tecnica`
   // fechado com 1 foto + descrição, sem passar por `em_execucao`.
+  // 0053/0054 (15/09/2026): ganhou uma etapa "começar a revisar" própria.
+  servico_revisao_iniciada: "Revisão iniciada",
   servico_revisado: "Revisado pelo técnico",
   servico_reagendado: "Reagendado",
   servico_reexecucao_programada: "Nova execução programada",

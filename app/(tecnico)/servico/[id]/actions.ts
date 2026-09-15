@@ -114,6 +114,24 @@ export async function iniciarServico(_prev: ActionState, formData: FormData): Pr
   return { error: null };
 }
 
+// Migration 0053/0054 (15/09/2026): contraparte leve de `iniciarServico` —
+// "Começar a revisar" um chamado `revisao_tecnica`, sem foto nenhuma (a
+// filosofia do fluxo leve é mínima; a única foto entra na conclusão, via
+// `revisarServico` abaixo). Só muda o status pra `em_revisao`, pra
+// distinguir de `em_execucao` (conclusão dos dois é diferente).
+export async function iniciarRevisao(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const servicoId = String(formData.get("servicoId") ?? "");
+  if (!servicoId) return { error: "Serviço inválido." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_iniciar_revisao", { p_servico_id: servicoId });
+  if (error) return { error: traduzErro(error) };
+
+  revalidatePath(`/servico/${servicoId}`);
+  revalidatePath("/servicos-do-dia");
+  return { error: null };
+}
+
 // Upload das evidências + fn_concluir_servico numa ação só: o técnico
 // preenche observação, anexa a OS (obrigatória) e a foto de depois
 // (obrigatória de novo desde a 0023 — câmera + geolocalização), e um único
