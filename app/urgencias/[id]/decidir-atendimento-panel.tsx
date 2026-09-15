@@ -179,9 +179,11 @@ export function DecidirAtendimentoPanel({
                       className={`rounded-[var(--radius-sm)] border border-border px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-accent hover:text-accent ${FOCUS_RING}`}
                     >
                       Otimizar para a rota atual — melhor encaixe{" "}
-                      {o.otimizada.antesCodigo
-                        ? `entre ${o.otimizada.aposCodigo} e ${o.otimizada.antesCodigo}`
-                        : `depois de ${o.otimizada.aposCodigo}`}{" "}
+                      {o.otimizada.aposCodigo === null
+                        ? `a partir de onde o técnico está agora, antes de ${o.otimizada.antesCodigo}`
+                        : o.otimizada.antesCodigo
+                          ? `entre ${o.otimizada.aposCodigo} e ${o.otimizada.antesCodigo}`
+                          : `depois de ${o.otimizada.aposCodigo}`}{" "}
                       — {formatarDistancia(o.otimizada.impacto.distanciaKm, o.otimizada.impacto.duracaoMin)}
                     </button>
                   )}

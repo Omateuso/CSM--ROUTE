@@ -35,12 +35,19 @@ export type ParadaRota = {
 export type DisponibilidadeTecnico = { ocupadoAgora: boolean; restantesHoje: number };
 
 // Localização ESTIMADA (migration 0057, 15/09/2026 — nunca GPS ao vivo, ver
-// o cabeçalho daquela migration) — informativa, não substitui a matemática
-// de inserção/fim de rota (que continua ancorada na PRÓXIMA/ÚLTIMA parada
-// da rota planejada, porque é dali que o técnico vai continuar dirigindo o
-// dia dele). Só dá ao gerente um sinal extra de "onde essa pessoa está
-// provavelmente agora", pra comparar contra a rota — nunca decide sozinho
-// (mesma regra de sempre: recomendação nunca impede escolha manual).
+// o cabeçalho daquela migration). `insercao`/`fimDeRota` continuam ancoradas
+// na PRÓXIMA/ÚLTIMA parada da rota planejada (modelam o desvio marginal de
+// um trecho já definido — não precisam saber onde o técnico está agora).
+// `otimizada` (abaixo) É alimentada por ela: sem essa leitura o módulo não
+// tem como saber a posição física atual, então só compara gaps ENTRE
+// paradas planejadas; com ela, ganha um candidato a mais — "ir direto pra
+// urgência a partir de onde o técnico está agora, antes de seguir pra
+// próxima parada" — que é justamente "com base na última interação/posição
+// conhecida do técnico", não só a ordem planejada da rota (16/09/2026,
+// fechando a lacuna que tinha ficado registrada como próximo passo).
+// Nunca decide sozinho (mesma regra de sempre: recomendação nunca impede
+// escolha manual) — a idade da leitura viaja junto (`atualizadoEm`) pro
+// gerente julgar se ainda vale confiar nela.
 export type LocalizacaoEstimada = PontoGeografico & { atualizadoEm: string };
 
 export type RotaAtivaHoje = {
@@ -62,14 +69,19 @@ export type ImpactoDistancia = { distanciaKm: number; duracaoMin: number | null 
 // "Otimizar para a rota atual" (pedido do usuário, 15/09/2026) — em vez de
 // comparar só duas posições fixas (logo depois da próxima parada, ou no
 // fim), testa TODOS os intervalos entre as paradas ainda não feitas e
-// recomenda o de menor custo (cheapest insertion). Não considera "antes da
-// primeira parada pendente" como candidato separado — isso exigiria saber
-// onde o técnico está agora fisicamente (que este módulo não tem, por
-// desenho — ver `DisponibilidadeTecnico`), e já é essencialmente o que
-// `insercao` (acima) já compara.
+// recomenda o de menor custo (cheapest insertion). Quando há uma leitura de
+// localização estimada do técnico responsável (0057), também testa "antes
+// da primeira parada pendente" — a partir de onde ele está agora, não de
+// uma RT planejada (16/09/2026, ver comentário de `LocalizacaoEstimada`
+// acima). Sem essa leitura, cai pro comportamento anterior (só os gaps
+// entre paradas planejadas).
 export type MelhorInsercao = {
-  /** Código da RT logo ANTES do ponto de inserção recomendado. */
-  aposCodigo: string;
+  /**
+   * Código da RT logo ANTES do ponto de inserção recomendado.
+   * `null` = a partir de onde o técnico está agora (localização estimada),
+   * não de uma parada da rota — só acontece quando essa leitura existe.
+   */
+  aposCodigo: string | null;
   /** Código da RT logo DEPOIS — null = recomendação é inserir no fim da rota. */
   antesCodigo: string | null;
   impacto: ImpactoDistancia;
@@ -132,12 +144,16 @@ function somarImpacto(a: ImpactoDistancia, b: ImpactoDistancia, c: ImpactoDistan
 async function calcularMelhorInsercao(
   urgenciaRt: PontoGeografico,
   paradasRestantes: ParadaRota[],
+  origemAtual: LocalizacaoEstimada | null,
 ): Promise<MelhorInsercao | null> {
   const n = paradasRestantes.length;
   if (n === 0) return null;
 
-  const pontos: PontoGeografico[] = [...paradasRestantes, urgenciaRt];
   const idxUrgencia = n;
+  const idxOrigemAtual = origemAtual ? n + 1 : -1;
+  const pontos: PontoGeografico[] = origemAtual
+    ? [...paradasRestantes, urgenciaRt, origemAtual]
+    : [...paradasRestantes, urgenciaRt];
 
   let matriz: ElementoMatrizRota[][] | null;
   try {
@@ -162,7 +178,10 @@ async function calcularMelhorInsercao(
   // Candidatos: um gap por parada restante — "depois de paradasRestantes[g]"
   // (e "antes de paradasRestantes[g+1]", exceto no último gap, que é "no
   // fim da rota"). n candidatos no total, todos dentro da MESMA matriz já
-  // calculada acima.
+  // calculada acima. Mais um candidato extra (g = -1, sentinel), só quando
+  // há localização estimada do técnico responsável: "antes da primeira
+  // parada pendente", medido a partir de onde ele está agora — é o único
+  // candidato que reflete posição REAL, não planejada.
   let melhorG = 0;
   let melhorCusto = Infinity;
   for (let g = 0; g < n; g++) {
@@ -171,6 +190,22 @@ async function calcularMelhorInsercao(
       melhorCusto = c;
       melhorG = g;
     }
+  }
+  if (origemAtual) {
+    const c = custo(idxOrigemAtual, idxUrgencia) + custo(idxUrgencia, 0) - custo(idxOrigemAtual, 0);
+    if (c < melhorCusto) {
+      melhorCusto = c;
+      melhorG = -1;
+    }
+  }
+
+  if (melhorG === -1) {
+    const impacto = somarImpacto(
+      impactoEntre(idxOrigemAtual, idxUrgencia),
+      impactoEntre(idxUrgencia, 0),
+      impactoEntre(idxOrigemAtual, 0),
+    );
+    return { aposCodigo: null, antesCodigo: paradasRestantes[0].codigo, impacto };
   }
 
   const impactoAntes = impactoEntre(melhorG, idxUrgencia);
@@ -226,7 +261,7 @@ export async function calcularImpactoUrgencia(
     const disponibilidade = referencia.tecnicoId ? disponibilidadePorTecnico.get(referencia.tecnicoId) : undefined;
     const localizacao = referencia.tecnicoId ? localizacaoPorTecnico.get(referencia.tecnicoId) : undefined;
     const paradasRestantes = paradas.filter((p) => !p.feita);
-    const otimizada = await calcularMelhorInsercao(urgenciaRt, paradasRestantes);
+    const otimizada = await calcularMelhorInsercao(urgenciaRt, paradasRestantes, localizacao ?? null);
 
     resultado.push({
       rotaId: rota.rotaId,
