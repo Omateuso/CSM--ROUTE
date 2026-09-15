@@ -1,15 +1,28 @@
 import sharp from "sharp";
 import type { SupabaseServerClient } from "@/lib/relatorio/types";
+import { CORES } from "./csm";
 
 // ~292 serviços × até 3 imagens ≈ 900 imagens num documento. O `docx` embute o
 // buffer que você entrega, sem redução — então redimensionar antes é
-// requisito, não otimização (seção 4 do prompt). `fit: "cover"` deixa toda
-// imagem EXATAMENTE do tamanho do quadro → páginas de serviço uniformes,
-// independente de a foto ter vindo deitada ou em pé.
+// requisito, não otimização (seção 4 do prompt).
+//
+// `fit: "contain"` (15/09/2026, substitui "cover"): sem padrão de como o
+// técnico fotografa (retrato, paisagem, de perto, de longe...), recortar pra
+// preencher o quadro cortava conteúdo de verdade — a foto da OS assinada
+// aparecia com metade dos campos fora do enquadramento. `contain` encolhe a
+// imagem inteira pra caber dentro do quadro, sem cortar nada, preenchendo a
+// sobra com um fundo neutro (mesmo cinza claro do quadro vazio) em vez de
+// deixar transparência.
 
 export type ImagemQuadro = { data: Buffer; largura: number; altura: number; tipo: "jpg" | "png" };
 
 const QUALIDADE_JPEG = 72;
+
+function hexParaRgb(hex: string): { r: number; g: number; b: number } {
+  return { r: parseInt(hex.slice(0, 2), 16), g: parseInt(hex.slice(2, 4), 16), b: parseInt(hex.slice(4, 6), 16) };
+}
+
+const FUNDO_QUADRO = { ...hexParaRgb(CORES.quadroFundo), alpha: 1 };
 
 export async function baixarDoStorage(
   supabase: SupabaseServerClient,
@@ -36,7 +49,8 @@ export async function evidenciaParaQuadro(
   try {
     const data = await sharp(entrada)
       .rotate() // aplica a orientação do EXIF antes de redimensionar
-      .resize(quadro.largura, quadro.altura, { fit: "cover", position: "centre" })
+      .resize(quadro.largura, quadro.altura, { fit: "contain", background: FUNDO_QUADRO })
+      .flatten({ background: FUNDO_QUADRO }) // funde eventual alpha do PNG de origem no fundo, não em preto
       .jpeg({ quality: QUALIDADE_JPEG })
       .toBuffer();
     return { data, largura: quadro.largura, altura: quadro.altura, tipo: "jpg" };

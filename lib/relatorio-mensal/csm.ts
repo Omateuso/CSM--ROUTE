@@ -25,6 +25,10 @@ export const CSM_INSTITUCIONAL = {
 export const CLIENTE = {
   nome: "IGEDES",
   descricao: "Residências Terapêuticas · SRT",
+  // Razão social do cliente (fornecida pelo usuário, 15/09/2026) — é o único
+  // dado de identificação do cliente que aparece na folha de rosto; CNPJ e
+  // contrato/NF foram retirados dali a pedido dele.
+  razaoSocial: "INSTITUTO DE GESTÃO E DESENVOLVIMENTO",
 } as const;
 
 // Paleta extraída do canvas "Relatório Mensal CSM"
@@ -39,6 +43,10 @@ export const CORES = {
   cinzaMedio: "8E9095",
   cinzaTexto: "6B6B6B",
   cinzaRotulo: "8E9095",
+  // Cabeçalho/rodapé de página (15/09/2026): cinzaTexto/cinzaMedio liam claro
+  // demais impressos — mais escuro que os dois, mas de propósito longe do
+  // preto (grafite é "quase preto" e foi descartado pro mesmo texto).
+  cinzaCabecalho: "595959",
   quadroFundo: "F5F6F7",
   branco: "FFFFFF",
 } as const;

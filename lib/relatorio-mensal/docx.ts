@@ -272,7 +272,7 @@ function cabecalhoInterno(logo: ImagemQuadro, direita: string): Header {
                 children: [
                   new Paragraph({
                     alignment: AlignmentType.RIGHT,
-                    children: [new TextRun({ text: direita.toUpperCase(), bold: true, size: 16, color: CORES.cinzaTexto, characterSpacing: 24 })],
+                    children: [new TextRun({ text: direita.toUpperCase(), bold: true, size: 16, color: CORES.cinzaCabecalho, characterSpacing: 24 })],
                   }),
                 ],
               }),
@@ -286,8 +286,8 @@ function cabecalhoInterno(logo: ImagemQuadro, direita: string): Header {
 
 function rodapeInterno(direita: string, comPagina: boolean): Footer {
   const runDireita = comPagina
-    ? [new TextRun({ text: "Página ", size: 15, color: CORES.cinzaMedio, characterSpacing: 16 }), new TextRun({ children: [PageNumber.CURRENT], size: 15, color: CORES.cinzaMedio })]
-    : [new TextRun({ text: direita.toUpperCase(), size: 15, color: CORES.cinzaMedio, characterSpacing: 16 })];
+    ? [new TextRun({ text: "Página ", size: 15, color: CORES.cinzaCabecalho, characterSpacing: 16 }), new TextRun({ children: [PageNumber.CURRENT], size: 15, color: CORES.cinzaCabecalho })]
+    : [new TextRun({ text: direita.toUpperCase(), size: 15, color: CORES.cinzaCabecalho, characterSpacing: 16 })];
 
   return new Footer({
     children: [
@@ -302,7 +302,7 @@ function rodapeInterno(direita: string, comPagina: boolean): Footer {
                 margins: { top: 80, bottom: 0, left: 0, right: 0 },
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: CSM_INSTITUCIONAL.nomeFantasia.toUpperCase(), size: 15, color: CORES.cinzaMedio, characterSpacing: 16 })],
+                    children: [new TextRun({ text: CSM_INSTITUCIONAL.nomeFantasia.toUpperCase(), size: 15, color: CORES.cinzaCabecalho, characterSpacing: 16 })],
                   }),
                 ],
               }),
@@ -335,8 +335,8 @@ function celulaStat(numero: string, rotulo: string): TableCell {
   });
 }
 
-function secaoFolhaDeRosto(args: { logo: ImagemQuadro; mesRotulo: string; intervaloTexto: string; nf: string; resumo: ResumoPeriodo }) {
-  const { logo, mesRotulo, intervaloTexto, nf, resumo } = args;
+function secaoFolhaDeRosto(args: { logo: ImagemQuadro; mesRotulo: string; intervaloTexto: string; resumo: ResumoPeriodo }) {
+  const { logo, mesRotulo, intervaloTexto, resumo } = args;
 
   const TOP_CAPS = 5;
   const topCaps = resumo.porCaps.slice(0, TOP_CAPS);
@@ -365,9 +365,7 @@ function secaoFolhaDeRosto(args: { logo: ImagemQuadro; mesRotulo: string; interv
     children: [
       new Paragraph({ spacing: { before: 400, after: 80 }, children: [new TextRun({ text: "CLIENTE", bold: true, size: 18, color: CORES.cinzaMedio, characterSpacing: 40 })] }),
       new Paragraph({ spacing: { after: 160 }, children: [new TextRun({ text: CLIENTE.nome, bold: true, size: 52, color: CORES.grafite })] }),
-      valor(CSM_INSTITUCIONAL.razaoSocial, { size: 22 }),
-      valor(`CNPJ ${CSM_INSTITUCIONAL.cnpj}`, { size: 22 }),
-      valor(`Contrato ${CSM_INSTITUCIONAL.contrato} · Nota fiscal ${nf || "[N° DA NF]"}`, { size: 22 }),
+      valor(CLIENTE.razaoSocial, { size: 22 }),
       valor(`Período: ${intervaloTexto}`, { size: 22 }),
 
       new Paragraph({ spacing: { before: 520, after: 60 }, children: [new TextRun({ text: "O PERÍODO EM NÚMEROS", bold: true, size: 18, color: CORES.cinzaMedio, characterSpacing: 40 })] }),
@@ -514,7 +512,7 @@ export async function montarDocxRelatorio(
     description: `Serviços de manutenção predial validados · ${intervaloTexto}`,
     sections: [
       secaoCapa({ mesRotulo, intervaloTexto, nf, logo: logoCapa, fotoCapa }),
-      secaoFolhaDeRosto({ logo: logoInterno, mesRotulo, intervaloTexto, nf, resumo }),
+      secaoFolhaDeRosto({ logo: logoInterno, mesRotulo, intervaloTexto, resumo }),
       ...comImagens.map((s) => secaoServico(logoInterno, mesRotulo, s)),
     ],
   });
