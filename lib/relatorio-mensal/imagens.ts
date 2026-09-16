@@ -24,28 +24,28 @@ function hexParaRgb(hex: string): { r: number; g: number; b: number } {
 
 const FUNDO_QUADRO = { ...hexParaRgb(CORES.quadroFundo), alpha: 1 };
 
+/** Baixa um arquivo de um bucket privado do Storage — usado por qualquer módulo de relatório. */
 export async function baixarDoStorage(
   supabase: SupabaseServerClient,
+  bucket: string,
   storagePath: string,
 ): Promise<Buffer | null> {
-  const { data, error } = await supabase.storage.from("evidencias").download(storagePath);
+  const { data, error } = await supabase.storage.from(bucket).download(storagePath);
   if (error || !data) return null;
   return Buffer.from(await data.arrayBuffer());
 }
 
 /**
- * Baixa a evidência e ajusta pra preencher o quadro (cover). Devolve `null`
- * quando o arquivo não é imagem rasterizável (ex.: OS anexada em PDF) ou está
- * corrompido — quem chama desenha um quadro de fallback no lugar.
+ * Ajusta um buffer já em mãos pra caber inteiro dentro do quadro (sem
+ * cortar), preenchendo a sobra com o fundo neutro. Bucket-agnóstico — quem
+ * chama já baixou o arquivo de onde for (`baixarDoStorage` ou outro).
+ * Devolve `null` quando o buffer não é imagem rasterizável (ex.: PDF) ou
+ * está corrompido — quem chama desenha um quadro de fallback no lugar.
  */
-export async function evidenciaParaQuadro(
-  supabase: SupabaseServerClient,
-  storagePath: string | null,
+export async function bufferParaQuadro(
+  entrada: Buffer,
   quadro: { largura: number; altura: number },
 ): Promise<ImagemQuadro | null> {
-  if (!storagePath) return null;
-  const entrada = await baixarDoStorage(supabase, storagePath);
-  if (!entrada) return null;
   try {
     const data = await sharp(entrada)
       .rotate() // aplica a orientação do EXIF antes de redimensionar
@@ -57,6 +57,18 @@ export async function evidenciaParaQuadro(
   } catch {
     return null;
   }
+}
+
+/** Baixa a evidência (bucket `evidencias`) e ajusta pra caber no quadro — ver `bufferParaQuadro`. */
+export async function evidenciaParaQuadro(
+  supabase: SupabaseServerClient,
+  storagePath: string | null,
+  quadro: { largura: number; altura: number },
+): Promise<ImagemQuadro | null> {
+  if (!storagePath) return null;
+  const entrada = await baixarDoStorage(supabase, "evidencias", storagePath);
+  if (!entrada) return null;
+  return bufferParaQuadro(entrada, quadro);
 }
 
 /** Foto decorativa da capa: recorta em círculo (P&B), como no canvas de design. */
