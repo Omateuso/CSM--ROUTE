@@ -1,0 +1,133 @@
+              RESIDÊNCIAS TERAPÊUTICAS
+
+COD. UNIDADE  NOME UNIDADE                                          ENDEREÇO                    COD POSTAL
+     11788          SRT 01  RUA CLAUDIO DA COSTA, 24 - IRAJÁ                                     21235-450
+     11680          SRT 02  RUA PERNAMBUCO Nº 635- CASA 08 - ENGENHO DE DENTRO                   20730-030
+     11681          SRT 03  RUA PERNAMBUCO, 780 AP. 602 - ENGENHO DE DENTRO                      20730-030
+     11682          SRT 04  RUA CATULO CEARENSE, 04 APTO 305 - ENGENHO DE DENTRO                 20730-320
+     11683          SRT 05  RUA ADOLFO BERGAMINI, 302 - ENGENHO DE DENTRO                        20730-000
+     11684          SRT 06  RUA AQUIDABÃ, 842 AP.411- LINS                                       20720-295
+     11685          SRT 07  RUA ADOLFO BERGAMINI, 331 AP. 102 - ENGENHO DE DENTRO                20730-000
+     11686          SRT 08  RUA ENGENHEIRO EMILIO BAUMGART, 622                                  21610-240
+     11687          SRT 09  RUA SANTA MARIANA, 291 - HIGIENÓPOLIS                                21061-150
+     11688          SRT 10  RUA THOMPSON FLORES, 96 CB 01 - MÉIER                                20710-090
+     11689          SRT 11  RUA MONTEVIDEU, 1140 CASA 01 - PENHA                                 21020-290
+     11690          SRT 12  RUA MAGALHÃES CORREIA 75 - HIGIENÓPOLIS                              21051-510
+     11691          SRT 13  TRAVESSA MARIETA RÉIS 52 - PILARES                                   20755-070
+     11692          SRT 14  RUA DOUTOR OLINTO DE MAGALHÃES, 31 - APTO 101 - BL. C - VIDIGAL.     22450-250
+     11693          SRT 15  RUA CAMBAÚBA, 1290 APTO 103 - JARDIM GUANABARA                       21940-001
+     11694          SRT 16  RUA SOUSA FRANCO 491 AP 202 VILA ISABEL                              20551-120
+     11695          SRT 17  RUA MAESTRO HENRIQUE VOGLER, 141 CS 2 - BRÁS DE PINA                 21235-680
+     11696          SRT 18  RUA CAPINTUBA Nº 206 - VAZ LOBO                                      21361-210
+     11697          SRT 19  RUA VISCONDE DE CABO FRIO 20 AP 101 TIJUCA                           20510-160
+     11698          SRT 20  RUA MAJOR REGO, 83 - OLARIA                                          21073-440
+     11700          SRT 21  RUA ROBERTO DOYLE MAIA 51 - BANGU                                    21830-070
+     11699          SRT 22  RUA DO NÍQUEL Nº 359 - CURICICA                                      22710-055
+     11701          SRT 23  RUA MANOEL RODRIGUES DE MOURA 141- BANGU                             21830-720
+     11702          SRT 24  RUA MIGUEL FERNANDES, 437 - CACHAMBI                                 20780-060
+     11703          SRT 25  ESTRADA DO TINGUI Nº 1951 - CAMPO GRANDE                             23067-551
+     11704          SRT 26  RUA MOISES DE OLIVEIRA Nº 175 - SANTA CRUZ                           23550-285
+     11705          SRT 27  RUA ITUBIRDES ESTEVES Nº 49 - CAMPO GRANDE                           23045-375
+     11706          SRT 28  RUA ABRAM LUSTMAM Nº 350 COND. GRAMADO - TAQUARA                     22715-550
+     11707          SRT 29  RUA APIACÁS, 294/201 FUNDOS - JACAREPAGUÁ                            22730-190
+     11708          SRT 30  PRAÇA DANIEL LAMES 34 - CAMPO GRANDE                                 23081-050
+     11709          SRT 31  RUA SÃO TEODÓSIO, 153 - INHOAIBA                                     23062-180
+     11710          SRT 32  RUA LATIFE LUVIZARO 359 - MARECHAL HERMES                            21555-550
+     11711          SRT 33  RUA ATITUBA, 101 FUNDOS AP. 102 - TAQUARA                            22730-170
+     11712          SRT 34  RUA ALZIRA VALDETARO SAMPAIO 105 - SAMPAIO                           20950-070
+     11713          SRT 35  RUA CHAPOT PREVOST, 364 - FREGUESIA/ ILHA DO GOVERNADOR              21910-030
+     11714          SRT 36  RUA FERNANDA 840 - SANTA CRUZ                                        23520-132
+     11715          SRT 37  RUA COXITO GRANADO Nº 40 - CAMPO GRANDE                              23045-380
+     11716          SRT 38  ESTR. OUTEIRO SANTO, 509 CASA 36 - JACAREPAGUÁ                       22713-169
+     11717          SRT 39  RUA DIAS DA CRUZ 174 AP 302 - MEIER                                  20720-010
+     11718          SRT 40  RUA GRALHA DO CAMPO, 48 TÉRREO AP. 101 - TAQUARA                     22713-740
+     11719          SRT 41  RUA GRALHA DO CAMPO, 48 SOBRADO 102 - TAQUARA                        22713-740
+     11720          SRT 42  RUA JIÇARA Nº 201 - CAMPO GRANDE                                     23045-030
+     11721          SRT 43  EST. DO TINDIBA, 1493 APTO 601 BLOCO 01- TAQUARA.                    22740-362
+     11722          SRT 44  RUA HAIA 225 - ILHA DO GOVERNADOR                                    21920-180
+     11723          SRT 45  RUA CONSELHEIRO FERRAZ 112 - LINS DE VASCONCELOS                     20710-350
+     11724          SRT 46  RUA SÃO POLICARPO 36- TAQUARA                                        22775-320
+     11725          SRT 47  RUA PICO DA TIJUCA 115 - TAQUARA                                     22715-380
+     11726          SRT 48  RUA MENEZES DE ATAÍDE 62 - SANTA CRUZ                                23520-005
+     11727          SRT 49  ESTR. DO TINDIBA, 891 AP. 103 BL 2 - TAQUARA                         22740-362
+     11728          SRT 50  AV. PROF. MANOEL DE ABREU 196 - MARACANÃ                             20550-170
+     11729          SRT 51  LADEIRA BELA VISTA, 3 - TAQUARA                                      22713-572
+     11730          SRT 52  AV. SAMPAIO CORRÊA, 39 CASA 01 COND. STELA DO PATROCÍNIO - TAQUARA   22713-560
+     11731          SRT 53  AV. SAMPAIO CORRÊA, 39 CASA 02 COND. STELA DO PATROCÍNIO - TAQUARA   22713-560
+     11732          SRT 54  AV. SAMPAIO CORRÊA, 39 CASA 03 COND. STELA DO PATROCÍNIO - TAQUARA   22713-560
+     11733          SRT 55  AV. SAMPAIO CORRÊA, 39 CASA 04 COND. STELA DO PATROCÍNIO - TAQUARA   22713-560
+     11734          SRT 56  AV. SAMPAIO CORRÊA, 39 CASA 05 COND. STELA DO PATROCÍNIO - TAQUARA   22713-560
+11735  SRT 57  AV. SAMPAIO CORRÊA, 39 CASA 06 COND. STELA DO PATROCÍNIO - TAQUARA      22713-560
+11736  SRT 58  AV. SAMPAIO CORRÊA, 39 CASA 07 COND. STELA DO PATROCÍNIO - TAQUARA      22713-560
+11737  SRT 59  AV. SAMPAIO CORRÊA, 39 CASA 08 COND. STELA DO PATROCÍNIO - TAQUARA      22713-560
+11738  SRT 60  AV. SAMPAIO CORRÊA, 39 CASA 09 COND. STELA DO PATROCÍNIO - TAQUARA      22713-560
+11739  SRT 61  AV. SAMPAIO CORRÊA, 39 CASA 10 COND. STELA DO PATROCÍNIO - TAQUARA      22713-560
+11740  SRT 62  RUA DA FEIRA 926 - BANGU                                                21820-030
+11741  SRT 63  RUA PROJETADA 04 - LOTE 01 - QUADRA 17 - BLOCO 01 - AP. 101 E 102 - PA  20972-480
+11742  SRT 64  RUA PROJETADA 04 - LOTE 01 - QUADRA 17 - BLOCO 01 - AP. 103 - PAL 4801  20972-480
+11743  SRT 65  RUA PROJETADA 04 - LOTE 01 - QUADRA 17 - BLOCO 01 - AP. 104 - PAL 4801  20972-480
+11744  SRT 66  RUA PROJETADA 04 - LOTE 01 - QUADRA 17 - BLOCO 01 - AP. 105 - PAL 4801  20972-480
+11745  SRT 67  RUA HELENO DE FREITAS, 95, CASA 102 - ILHA DO GOVERNADOR                21920-385
+11746  SRT 68  RUA GENERAL AURELIO VEIERA 120 TURIAÇU                                  21351-250
+11747  SRT 69  RUA HUMAITÁ, 102 - CASA 07 - HUMAITÁ                                    22261-970
+11748  SRT 70  RUA FIRMINO GAMELEIRA, 634 - OLARIA                                     21021-450
+11749  SRT 71  RUA CANTILDA MACIEL, 53 - ABOLIÇÃO                                      20755-190
+11750  SRT 72  RUA ADAUTO BOTELHO 12 - JACAREPAGUÁ                                     22713-550
+11751  SRT 73  RUA JOAQUIM SOARES, 44 - PIEDADE                                        20740-510
+11752  SRT 74  RUA FREI BENTO, N 232 - OSWALDO CRUZ                                    21550-220
+11753  SRT 75  RUA DESEMBARGADOR MILTON BARCELOS, 78 - CAMPO GRANDE                    23040-070
+11754  SRT 76  RUA DOM PEDRO I 450 - SANTA CRUZ                                        23515-010
+11755  SRT 77  RUA PATRÍCIA PAGU GALVÃO S/N - BL.01 AP. 408 - JACAREPAGUÁ              22713-535
+11756  SRT 78  RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 507 - JACAREPAGUÁ              22713-535
+11757  SRT 79  RUA PATRÍCIA PAGU GALVÃO S/N - BL.01 AP. 105 - JACAREPAGUÁ              22713-535
+11758  SRT 80  RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 403 - JACAREPAGUÁ              22713-535
+11759  SRT 81  RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 404 - JACAREPAGUÁ              22713-535
+11760  SRT 82  RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 405 - JACAREPAGUÁ              22713-535
+11761  SRT 83  RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 408 - JACAREPAGUÁ              22713-535
+11762  SRT 84  RUA HUMAITA 104 AP. 704 - HUMAITÁ                                       22261-970
+11763  SRT 85  RUA RANGEL PESTANA, 422 AP 101 - BANGU                                  21820-040
+11764  SRT 86  RUA MONTEVIDEU, 1140 CASA 02 - PENHA                                    21020-290
+11765  SRT 87  RUA FABIO LUZ, 386 (CASA 4) MEIER                                       20720-350
+11766  SRT 88  RUA ICURANA Nº 2 - COSMOS                                               23059-340
+11767  SRT 89  RUA PADRE JOSINO TAVARES, 547 - BANGU                                   21810-220
+11768  SRT 90  RUA MAGDA, 198 - HIGIENÓPOLIS                                           21061-030
+11769  SRT 91  RUA CAPITÃO VERDIER 191- BANGU                                          21862-180
+11770  SRT 92  RUA FELISBELO FREIRE,159 - RAMOS                                        21031-250
+11811  SRT 93  RUA LUIZ DE BRITO, 50 - MARIA DA GRAÇA                                  20785-360
+11772  SRT 94  RUA DOUTOR OLINTO DE MAGALHÃES 31 APTO 201 BL A - VIDIGAL               22450-250
+11773  SRT 95  RUA ARAUJO LIMA 76 VILA ISABEL                                          20541-050
+11774  SRT 96  RUA MAESTRO HENRIQUE VOGLER, 141 CS 1 - BRÁS DE PINA                    21235-680
+11775  SRT 97  RUA MONTE PASCOAL, 18 - CACHAMBI                                        20780-270
+11812  SRT 99  RUA DOMINGOS DE MAGALHÃES, 868 - MARIA DA GRAÇA                         20785-352
+
+11788  SRT 01          MUDANÇAS                                                        20520-060
+11682  SRT 04  ANTIGA - MOURA BRITO, 108 - TIJUCA                                      20730-390
+11690  SRT 12  ANTIGA - RUA ANA LEONIDIA, 351 AP.302 - ENGENHO DE DENTRO               20785-320
+11691  SRT 13  RUA LAVRAS, 65 - DEL CASTILHO                                           21032-025
+11692  SRT 14  ANTIGA - CARDOSO DE MORAIS, 373 - RAMOS                                 22451-520
+11693  SRT 15  ANTIGA - TRAVESSA SERVIDÃO - ROCINHA                                    20560-180
+11694  SRT 16  ANTIGA - RUA MARECHAL JOFRE, 187 - GRAJAÚ                               20520-050
+11695  SRT 17  ANTIGA - RUA CONDE DE BONFIM, 974 AP. 301- TIJUCA                       21236-060
+11697  SRT 19  ANTIGA - RUA PROFESSOR JOÃO MASSENA, 234 B - VISTA ALEGRE               20511-050
+11709  SRT 31  ANTIGA - AV. MARACANÃ, N° 1341 AP. 302 - MARACANÃ                       22710-074
+11710  SRT 32  ANTIGA - RUA CAÇU Nº 279 - TAQUARA                                      22730-170
+11714  SRT 36  ANTIGA - ATITUBA, 149 - TAQUARA                                         23570-180
+11717  SRT 39  ANTIGA - RICARDO KIRK, 8 - SANTA CRUZ                                   22713-372
+11722  SRT 44  ANTIGA - RODRIGUES CALDAS, 2135 - TAQUARA                               22713-372
+11723  SRT 45  ANTIGA - ESTR. RODRIGUES CALDAS, 2228 CASA 53 RUA A - TAQUARA           22713-372
+11724  SRT 46  ANTIGA - ESTRADA RODRIGUES CALDAS 2228 CASA 12                          22713-372
+11725  SRT 47  ANTIGA - ESTR. RODRIGUES CALDAS, 2135 RUA 4 CASA 33 B - TAQUARA         22713-372
+11746  SRT 68  ANTIGA - ESTRADA RODRIGUES CALDAS 2135 RUA 4 CASA 33 A - TAQUARA        21351-210
+11749  SRT 71  ANTIGA - ESTRADA DA PORTELA, 713 - TURIAÇU                              20770-130
+               ANTIGA - RUA PIAUI, 273 - TODOS OS SANTOS
+11753  SRT 75  ANTIGA - PETER PAN, 06 - CAMPO GRANDE                     23045-420
+11763  SRT 85  ANTIGA - DR. DOUTOR LESSA 53B - REALENGO                  21710-190
+11765  SRT 87  ANTIGA - ADOLFO BERGAMINI, 249 - ENGENHO DE DENTRO        20730-000
+11767  SRT 89  ANTIGA - RUA BARAO DE PIRAQUARA 375, PADRE MIGUEL.        21721-301
+11773  SRT 95  ANTIGA - AV.DOM HÉLDER CÂMARA 2204 - MARIA DA GRAÇA       21050-455
+11774  SRT 96  ANTIGA - RUA PROFESSOR JOÃO MASSENA, 234A - VISTA ALEGRE  21236-060
+11775  SRT 97  ANTIGA - BARROS BARRETO, 43 - BONSUCESSO                  21032-140
+
+Nota: CEPs em laranja foram confirmados por correspondência única de logradouro (sem bairro exato na base) ou por pesquisa manual complementar, pois o
+endereço não retornou correspondência automática direta na base dos Correios (ViaCEP).
+

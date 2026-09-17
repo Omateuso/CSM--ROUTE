@@ -36,7 +36,7 @@ export default async function ServicosDoDiaPage() {
   const { data: servicosRaw, error: servicosError } = await supabase
     .from("servicos")
     .select(
-      "id, status, categoria, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
+      "id, status, categoria, rota_id, rt_id, chamado_id, rotas!inner(data), chamados(assunto, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude, logradouro, numero, bairro, cidade, uf, cep)",
     )
     // Sem `.eq("tecnico_id", user.id)` de propósito (migration 0050, pedido
     // do usuário 14/09/2026): a RLS de `servicos_select` já resolve isso via
@@ -107,6 +107,14 @@ export default async function ServicosDoDiaPage() {
         rtEndereco: rt?.endereco as string,
         rtLat: rt?.latitude == null ? null : Number(rt.latitude),
         rtLng: rt?.longitude == null ? null : Number(rt.longitude),
+        // Endereço estruturado: é o que vai no link de navegação (o Google
+        // resolve o texto e acha a porta certa) — coordenada é só fallback.
+        rtLogradouro: (rt?.logradouro as string | null) ?? null,
+        rtNumero: (rt?.numero as string | null) ?? null,
+        rtBairro: (rt?.bairro as string | null) ?? null,
+        rtCidade: (rt?.cidade as string | null) ?? null,
+        rtUf: (rt?.uf as string | null) ?? null,
+        rtCep: (rt?.cep as string | null) ?? null,
         assunto: chamado?.assunto as string,
         protocolo: (chamado?.tomticket_id as string | null) ?? null,
         criadoEm: chamado?.criado_em as string,

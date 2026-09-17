@@ -9,7 +9,12 @@ import { StatusServicoBadge, type StatusServico } from "../status-servico-badge"
 import { MapaDoDia } from "./mapa-do-dia";
 import { BotaoRotaOtimizada } from "./botao-rota-otimizada";
 import { BotaoAtualizarLocalizacao } from "./botao-atualizar-localizacao";
-import { linkGoogleMapsDestino, linkGoogleMapsRota, paradasNavegaveis } from "@/lib/navegacao";
+import {
+  linkGoogleMapsDestino,
+  linkGoogleMapsRota,
+  paradasNavegaveis,
+  type EnderecoNavegacao,
+} from "@/lib/navegacao";
 
 // Com ano: sem ele, um chamado de 2025 e um de 2026 aparecem como "08/09" e
 // "12/11" e o técnico lê fora de ordem, sem ter como perceber.
@@ -31,6 +36,12 @@ export type ServicoItem = {
   rtEndereco: string;
   rtLat: number | null;
   rtLng: number | null;
+  rtLogradouro: string | null;
+  rtNumero: string | null;
+  rtBairro: string | null;
+  rtCidade: string | null;
+  rtUf: string | null;
+  rtCep: string | null;
   assunto: string;
   protocolo: string | null;
   criadoEm: string;
@@ -38,6 +49,23 @@ export type ServicoItem = {
   slaPrazo: string | null;
   chamadoStatus: "aberto" | "em_andamento" | "finalizado" | "cancelado";
 };
+
+// Endereço estruturado da RT no formato que lib/navegacao.ts consome — é o
+// que entra no link do Google Maps/Waze. A coordenada vai junto só como
+// fallback pra RT que ainda não tenha logradouro cadastrado.
+function enderecoDaRt(s: ServicoItem | undefined): EnderecoNavegacao {
+  return {
+    logradouro: s?.rtLogradouro ?? null,
+    numero: s?.rtNumero ?? null,
+    bairro: s?.rtBairro ?? null,
+    cidade: s?.rtCidade ?? null,
+    uf: s?.rtUf ?? null,
+    cep: s?.rtCep ?? null,
+    enderecoLivre: s?.rtEndereco ?? null,
+    lat: s?.rtLat ?? null,
+    lng: s?.rtLng ?? null,
+  };
+}
 
 // Barra de busca da tela do técnico (pedido do usuário, 10/09/2026) — filtra o
 // array plano por código/nome/endereço da RT, assunto ou protocolo e reagrupa.
@@ -77,12 +105,17 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
       }
       const rts = [...porRt.entries()];
       // Uma parada por RT, na ordem da rota — e não um ponto por chamado.
-      const paradas = paradasNavegaveis(
-        rts.map(([, doRt]) => ({ lat: doRt[0]?.rtLat ?? null, lng: doRt[0]?.rtLng ?? null })),
-      );
+      // Carrega o endereço inteiro: é ele que vai no link de navegação.
+      const paradas = paradasNavegaveis(rts.map(([, doRt]) => enderecoDaRt(doRt[0])));
       const paradasComCodigo = rts
-        .map(([codigo, doRt]) => ({ codigo, lat: doRt[0]?.rtLat ?? null, lng: doRt[0]?.rtLng ?? null }))
-        .filter((x): x is { codigo: string; lat: number; lng: number } => x.lat != null && x.lng != null);
+        .map(([codigo, doRt]) => {
+          const endereco = enderecoDaRt(doRt[0]);
+          return { codigo, lat: endereco.lat, lng: endereco.lng, endereco };
+        })
+        .filter(
+          (x): x is { codigo: string; lat: number; lng: number; endereco: EnderecoNavegacao } =>
+            x.lat != null && x.lng != null,
+        );
       return { dia, rts, navegacao: linkGoogleMapsRota(paradas), paradasComCodigo };
     });
   }, [filtrados]);
@@ -154,11 +187,7 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                       endereco={doRt[0]?.rtEndereco ?? ""}
                       quantidade={doRt.length}
                       paraRevisaoQuantidade={paraRevisao.length}
-                      urlNavegacao={
-                        doRt[0]?.rtLat != null && doRt[0]?.rtLng != null
-                          ? linkGoogleMapsDestino({ lat: doRt[0].rtLat, lng: doRt[0].rtLng })
-                          : null
-                      }
+                      urlNavegacao={doRt[0] ? linkGoogleMapsDestino(enderecoDaRt(doRt[0])) : null}
                     >
                       {(() => {
                         let numero = 0;

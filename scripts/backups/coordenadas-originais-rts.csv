@@ -1,0 +1,100 @@
+﻿codigo;latitude;longitude;endereco;bairro;origem
+"SRT 1";-22.835815;-43.323624;"Rua Claudio da Costa 24";"Irajá";inalterada
+"SRT 2";-22.898361;-43.300545;"Rua Pernambuco 635 - Casa 08";"Engenho de Dentro";inalterada
+"SRT 3";-22.898695;-43.299311;"Rua Pernambuco 780 - Apto 602";"Engenho de Dentro";inalterada
+"SRT 4";-22.907893;-43.297565;"Rua Catulo Cearense 04 - Apto 305";"Engenho de Dentro";inalterada
+"SRT 5";-22.900263;-43.296037;"Rua Adolfo Bergamini 302";"Engenho de Dentro";inalterada
+"SRT 6";-22.909086;-43.285623;"Rua Aquidabã 842 - Apto 411";"Lins";inalterada
+"SRT 7";-22.900263;-43.296037;"Rua Adolfo Bergamini 331 - Apto 102";"Engenho de Dentro";inalterada
+"SRT 8";-22.86199;-43.374055;"Rua Engenheiro Emílio Baumgart 622";"Marechal Hermes";inalterada
+"SRT 9";-22.869882;-43.264752;"Rua Santa Mariana 291";"Higienópolis";inalterada
+"SRT 10";-22.788242;-43.408588;"Rua Tompson Flores 96 - Casa 01";"Lins";historico (corrigida em 16/09)
+"SRT 11";-22.831719;-43.273078;"Rua Montevidéu 1140 - Casa 01";"Penha";inalterada
+"SRT 12";-22.882779;-43.270158;"Rua Lavras 65";"Del Castilho";historico (corrigida em 16/09)
+"SRT 13";-22.886615;-43.295581;"Travessa Marieta Réis 52";"Pilares";inalterada
+"SRT 14";-22.993792;-43.237982;"Rua Doutor Olinto de Magalhães 31 - Bloco A Apto 202";"Vidigal";inalterada
+"SRT 15";-22.815368;-43.206418;"Rua Cambaúba 1290 - Apto 103";"Jardim Guanabara";inalterada
+"SRT 16";-22.914267;-43.246319;"Rua Sousa Franco, 491 - ap 202 - Vila Isabel";"Vila Isabel";inalterada
+"SRT 17";-22.835381;-43.312745;"Rua Maestro Henrique Vogeler 141 - Casa 02";"Vista Alegre";inalterada
+"SRT 18";-22.853978;-43.323617;"Rua Capintuba 206";"Irajá";inalterada
+"SRT 19";-22.931354;-43.237832;"Rua Visconde de Cabo Frio, 20, Apto 101 - Tijuca";"Tijuca";inalterada
+"SRT 20";-22.853052;-43.270721;"Rua Major Rego 83";"Olaria";inalterada
+"SRT 21";-22.877858;-43.477225;"Rua Roberto Doyle Maia 51";"Bangu";inalterada
+"SRT 22";-22.940618;-43.382478;"Rua do Níquel 359";"Curicica";inalterada
+"SRT 23";-22.881711;-43.480311;"Rua Manoel Rodrigues de Moura 141";"Bangu";inalterada
+"SRT 24";-22.898212;-43.270169;"Rua Miguel Fernandes 437";"Méier";inalterada
+"SRT 25";-22.875618;-43.602876;"Estrada do Tingui 1951";"Campo Grande";historico (corrigida em 16/09)
+"SRT 26";-22.936335;-43.690524;"Rua Moisés de Oliveira 175";"Santa Cruz";inalterada
+"SRT 27";-22.917527;-43.558882;"Rua Iturbides Esteves 49";"Campo Grande";inalterada
+"SRT 28";-22.921884;-43.385381;"Rua Abram Lustmam 350";"Taquara";inalterada
+"SRT 29";-22.922656;-43.374303;"Rua Apiacás 294 - Apto 201 Fundos";"Taquara";inalterada
+"SRT 30";-22.894742;-43.570343;"Praça Daniel Lames 34";"Campo Grande";inalterada
+"SRT 31";-22.9029;-43.599731;"Rua São Teodósio 153";"Inhoaíba";inalterada
+"SRT 32";-22.85987;-43.369848;"Rua Latife Luvizaro 359";"Marechal Hermes";inalterada
+"SRT 33";-22.919838;-43.373856;"Rua Atituba 101 - Fundos Apto 102";"Taquara";inalterada
+"SRT 34";-22.903156;-43.263477;"Rua Alzira Valdetaro Sampaio 105";"Sampaio";inalterada
+"SRT 35";-22.795452;-43.174394;"Rua Chapot Prevost 364";"Ilha do Governador";inalterada
+"SRT 36";-22.923244;-43.682303;"Rua Fernanda 840";"Santa Cruz";historico (corrigida em 16/09)
+"SRT 37";-22.919433;-43.55837;"Rua Coxito Granado 40";"Campo Grande";inalterada
+"SRT 38";-22.928742;-43.393291;"Estrada Outeiro Santo 509 - Casa 36";"Jacarepaguá";inalterada
+"SRT 39";-22.904161;-43.285446;"Rua Dias da Cruz 174 - Apto 302";"Méier";inalterada
+"SRT 40";-22.926449;-43.386731;"Rua Gralha do Campo 48 - Térreo Apto 101";"Taquara";inalterada
+"SRT 41";-22.926449;-43.386731;"Rua Gralha do Campo 48 - Sobrado 102";"Taquara";inalterada
+"SRT 42";-22.914463;-43.560482;"Rua Jiçara 201";"Campo Grande";inalterada
+"SRT 43";-22.92874;-43.355329;"Estrada do Tindiba 1493 - Bloco 01 Apto 601";"Pechincha";historico (corrigida em 16/09)
+"SRT 44";-22.798166;-43.19257;"Rua Haia, 225 - Ilha do Governador";"Ilha do Governador";inalterada
+"SRT 45";-22.909088;-43.277297;"Rua Conselheiro Ferraz 112";"Lins";inalterada
+"SRT 46";-22.924845;-43.388621;"Estrada Rodrigues Caldas 2135 - Rua 4 Casa 33 B";"Taquara";historico (corrigida em 16/09)
+"SRT 47";-22.920366;-43.381151;"Rua Pico da Tijuca 115";"Taquara";inalterada
+"SRT 48";-22.927508;-43.679074;"Rua Menezes de Ataíde 62";"Santa Cruz";inalterada
+"SRT 49";-22.921649;-43.373836;"Estrada do Tindiba 891 - Bloco 01 Apto 103";"Taquara";historico (corrigida em 16/09)
+"SRT 50";-22.910604;-43.23387;"Avenida Professor Manoel de Abreu 196";"Maracanã";inalterada
+"SRT 51";-22.943804;-43.393543;"Ladeira Bela Vista 3";"Taquara";inalterada
+"SRT 52";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 1 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 53";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 2 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 54";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 3 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 55";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 4 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 56";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 5 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 57";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 6 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 58";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 7 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 59";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 8 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 60";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 9 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 61";-22.939918;-43.395138;"Rua Sampaio Corrêa 39 - Casa 10 Condomínio Stella do Patrocínio";"Jacarepaguá";inalterada
+"SRT 62";-22.880457;-43.477793;"Rua da Feira 926";"Bangu";inalterada
+"SRT 63";-22.93409;-43.392218;"Rua Projetada 04 Lote 01 Quadra 17 01 - Bloco 01 Apto 101/102";"Taquara";inalterada
+"SRT 64";-22.93409;-43.392218;"Rua Projetada 04 Lote 01 Quadra 17 01 - Bloco 01 Apto 103";"Taquara";inalterada
+"SRT 65";-22.93409;-43.392218;"Rua Projetada 04 Lote 01 Quadra 17 01 - Bloco 01 Apto 104";"Taquara";inalterada
+"SRT 66";-22.93409;-43.392218;"Rua Projetada 04 Lote 01 Quadra 17 01 - Bloco 01 Apto 105";"Taquara";inalterada
+"SRT 67";-22.798349;-43.202083;"Rua Heleno de Freitas 95 - Casa 102";"Ilha do Governador";inalterada
+"SRT 68";-22.866224;-43.345319;"Rua General Aurélio Vieira 120";"Turiaçú";inalterada
+"SRT 69";-22.958348;-43.199623;"Rua Humaitá 102 - Casa 07";"Humaitá";inalterada
+"SRT 70";-22.842397;-43.262832;"Rua Firmino Gameleira 634";"Olaria";inalterada
+"SRT 71";-22.885976;-43.299109;"Rua Cantilda Maciel 53";"Abolição";inalterada
+"SRT 72";-22.945543;-43.397488;"Rua Adauto Botelho 279";"Jacarepaguá";inalterada
+"SRT 73";-22.90103;-43.315105;"Rua Joaquim Soares 44";"Piedade";inalterada
+"SRT 74";-22.867606;-43.351727;"Rua Frei Bento 232";"Osvaldo Cruz";inalterada
+"SRT 75";-22.921955;-43.549607;"Rua Desembargador Milton Barcelos 78";"Campo Grande";inalterada
+"SRT 76";-22.915622;-43.680408;"Rua Dom Pedro I 450";"Santa Cruz";inalterada
+"SRT 77";-22.935219;-43.388946;"Rua Patrícia Pagu Galvão - Bloco 01 Apto 408";"Jacarepaguá";inalterada
+"SRT 78";-22.935219;-43.388946;"Rua Patrícia Pagu Galvão - Bloco 02 Apto 507";"Jacarepaguá";inalterada
+"SRT 79";-22.935219;-43.388946;"Rua Patrícia Pagu Galvão - Bloco 01 Apto 105";"Jacarepaguá";inalterada
+"SRT 80";-22.935219;-43.388946;"Rua Patrícia Pagu Galvão - Bloco 02 Apto 403";"Jacarepaguá";inalterada
+"SRT 81";-22.935219;-43.388946;"Rua Patrícia Pagu Galvão - Bloco 02 Apto 404";"Jacarepaguá";inalterada
+"SRT 82";-22.935219;-43.388946;"Rua Patrícia Pagu Galvão - Bloco 02 Apto 405";"Jacarepaguá";inalterada
+"SRT 83";-22.935219;-43.388946;"Rua Patrícia Pagu Galvão - Bloco 02 Apto 408";"Jacarepaguá";inalterada
+"SRT 84";-22.952734;-43.196467;"Rua Humaitá 104 - Apto 704";"Humaitá";inalterada
+"SRT 85";-22.884466;-43.467516;"Rua Rangel Pestana 422 - Apto 101";"Bangu";inalterada
+"SRT 86";-22.831719;-43.273078;"Rua Montevidéu 1140 - Casa 02";"Penha";inalterada
+"SRT 87";-22.908382;-43.291168;"Rua Fábio Luz 386 - Casa 04";"Méier";inalterada
+"SRT 88";-22.913358;-43.606734;"Rua Icurana 2";"Cosmos";inalterada
+"SRT 89";-22.887358;-43.463399;"Rua Padre Josino Tavares 547";"Bangu";inalterada
+"SRT 90";-22.869657;-43.264061;"Rua Magda 198";"Higienópolis";inalterada
+"SRT 91";-22.867662;-43.464393;"Rua Capitão Verdier 191";"Bangu";inalterada
+"SRT 92";-22.849801;-43.261128;"Rua Felisbelo Freire 159";"Ramos";inalterada
+"SRT 93";-22.886303;-43.270211;"Rua Luiz de Brito 50";"Maria da Graça";inalterada
+"SRT 94";-22.993792;-43.237982;"Rua Doutor Olinto de Magalhães 31 - Bloco B Apto 201";"Vidigal";inalterada
+"SRT 95";-22.921647;-43.241788;"Avenida Araújo Lima - 76";"Vila Isabel";inalterada
+"SRT 96";-22.835381;-43.312745;"Rua Maestro Henrique Vogeler 141 - Casa 01";"Vista Alegre";inalterada
+"SRT 97";-22.726851;-43.524233;"Rua Monte Pascoal 18";"Cachambi";inalterada
+"SRT 99";-22.881993;-43.26756;"Rua Domingo de Magalhães 868";"Maria da Graça";inalterada
+"RT TESTE ESCRITÓRIO";-22.999216;-43.34819;"Endereço NOVO fictício (pós 01/09) — teste histórico";"Curicica";inalterada

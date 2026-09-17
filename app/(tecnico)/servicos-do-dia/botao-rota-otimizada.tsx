@@ -66,7 +66,7 @@ export function BotaoRotaOtimizada({
       } else {
         try {
           const resultado = await otimizarRotaDoDia(origem, paradas);
-          const navegacaoOtimizada = linkGoogleMapsRota(resultado.paradas);
+          const navegacaoOtimizada = linkGoogleMapsRota(resultado.paradas.map((p) => p.endereco));
           if (navegacaoOtimizada) {
             url = navegacaoOtimizada.url;
             statusFinal = { tipo: "otimizada", fonte: resultado.fonte };

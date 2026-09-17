@@ -71,7 +71,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
   const { data: servicoRaw } = await supabase
     .from("servicos")
     .select(
-      "id, status, categoria, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude)",
+      "id, status, categoria, concluido_em, tecnico_id, chamado_id, chamados(assunto, descricao, prioridade, sla_prazo, status, tomticket_id, criado_em), rts(codigo, nome, endereco, latitude, longitude, logradouro, numero, bairro, cidade, uf, cep)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -196,6 +196,22 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
   const slaPrazo = (chamado?.sla_prazo as string | null) ?? null;
   const chamadoStatus = chamado?.status as "aberto" | "em_andamento" | "finalizado" | "cancelado";
 
+  // Destino da navegação = endereço em texto (rua, número, bairro, cidade,
+  // CEP). Coordenada é só fallback pra RT sem endereço estruturado.
+  const enderecoRt = {
+    logradouro: (rt?.logradouro as string | null) ?? null,
+    numero: (rt?.numero as string | null) ?? null,
+    bairro: (rt?.bairro as string | null) ?? null,
+    cidade: (rt?.cidade as string | null) ?? null,
+    uf: (rt?.uf as string | null) ?? null,
+    cep: (rt?.cep as string | null) ?? null,
+    enderecoLivre: (rt?.endereco as string | null) ?? null,
+    lat: rt?.latitude == null ? null : Number(rt.latitude),
+    lng: rt?.longitude == null ? null : Number(rt.longitude),
+  };
+  const urlGoogleMaps = linkGoogleMapsDestino(enderecoRt);
+  const urlWaze = linkWaze(enderecoRt);
+
   return (
     <div className="flex flex-1 flex-col">
       <ServicoRealtime />
@@ -236,11 +252,14 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
         <p className="mt-0.5 text-sm text-text-tertiary">{rt?.endereco}</p>
 
         {/* Navegação abre no app de mapa do próprio técnico — turn-by-turn de
-            verdade, sem custo de API e sem reimplementar navegação no PWA. */}
-        {rt?.latitude != null && rt?.longitude != null && (
+            verdade, sem custo de API e sem reimplementar navegação no PWA.
+            O destino vai como ENDEREÇO em texto, não coordenada: mandando o
+            ponto, o Google mostra o endereço mais próximo dele e o técnico
+            pode parar na casa errada (ver lib/navegacao.ts). */}
+        {urlGoogleMaps && (
           <div className="mt-3 flex gap-2">
             <a
-              href={linkGoogleMapsDestino({ lat: Number(rt.latitude), lng: Number(rt.longitude) })}
+              href={urlGoogleMaps}
               target="_blank"
               rel="noopener noreferrer"
               className={`flex flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-accent bg-accent/5 px-4 py-2.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 ${FOCUS_RING}`}
@@ -249,7 +268,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
               Como chegar
             </a>
             <a
-              href={linkWaze({ lat: Number(rt.latitude), lng: Number(rt.longitude) })}
+              href={urlWaze ?? urlGoogleMaps}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Abrir no Waze"

@@ -1,0 +1,492 @@
+[
+  {
+    "codigo": "SRT 1",
+    "enderecoCompleto": "RUA CLAUDIO DA COSTA, 24 - IRAJÁ",
+    "cep": "21235-450"
+  },
+  {
+    "codigo": "SRT 2",
+    "enderecoCompleto": "RUA PERNAMBUCO Nº 635- CASA 08 - ENGENHO DE DENTRO",
+    "cep": "20730-030"
+  },
+  {
+    "codigo": "SRT 3",
+    "enderecoCompleto": "RUA PERNAMBUCO, 780 AP. 602 - ENGENHO DE DENTRO",
+    "cep": "20730-030"
+  },
+  {
+    "codigo": "SRT 4",
+    "enderecoCompleto": "RUA CATULO CEARENSE, 04 APTO 305 - ENGENHO DE DENTRO",
+    "cep": "20730-320"
+  },
+  {
+    "codigo": "SRT 5",
+    "enderecoCompleto": "RUA ADOLFO BERGAMINI, 302 - ENGENHO DE DENTRO",
+    "cep": "20730-000"
+  },
+  {
+    "codigo": "SRT 6",
+    "enderecoCompleto": "RUA AQUIDABÃ, 842 AP.411- LINS",
+    "cep": "20720-295"
+  },
+  {
+    "codigo": "SRT 7",
+    "enderecoCompleto": "RUA ADOLFO BERGAMINI, 331 AP. 102 - ENGENHO DE DENTRO",
+    "cep": "20730-000"
+  },
+  {
+    "codigo": "SRT 8",
+    "enderecoCompleto": "RUA ENGENHEIRO EMILIO BAUMGART, 622",
+    "cep": "21610-240"
+  },
+  {
+    "codigo": "SRT 9",
+    "enderecoCompleto": "RUA SANTA MARIANA, 291 - HIGIENÓPOLIS",
+    "cep": "21061-150"
+  },
+  {
+    "codigo": "SRT 10",
+    "enderecoCompleto": "RUA THOMPSON FLORES, 96 CB 01 - MÉIER",
+    "cep": "20710-090"
+  },
+  {
+    "codigo": "SRT 11",
+    "enderecoCompleto": "RUA MONTEVIDEU, 1140 CASA 01 - PENHA",
+    "cep": "21020-290"
+  },
+  {
+    "codigo": "SRT 12",
+    "enderecoCompleto": "RUA MAGALHÃES CORREIA 75 - HIGIENÓPOLIS",
+    "cep": "21051-510"
+  },
+  {
+    "codigo": "SRT 13",
+    "enderecoCompleto": "TRAVESSA MARIETA RÉIS 52 - PILARES",
+    "cep": "20755-070"
+  },
+  {
+    "codigo": "SRT 14",
+    "enderecoCompleto": "RUA DOUTOR OLINTO DE MAGALHÃES, 31 - APTO 101 - BL. C - VIDIGAL.",
+    "cep": "22450-250"
+  },
+  {
+    "codigo": "SRT 15",
+    "enderecoCompleto": "RUA CAMBAÚBA, 1290 APTO 103 - JARDIM GUANABARA",
+    "cep": "21940-001"
+  },
+  {
+    "codigo": "SRT 16",
+    "enderecoCompleto": "RUA SOUSA FRANCO 491 AP 202 VILA ISABEL",
+    "cep": "20551-120"
+  },
+  {
+    "codigo": "SRT 17",
+    "enderecoCompleto": "RUA MAESTRO HENRIQUE VOGLER, 141 CS 2 - BRÁS DE PINA",
+    "cep": "21235-680"
+  },
+  {
+    "codigo": "SRT 18",
+    "enderecoCompleto": "RUA CAPINTUBA Nº 206 - VAZ LOBO",
+    "cep": "21361-210"
+  },
+  {
+    "codigo": "SRT 19",
+    "enderecoCompleto": "RUA VISCONDE DE CABO FRIO 20 AP 101 TIJUCA",
+    "cep": "20510-160"
+  },
+  {
+    "codigo": "SRT 20",
+    "enderecoCompleto": "RUA MAJOR REGO, 83 - OLARIA",
+    "cep": "21073-440"
+  },
+  {
+    "codigo": "SRT 21",
+    "enderecoCompleto": "RUA ROBERTO DOYLE MAIA 51 - BANGU",
+    "cep": "21830-070"
+  },
+  {
+    "codigo": "SRT 22",
+    "enderecoCompleto": "RUA DO NÍQUEL Nº 359 - CURICICA",
+    "cep": "22710-055"
+  },
+  {
+    "codigo": "SRT 23",
+    "enderecoCompleto": "RUA MANOEL RODRIGUES DE MOURA 141- BANGU",
+    "cep": "21830-720"
+  },
+  {
+    "codigo": "SRT 24",
+    "enderecoCompleto": "RUA MIGUEL FERNANDES, 437 - CACHAMBI",
+    "cep": "20780-060"
+  },
+  {
+    "codigo": "SRT 25",
+    "enderecoCompleto": "ESTRADA DO TINGUI Nº 1951 - CAMPO GRANDE",
+    "cep": "23067-551"
+  },
+  {
+    "codigo": "SRT 26",
+    "enderecoCompleto": "RUA MOISES DE OLIVEIRA Nº 175 - SANTA CRUZ",
+    "cep": "23550-285"
+  },
+  {
+    "codigo": "SRT 27",
+    "enderecoCompleto": "RUA ITUBIRDES ESTEVES Nº 49 - CAMPO GRANDE",
+    "cep": "23045-375"
+  },
+  {
+    "codigo": "SRT 28",
+    "enderecoCompleto": "RUA ABRAM LUSTMAM Nº 350 COND. GRAMADO - TAQUARA",
+    "cep": "22715-550"
+  },
+  {
+    "codigo": "SRT 29",
+    "enderecoCompleto": "RUA APIACÁS, 294/201 FUNDOS - JACAREPAGUÁ",
+    "cep": "22730-190"
+  },
+  {
+    "codigo": "SRT 30",
+    "enderecoCompleto": "PRAÇA DANIEL LAMES 34 - CAMPO GRANDE",
+    "cep": "23081-050"
+  },
+  {
+    "codigo": "SRT 31",
+    "enderecoCompleto": "RUA SÃO TEODÓSIO, 153 - INHOAIBA",
+    "cep": "23062-180"
+  },
+  {
+    "codigo": "SRT 32",
+    "enderecoCompleto": "RUA LATIFE LUVIZARO 359 - MARECHAL HERMES",
+    "cep": "21555-550"
+  },
+  {
+    "codigo": "SRT 33",
+    "enderecoCompleto": "RUA ATITUBA, 101 FUNDOS AP. 102 - TAQUARA",
+    "cep": "22730-170"
+  },
+  {
+    "codigo": "SRT 34",
+    "enderecoCompleto": "RUA ALZIRA VALDETARO SAMPAIO 105 - SAMPAIO",
+    "cep": "20950-070"
+  },
+  {
+    "codigo": "SRT 35",
+    "enderecoCompleto": "RUA CHAPOT PREVOST, 364 - FREGUESIA/ ILHA DO GOVERNADOR",
+    "cep": "21910-030"
+  },
+  {
+    "codigo": "SRT 36",
+    "enderecoCompleto": "RUA FERNANDA 840 - SANTA CRUZ",
+    "cep": "23520-132"
+  },
+  {
+    "codigo": "SRT 37",
+    "enderecoCompleto": "RUA COXITO GRANADO Nº 40 - CAMPO GRANDE",
+    "cep": "23045-380"
+  },
+  {
+    "codigo": "SRT 38",
+    "enderecoCompleto": "ESTR. OUTEIRO SANTO, 509 CASA 36 - JACAREPAGUÁ",
+    "cep": "22713-169"
+  },
+  {
+    "codigo": "SRT 39",
+    "enderecoCompleto": "RUA DIAS DA CRUZ 174 AP 302 - MEIER",
+    "cep": "20720-010"
+  },
+  {
+    "codigo": "SRT 40",
+    "enderecoCompleto": "RUA GRALHA DO CAMPO, 48 TÉRREO AP. 101 - TAQUARA",
+    "cep": "22713-740"
+  },
+  {
+    "codigo": "SRT 41",
+    "enderecoCompleto": "RUA GRALHA DO CAMPO, 48 SOBRADO 102 - TAQUARA",
+    "cep": "22713-740"
+  },
+  {
+    "codigo": "SRT 42",
+    "enderecoCompleto": "RUA JIÇARA Nº 201 - CAMPO GRANDE",
+    "cep": "23045-030"
+  },
+  {
+    "codigo": "SRT 43",
+    "enderecoCompleto": "EST. DO TINDIBA, 1493 APTO 601 BLOCO 01- TAQUARA.",
+    "cep": "22740-362"
+  },
+  {
+    "codigo": "SRT 44",
+    "enderecoCompleto": "RUA HAIA 225 - ILHA DO GOVERNADOR",
+    "cep": "21920-180"
+  },
+  {
+    "codigo": "SRT 45",
+    "enderecoCompleto": "RUA CONSELHEIRO FERRAZ 112 - LINS DE VASCONCELOS",
+    "cep": "20710-350"
+  },
+  {
+    "codigo": "SRT 46",
+    "enderecoCompleto": "RUA SÃO POLICARPO 36- TAQUARA",
+    "cep": "22775-320"
+  },
+  {
+    "codigo": "SRT 47",
+    "enderecoCompleto": "RUA PICO DA TIJUCA 115 - TAQUARA",
+    "cep": "22715-380"
+  },
+  {
+    "codigo": "SRT 48",
+    "enderecoCompleto": "RUA MENEZES DE ATAÍDE 62 - SANTA CRUZ",
+    "cep": "23520-005"
+  },
+  {
+    "codigo": "SRT 49",
+    "enderecoCompleto": "ESTR. DO TINDIBA, 891 AP. 103 BL 2 - TAQUARA",
+    "cep": "22740-362"
+  },
+  {
+    "codigo": "SRT 50",
+    "enderecoCompleto": "AV. PROF. MANOEL DE ABREU 196 - MARACANÃ",
+    "cep": "20550-170"
+  },
+  {
+    "codigo": "SRT 51",
+    "enderecoCompleto": "LADEIRA BELA VISTA, 3 - TAQUARA",
+    "cep": "22713-572"
+  },
+  {
+    "codigo": "SRT 52",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 01 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 53",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 02 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 54",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 03 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 55",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 04 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 56",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 05 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 57",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 06 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 58",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 07 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 59",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 08 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 60",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 09 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 61",
+    "enderecoCompleto": "AV. SAMPAIO CORRÊA, 39 CASA 10 COND. STELA DO PATROCÍNIO - TAQUARA",
+    "cep": "22713-560"
+  },
+  {
+    "codigo": "SRT 62",
+    "enderecoCompleto": "RUA DA FEIRA 926 - BANGU",
+    "cep": "21820-030"
+  },
+  {
+    "codigo": "SRT 63",
+    "enderecoCompleto": "RUA PROJETADA 04 - LOTE 01 - QUADRA 17 - BLOCO 01 - AP. 101 E 102 - PAL 48018 - JACAREPAGUÁ",
+    "cep": "20972-480"
+  },
+  {
+    "codigo": "SRT 64",
+    "enderecoCompleto": "RUA PROJETADA 04 - LOTE 01 - QUADRA 17 - BLOCO 01 - AP. 103 - PAL 48018 - JACAREPAGUÁ",
+    "cep": "20972-480"
+  },
+  {
+    "codigo": "SRT 65",
+    "enderecoCompleto": "RUA PROJETADA 04 - LOTE 01 - QUADRA 17 - BLOCO 01 - AP. 104 - PAL 48018 - JACAREPAGUÁ",
+    "cep": "20972-480"
+  },
+  {
+    "codigo": "SRT 66",
+    "enderecoCompleto": "RUA PROJETADA 04 - LOTE 01 - QUADRA 17 - BLOCO 01 - AP. 105 - PAL 48018 - JACAREPAGUÁ",
+    "cep": "20972-480"
+  },
+  {
+    "codigo": "SRT 67",
+    "enderecoCompleto": "RUA HELENO DE FREITAS, 95, CASA 102 - ILHA DO GOVERNADOR",
+    "cep": "21920-385"
+  },
+  {
+    "codigo": "SRT 68",
+    "enderecoCompleto": "RUA GENERAL AURELIO VEIERA 120 TURIAÇU",
+    "cep": "21351-250"
+  },
+  {
+    "codigo": "SRT 69",
+    "enderecoCompleto": "RUA HUMAITÁ, 102 - CASA 07 - HUMAITÁ",
+    "cep": "22261-970"
+  },
+  {
+    "codigo": "SRT 70",
+    "enderecoCompleto": "RUA FIRMINO GAMELEIRA, 634 - OLARIA",
+    "cep": "21021-450"
+  },
+  {
+    "codigo": "SRT 71",
+    "enderecoCompleto": "RUA CANTILDA MACIEL, 53 - ABOLIÇÃO",
+    "cep": "20755-190"
+  },
+  {
+    "codigo": "SRT 72",
+    "enderecoCompleto": "RUA ADAUTO BOTELHO 12 - JACAREPAGUÁ",
+    "cep": "22713-550"
+  },
+  {
+    "codigo": "SRT 73",
+    "enderecoCompleto": "RUA JOAQUIM SOARES, 44 - PIEDADE",
+    "cep": "20740-510"
+  },
+  {
+    "codigo": "SRT 74",
+    "enderecoCompleto": "RUA FREI BENTO, N 232 - OSWALDO CRUZ",
+    "cep": "21550-220"
+  },
+  {
+    "codigo": "SRT 75",
+    "enderecoCompleto": "RUA DESEMBARGADOR MILTON BARCELOS, 78 - CAMPO GRANDE",
+    "cep": "23040-070"
+  },
+  {
+    "codigo": "SRT 76",
+    "enderecoCompleto": "RUA DOM PEDRO I 450 - SANTA CRUZ",
+    "cep": "23515-010"
+  },
+  {
+    "codigo": "SRT 77",
+    "enderecoCompleto": "RUA PATRÍCIA PAGU GALVÃO S/N - BL.01 AP. 408 - JACAREPAGUÁ",
+    "cep": "22713-535"
+  },
+  {
+    "codigo": "SRT 78",
+    "enderecoCompleto": "RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 507 - JACAREPAGUÁ",
+    "cep": "22713-535"
+  },
+  {
+    "codigo": "SRT 79",
+    "enderecoCompleto": "RUA PATRÍCIA PAGU GALVÃO S/N - BL.01 AP. 105 - JACAREPAGUÁ",
+    "cep": "22713-535"
+  },
+  {
+    "codigo": "SRT 80",
+    "enderecoCompleto": "RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 403 - JACAREPAGUÁ",
+    "cep": "22713-535"
+  },
+  {
+    "codigo": "SRT 81",
+    "enderecoCompleto": "RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 404 - JACAREPAGUÁ",
+    "cep": "22713-535"
+  },
+  {
+    "codigo": "SRT 82",
+    "enderecoCompleto": "RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 405 - JACAREPAGUÁ",
+    "cep": "22713-535"
+  },
+  {
+    "codigo": "SRT 83",
+    "enderecoCompleto": "RUA PATRÍCIA PAGU GALVÃO S/N - BL.02 AP. 408 - JACAREPAGUÁ",
+    "cep": "22713-535"
+  },
+  {
+    "codigo": "SRT 84",
+    "enderecoCompleto": "RUA HUMAITA 104 AP. 704 - HUMAITÁ",
+    "cep": "22261-970"
+  },
+  {
+    "codigo": "SRT 85",
+    "enderecoCompleto": "RUA RANGEL PESTANA, 422 AP 101 - BANGU",
+    "cep": "21820-040"
+  },
+  {
+    "codigo": "SRT 86",
+    "enderecoCompleto": "RUA MONTEVIDEU, 1140 CASA 02 - PENHA",
+    "cep": "21020-290"
+  },
+  {
+    "codigo": "SRT 87",
+    "enderecoCompleto": "RUA FABIO LUZ, 386 (CASA 4) MEIER",
+    "cep": "20720-350"
+  },
+  {
+    "codigo": "SRT 88",
+    "enderecoCompleto": "RUA ICURANA Nº 2 - COSMOS",
+    "cep": "23059-340"
+  },
+  {
+    "codigo": "SRT 89",
+    "enderecoCompleto": "RUA PADRE JOSINO TAVARES, 547 - BANGU",
+    "cep": "21810-220"
+  },
+  {
+    "codigo": "SRT 90",
+    "enderecoCompleto": "RUA MAGDA, 198 - HIGIENÓPOLIS",
+    "cep": "21061-030"
+  },
+  {
+    "codigo": "SRT 91",
+    "enderecoCompleto": "RUA CAPITÃO VERDIER 191- BANGU",
+    "cep": "21862-180"
+  },
+  {
+    "codigo": "SRT 92",
+    "enderecoCompleto": "RUA FELISBELO FREIRE,159 - RAMOS",
+    "cep": "21031-250"
+  },
+  {
+    "codigo": "SRT 93",
+    "enderecoCompleto": "RUA LUIZ DE BRITO, 50 - MARIA DA GRAÇA",
+    "cep": "20785-360"
+  },
+  {
+    "codigo": "SRT 94",
+    "enderecoCompleto": "RUA DOUTOR OLINTO DE MAGALHÃES 31 APTO 201 BL A - VIDIGAL",
+    "cep": "22450-250"
+  },
+  {
+    "codigo": "SRT 95",
+    "enderecoCompleto": "RUA ARAUJO LIMA 76 VILA ISABEL",
+    "cep": "20541-050"
+  },
+  {
+    "codigo": "SRT 96",
+    "enderecoCompleto": "RUA MAESTRO HENRIQUE VOGLER, 141 CS 1 - BRÁS DE PINA",
+    "cep": "21235-680"
+  },
+  {
+    "codigo": "SRT 97",
+    "enderecoCompleto": "RUA MONTE PASCOAL, 18 - CACHAMBI",
+    "cep": "20780-270"
+  },
+  {
+    "codigo": "SRT 99",
+    "enderecoCompleto": "RUA DOMINGOS DE MAGALHÃES, 868 - MARIA DA GRAÇA",
+    "cep": "20785-352"
+  }
+]
