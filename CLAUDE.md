@@ -151,7 +151,8 @@ Une a "Regra de processo" (dados) com o processo de design — nenhuma tela é c
 
 Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pelo título/data pra ler o detalhe completo.
 
-- [x] Localização das RTs: endereço oficial (rua/número/CEP) vira a fonte de verdade da navegação, geocodificação Nominatim, backfill das 98 RTs, correção de coordenadas erradas — 16-17/09/2026
+- [x] "Relatório de RT" — documento técnico avulso pra encaminhamento ao IGEDES (não é chamado, vínculo com chamado opcional) — 15-16/09/2026, feito pelo Mateus em paralelo
+- [x] Localização das RTs: endereço oficial (rua/número/CEP) vira a fonte de verdade da navegação — geocodificação Nominatim (backfill inicial), depois **substituída por planilha do usuário com coordenada verificada** (conta de luz/visita de campo) pras 98 RTs, corrigindo uma que estava 32km fora do lugar — 16-17/09/2026
 - [x] Backup dos dados de localização das RTs (limpeza cogitada, cancelada) — 16/09/2026
 - [x] Status `em_revisao` + 3ª opção de despacho na Central de Urgências ("otimizar pra rota atual") + localização estimada do técnico — 15-16/09/2026, com 4 bugs reais corrigidos na sequência (RLS de evidências em revisão, chave de mapa duplicada, distância de despacho por atividade real, `fimDeRota` ignorando paradas concluídas, ORS estourando cota, unicidade de `rota_rts`)
 - [x] Compressão de foto (bug de memória) + botão "Tire uma foto" — 15/09/2026
@@ -194,13 +195,13 @@ Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pel
 - `0028_resposta_tomticket.sql` — status incerto (marcada pendente em 08/09, mas funcionalidade relacionada foi expandida depois como se estivesse ativa; confirmar antes de assumir qualquer lado)
 - `0045_urgencias_chamado_first.sql` — confirmada aplicada em 11/09 (registrada aqui só pra não confundir com as pendentes abaixo)
 - `0047_revisar_servico.sql`, `0048_realtime_mais_telas.sql`, `0050_multiplos_tecnicos_por_rt.sql`, `0051_evidencia_audio.sql`, `0052_aumentar_limite_evidencias.sql` — sem confirmação de execução no histórico
+- `0059_relatorios_rt.sql` (Mateus) — usuário ainda precisa rodar
 - `0061_urgencia_rt_ja_na_rota.sql` — usuário ainda precisa rodar (renumerada de 0059 em 17/09/2026 por colisão com `0059_relatorios_rt.sql`, do Mateus, mergeado do Gitea nessa mesma sessão)
 - `0053`-`0058`, `0060` — confirmadas aplicadas (15-16/09)
 
 **Outras pendências:**
 - `ORS_API_KEY` só está em `.env.local` (dev) — falta colar no ambiente de produção (Netlify) pra rota inteligente/navegação usarem tempo real de carro em vez de linha reta
 - Deploy Netlify: `netlify login` e as variáveis de ambiente do site ainda precisam ser configuradas pelo usuário (não consigo autenticar por aqui); 2 secrets do GitHub Actions (`SYNC_URL`, `SYNC_SECRET`) pendentes pra sincronização automática funcionar em produção
-- SRT 63/64/65/66: CEP ficou `NULL` de propósito (via real "Rua Projetada 04" não existe na base dos Correios) — navegação usa a coordenada, que está verificada; se o usuário confirmar o CEP certo depois, preencher
 - Logo CSM em alta resolução + endereço/CNPJ/selos institucionais pro relatório mensal — placeholders `[PREENCHER]` em `lib/relatorio-mensal/csm.ts`
 - "Abrir rota no Google Maps" caindo pra ordem planejada em vez da otimizada — causa raiz não 100% confirmada (ver entrada de 15/09 no histórico)
 
