@@ -52,8 +52,12 @@ export async function POST(request: Request) {
     }
   }
 
+  // `?completa=1` força a leitura completa dos abertos (resgate dos antigos +
+  // reconciliação) sem esperar a hora — pra rodar à mão quando precisar.
+  const completa = new URL(request.url).searchParams.get("completa") === "1";
+
   try {
-    const resultado = await sincronizarChamados(supabase);
+    const resultado = await sincronizarChamados(supabase, { completa });
     return NextResponse.json({ ok: true, ...resultado });
   } catch (erro) {
     const mensagem = erro instanceof Error ? erro.message : String(erro);

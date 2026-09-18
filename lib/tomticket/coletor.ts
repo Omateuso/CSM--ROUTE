@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  buscarDetalhe,
   listarChamadosAlterados,
   listarDepartamentos,
   listarProtocolosAbertos,
@@ -7,6 +8,7 @@ import {
   type ChamadoTomTicket,
 } from "./client";
 import { ehRespostaAutomaticaIgnorada } from "./mensagens";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 // Coleta direta do TomTicket — substitui o import por planilha (ver migration
 // 0030 pro racional completo).
@@ -103,6 +105,8 @@ export type ResultadoSync = {
   anexosBaixados: number;
   /** Chamados encerrados pela reconciliação (sumiram do TomTicket). */
   reconciliados: number;
+  /** Chamados abertos ANTIGOS trazidos pelo resgate (fora da janela de 90 dias). */
+  resgatados: number;
 };
 
 // Nome de arquivo seguro pro path do Storage: sem acento, sem espaço, sem
@@ -255,7 +259,17 @@ async function resolverDepartamento(): Promise<string> {
   return achado.id;
 }
 
-export async function sincronizarChamados(supabase: SupabaseClient): Promise<ResultadoSync> {
+export async function sincronizarChamados(
+  supabase: SupabaseClient,
+  opcoes: {
+    /**
+     * Força a leitura completa dos abertos (resgate + reconciliação) nesta
+     * passada, sem esperar a hora. É o que o botão "Sincronizar" manual usa —
+     * quem clica quer ver o resultado agora, não daqui a uma hora.
+     */
+    completa?: boolean;
+  } = {},
+): Promise<ResultadoSync> {
   const { data: estado } = await supabase
     .from("sync_estado")
     .select("ultima_leitura")
@@ -292,6 +306,63 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
 
   const departmentId = await resolverDepartamento();
   const { chamados: lidos, cortou } = await listarChamadosAlterados({ desde, departmentId });
+
+  // Leitura COMPLETA dos abertos do departamento (sem filtro de data), no
+  // máximo 1x/hora. Serve a dois fins:
+  //
+  //   1. Resgate (abaixo): chamado aberto há mais de 90 dias sem ninguém mexer
+  //      NUNCA entra pela leitura incremental — a API limita `last_update_ge`
+  //      a 90 dias (ver `limitarJanela`). Chamados de janeiro ainda abertos
+  //      simplesmente não existiam aqui. Todo protocolo que está aberto lá e
+  //      não existe aqui (em nenhum status) tem o detalhe buscado e entra no
+  //      MESMO pipeline dos incrementais, logo abaixo.
+  //   2. Reconciliação (no fim): encerrar o que sumiu de lá.
+  //
+  // Fica `null` quando não é hora ou a leitura falhou — e aí nem resgata nem
+  // reconcilia, porque agir em cima de lista parcial marcaria chamado vivo
+  // como encerrado.
+  const RECONCILIA_INTERVALO_MS = 60 * 60 * 1000;
+  let abertosNoTomticket: Map<string, string> | null = null;
+  const horaDaCompleta = Date.now() - ultimaReconciliacaoMs >= RECONCILIA_INTERVALO_MS;
+  if (colunaReconciliacao && (horaDaCompleta || opcoes.completa)) {
+    try {
+      abertosNoTomticket = await listarProtocolosAbertos(departmentId);
+    } catch {
+      abertosNoTomticket = null;
+    }
+  }
+
+  // Resgate dos abertos antigos. Teto por passada porque cada um custa uma
+  // requisição de detalhe (3/s): 300 = ~100s, dentro do `maxDuration` da rota
+  // de sync. O que sobrar entra na próxima hora — a lista completa é lida de
+  // novo e o que já entrou não está mais "faltando".
+  const MAX_RESGATE_POR_PASSADA = 300;
+  const resgatados = new Set<string>();
+  if (abertosNoTomticket) {
+    const jaLidos = new Set(lidos.map((c) => c.protocolo));
+    const candidatos = [...abertosNoTomticket.keys()].filter((p) => p && !jaLidos.has(p));
+
+    const jaExistem = new Set<string>();
+    for (let i = 0; i < candidatos.length; i += 200) {
+      const { data } = await supabase
+        .from("chamados")
+        .select("tomticket_id")
+        .in("tomticket_id", candidatos.slice(i, i + 200));
+      for (const c of data ?? []) jaExistem.add(String(c.tomticket_id));
+    }
+
+    const faltando = candidatos.filter((p) => !jaExistem.has(p)).slice(0, MAX_RESGATE_POR_PASSADA);
+    for (const protocolo of faltando) {
+      const ticketId = abertosNoTomticket.get(protocolo);
+      if (!ticketId) continue;
+      try {
+        lidos.push(await buscarDetalhe(ticketId));
+        resgatados.add(protocolo);
+      } catch {
+        // um detalhe que falhou não derruba a passada — tenta na próxima hora.
+      }
+    }
+  }
 
   const { data: rtsRaw } = await supabase.from("rts").select("id, codigo, tomticket_customer_id");
   const rts: RtParaCasamento[] = (rtsRaw ?? []).map((rt) => ({
@@ -416,6 +487,9 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
   // cliente que está sendo INSERIDA agora entra como "não vista" (alimenta o
   // sino/toast), exceto no primeiro povoamento — aí o histórico inteiro entra
   // de uma vez e marcar tudo como não visto afogaria o contador.
+  //
+  // Chamado RESGATADO (aberto antigo, fora da janela de 90 dias) entra do
+  // mesmo jeito silencioso: as respostas dele têm meses, não são "novidade".
   const primeiroPovoamento = !estado?.ultima_leitura;
   let respostasNovas = 0;
   let anexosBaixados = 0;
@@ -423,7 +497,12 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     const chamadoId = chamado.protocolo ? idPorProtocolo.get(chamado.protocolo) : undefined;
     if (!chamadoId) continue;
     try {
-      const r = await sincronizarRespostasEAnexos(supabase, chamadoId, chamado, primeiroPovoamento);
+      const r = await sincronizarRespostasEAnexos(
+        supabase,
+        chamadoId,
+        chamado,
+        primeiroPovoamento || resgatados.has(chamado.protocolo),
+      );
       respostasNovas += r.respostasNovas;
       anexosBaixados += r.anexosBaixados;
     } catch {
@@ -457,13 +536,16 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
   // pra sempre. No máximo 1x/hora, lê a lista COMPLETA de abertos do
   // departamento e encerra qualquer chamado nosso `aberto`/`em_andamento` que
   // não apareça mais lá. Mesmo padrão de `Coletor._ler_tudo` da base-automatizacao.
+  //
+  // A lista completa já foi lida lá em cima (antes do resgate); aqui só age em
+  // cima dela. `abertosNoTomticket` nulo = não era hora ou a leitura falhou —
+  // não reconcilia e o relógio não avança.
   let reconciliados = 0;
   let reconciliou = false;
-  const RECONCILIA_INTERVALO_MS = 60 * 60 * 1000;
 
-  if (colunaReconciliacao && Date.now() - ultimaReconciliacaoMs >= RECONCILIA_INTERVALO_MS) {
+  if (abertosNoTomticket) {
+    const abertos = abertosNoTomticket;
     try {
-      const abertosNoTomticket = await listarProtocolosAbertos(departmentId);
       // A leitura da lista completa terminou sem exceção — só agora dá pra agir
       // e avançar o relógio da reconciliação. Uma leitura parcial marcaria
       // chamados vivos como encerrados.
@@ -477,16 +559,19 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
       // filtro, os chamados fictícios de teste (protocolo 900000+, que nunca
       // existiram no TomTicket) eram cancelados sozinhos a cada hora —
       // aconteceu de verdade em 11/09/2026 com 3 deles.
-      const { data: nossosAbertos } = await supabase
-        .from("chamados")
-        .select("id, tomticket_id")
-        .in("status", ["aberto", "em_andamento"])
-        .not("tomticket_ticket_id", "is", null);
+      const { data: nossosAbertos } = await todasAsLinhas(() =>
+        supabase
+          .from("chamados")
+          .select("id, tomticket_id")
+          .in("status", ["aberto", "em_andamento"])
+          .not("tomticket_ticket_id", "is", null)
+          .order("id"),
+      );
 
       const sumiram = (nossosAbertos ?? []).filter((c) => {
         const proto = String(c.tomticket_id ?? "").trim();
         // `resolvidosSet`: tocado nesta passada, então está vivo com certeza.
-        return proto && !resolvidosSet.has(proto) && !abertosNoTomticket.has(proto);
+        return proto && !resolvidosSet.has(proto) && !abertos.has(proto);
       });
 
       // Cada divergência custa 1 requisição pra confirmar a situação. Em uso
@@ -555,5 +640,6 @@ export async function sincronizarChamados(supabase: SupabaseClient): Promise<Res
     respostasNovas,
     anexosBaixados,
     reconciliados,
+    resgatados: resgatados.size,
   };
 }

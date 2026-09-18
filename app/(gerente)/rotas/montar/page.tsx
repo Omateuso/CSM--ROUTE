@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { computeSlaStatus } from "@/lib/sla";
 import { sugerirProximasRts, type RtParaRoteirizacao } from "@/lib/routing/intelligent-route";
 import { MontarRotaClient } from "./montar-rota-client";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -48,7 +49,7 @@ export default async function MontarRotaPage() {
     // Só o que alimenta o resumo por RT (volume/prioridade/SLA no card de
     // candidata). A escolha manual de chamados por técnico (0033) foi removida
     // em 09/09/2026 — o técnico recebe todos os chamados em aberto da RT.
-    supabase.from("chamados").select("id, rt_id, prioridade, status, sla_prazo"),
+    todasAsLinhas(() => supabase.from("chamados").select("id, rt_id, prioridade, status, sla_prazo").order("id")),
     supabase.from("equipes").select("id, nome").eq("ativo", true).order("nome", { ascending: true }),
     supabase
       .from("profiles")

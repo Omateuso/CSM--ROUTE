@@ -6,6 +6,7 @@ import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
 import { RegiaoSection } from "./regiao-section";
 import { RtsSection } from "./rts-section";
 import { PainelRealtime } from "./painel-realtime";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -48,9 +49,12 @@ export default async function PainelGestaoPage() {
     { count: travadosCount, error: travadosError },
     { data: rotasRecentesRaw, error: rotasError },
   ] = await Promise.all([
-    supabase
-      .from("chamados")
-      .select("id, prioridade, status, sla_prazo, rt_id, rts(codigo, nome, regiao_id, regioes(nome))"),
+    todasAsLinhas(() =>
+      supabase
+        .from("chamados")
+        .select("id, prioridade, status, sla_prazo, rt_id, rts(codigo, nome, regiao_id, regioes(nome))")
+        .order("id"),
+    ),
     supabase.from("servicos").select("status, rotas!inner(data)").eq("rotas.data", hoje),
     supabase.from("servicos").select("id", { count: "exact", head: true }).eq("status", "concluido_tecnico"),
     supabase

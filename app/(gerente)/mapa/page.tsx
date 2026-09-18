@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { computeSlaStatus } from "@/lib/sla";
 import { MapaClient, type RtMarker } from "./mapa-client";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 const STATUS_ABERTO = new Set(["aberto", "em_andamento"]);
 
@@ -55,7 +56,7 @@ export default async function MapaPage() {
       .from("rts")
       .select("id, codigo, nome, endereco, latitude, longitude, ativo")
       .eq("ativo", true),
-    supabase.from("chamados").select("rt_id, prioridade, status, sla_prazo"),
+    todasAsLinhas(() => supabase.from("chamados").select("rt_id, prioridade, status, sla_prazo").order("id")),
   ]);
 
   if (rtsError || chamadosError) {

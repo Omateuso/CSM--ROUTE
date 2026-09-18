@@ -5,6 +5,7 @@ import { buscarDetalheChamado, type DetalheChamado } from "./actions";
 import { SyncTomticketButton, type SyncInfo } from "./sync-tomticket-button";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
 import { ChamadosRealtime } from "./chamados-realtime";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 // Mesma situação do app/(gestao)/rts/page.tsx: sem Database types gerados
 // ainda, embeds aninhados (chamados.rts / rts.regioes / regioes.zonas)
@@ -66,12 +67,15 @@ export default async function ChamadosPage(props: PageProps<"/chamados">) {
     { data: rtsRaw, error: rtsError },
     { data: respostasNovasRaw },
   ] = await Promise.all([
-    supabase
-      .from("chamados")
-      .select(
-        "id, tomticket_id, rt_id, assunto, prioridade, status, sla_prazo, criado_em, rts(codigo, nome, regioes(nome, zonas(nome)))",
-      )
-      .order("criado_em", { ascending: false }),
+    todasAsLinhas(() =>
+      supabase
+        .from("chamados")
+        .select(
+          "id, tomticket_id, rt_id, assunto, prioridade, status, sla_prazo, criado_em, rts(codigo, nome, regioes(nome, zonas(nome)))",
+        )
+        .order("criado_em", { ascending: false })
+        .order("id", { ascending: false }),
+    ),
     supabase
       .from("rts")
       .select("id, codigo, endereco, regioes(nome, zonas(nome))")

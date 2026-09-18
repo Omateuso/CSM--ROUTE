@@ -5,6 +5,7 @@ import { DashboardRealtime } from "./dashboard-realtime";
 import { RtsVolumeSection } from "./rts-volume-section";
 import { AtencaoAgoraCard } from "./atencao-agora-card";
 import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 // Mesma situação de app/chamados/page.tsx: sem Database types gerados
 // ainda, embed aninhado (chamados.rts) fica ambíguo pro TypeScript (array
@@ -101,10 +102,13 @@ export default async function DashboardPage() {
     // Só os chamados que entram nas métricas de volume — o loop abaixo já
     // descartava finalizado/cancelado em JS. Filtrar no banco evita trazer as
     // centenas de chamados fechados que a sincronização do TomTicket acumula.
-    supabase
-      .from("chamados")
-      .select("id, prioridade, status, sla_prazo, rt_id, rts(codigo, nome)")
-      .in("status", ["aberto", "em_andamento"]),
+    todasAsLinhas(() =>
+      supabase
+        .from("chamados")
+        .select("id, prioridade, status, sla_prazo, rt_id, rts(codigo, nome)")
+        .in("status", ["aberto", "em_andamento"])
+        .order("id"),
+    ),
     // "Operação de hoje" — escopado pela rota do dia (planejamento de hoje),
     // não pelo status corrente sem filtro nenhum como era antes.
     supabase

@@ -4,6 +4,7 @@ import { SecaoRelatorio, Tabela, SemDados } from "../componentes-impressao";
 import { SecaoRelatorioPdf, TabelaPdf, SemDadosPdf } from "../pdf/componentes-impressao-pdf";
 import { DEF_NUCLEOS_AGORA } from "../metadados";
 import type { BlocoModulo, SupabaseServerClient } from "../types";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 const STATUS_ABERTO = new Set(["aberto", "em_andamento"]);
 
@@ -13,7 +14,7 @@ type Dados = { nucleos: LinhaNucleo[] };
 async function buscar(supabase: SupabaseServerClient): Promise<Dados> {
   const [{ data: rtsRaw, error: erroRts }, { data: chamadosRaw, error: erroChamados }] = await Promise.all([
     supabase.from("rts").select("id, codigo, latitude, longitude").eq("ativo", true),
-    supabase.from("chamados").select("rt_id, status"),
+    todasAsLinhas(() => supabase.from("chamados").select("rt_id, status").order("id")),
   ]);
   if (erroRts) throw new Error(erroRts.message);
   if (erroChamados) throw new Error(erroChamados.message);

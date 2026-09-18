@@ -3,6 +3,7 @@ import { SecaoRelatorio, GradeStats, Stat, Tabela } from "../componentes-impress
 import { SecaoRelatorioPdf, GradeStatsPdf, StatPdf, TabelaPdf } from "../pdf/componentes-impressao-pdf";
 import { DEF_PANORAMA_CHAMADOS_AGORA } from "../metadados";
 import type { BlocoModulo, SupabaseServerClient } from "../types";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 // "Aberto" pro propósito do relatório = mesma convenção usada em todo o
 // resto do app (dashboard, painel) — cobre os dois status que o import
@@ -17,7 +18,9 @@ type Dados = {
 };
 
 async function buscar(supabase: SupabaseServerClient): Promise<Dados> {
-  const { data, error } = await supabase.from("chamados").select("prioridade, status, sla_prazo");
+  const { data, error } = await todasAsLinhas(() =>
+    supabase.from("chamados").select("prioridade, status, sla_prazo").order("id"),
+  );
   if (error) throw new Error(error.message);
 
   const porPrioridade = { emergencial: 0, alta: 0, normal: 0, baixa: 0 };

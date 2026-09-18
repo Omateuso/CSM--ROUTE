@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { computeSlaStatus } from "@/lib/sla";
 import { sugerirProximasRts, type RtParaRoteirizacao } from "@/lib/routing/intelligent-route";
 import { ROUTE_PROXIMITY_RADIUS_KM } from "@/lib/routing/config";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 // Raios que o gerente pode escolher na tela (pedido do usuário, 27/08/2026)
 // — validados aqui pra não aceitar valor arbitrário vindo do client.
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
       .from("rts")
       .select("id, codigo, nome, endereco, latitude, longitude, regiao_id, ativo")
       .eq("ativo", true),
-    supabase.from("chamados").select("rt_id, prioridade, status, sla_prazo"),
+    todasAsLinhas(() => supabase.from("chamados").select("rt_id, prioridade, status, sla_prazo").order("id")),
   ]);
 
   if (rtsError || chamadosError) {

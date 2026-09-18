@@ -2,6 +2,7 @@ import { SecaoRelatorio, Tabela, SemDados } from "../componentes-impressao";
 import { SecaoRelatorioPdf, TabelaPdf, SemDadosPdf } from "../pdf/componentes-impressao-pdf";
 import { DEF_RT_MAIS_CHAMADOS_AGORA } from "../metadados";
 import type { BlocoModulo, SupabaseServerClient } from "../types";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 const STATUS_ABERTO = new Set(["aberto", "em_andamento"]);
 const TOP_N = 5;
@@ -15,7 +16,9 @@ function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
 }
 
 async function buscar(supabase: SupabaseServerClient): Promise<Dados> {
-  const { data, error } = await supabase.from("chamados").select("status, rt_id, rts(codigo, nome)");
+  const { data, error } = await todasAsLinhas(() =>
+    supabase.from("chamados").select("status, rt_id, rts(codigo, nome)").order("id"),
+  );
   if (error) throw new Error(error.message);
 
   const volumePorRt = new Map<string, LinhaRt>();

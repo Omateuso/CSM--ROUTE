@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Prioridade } from "@/app/chamados/prioridade-badge";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 export type ActionState = { error: string | null; rotaId?: string };
 
@@ -44,12 +45,15 @@ export async function buscarChamadosElegiveis(rtIds: string[]): Promise<ChamadoE
 
   const supabase = await createClient();
 
-  const { data: chamadosRaw, error } = await supabase
-    .from("chamados")
-    .select("id, rt_id, tomticket_id, assunto, prioridade")
-    .in("rt_id", rtIds)
-    .not("status", "in", "(finalizado,cancelado)")
-    .order("criado_em", { ascending: true });
+  const { data: chamadosRaw, error } = await todasAsLinhas(() =>
+    supabase
+      .from("chamados")
+      .select("id, rt_id, tomticket_id, assunto, prioridade")
+      .in("rt_id", rtIds)
+      .not("status", "in", "(finalizado,cancelado)")
+      .order("criado_em", { ascending: true })
+      .order("id"),
+  );
 
   if (error || !chamadosRaw || chamadosRaw.length === 0) return [];
 

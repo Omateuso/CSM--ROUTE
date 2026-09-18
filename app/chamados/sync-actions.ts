@@ -43,7 +43,7 @@ export async function sincronizarComTomticket(): Promise<SyncState> {
   }
 
   try {
-    const r = await sincronizarChamados(supabase);
+    const r = await sincronizarChamados(supabase, { completa: true });
 
     revalidatePath("/chamados");
     revalidatePath("/dashboard");
@@ -57,6 +57,9 @@ export async function sincronizarComTomticket(): Promise<SyncState> {
     if (r.ignorados > 0) partes.push(`${r.ignorados} sem RT correspondente`);
     if (r.servicosCriados > 0) {
       partes.push(`${r.servicosCriados} já entraram numa rota confirmada`);
+    }
+    if (r.resgatados > 0) {
+      partes.push(`${r.resgatados} aberto(s) antigo(s) resgatado(s) — fora da janela de 90 dias`);
     }
     if (r.reconciliados > 0) {
       partes.push(`${r.reconciliados} encerrado(s) — sumiram do TomTicket`);

@@ -2,6 +2,7 @@ import { SecaoRelatorio, Tabela, SemDados } from "../componentes-impressao";
 import { SecaoRelatorioPdf, TabelaPdf, SemDadosPdf } from "../pdf/componentes-impressao-pdf";
 import { DEF_VOLUME_REGIAO_PERIODO } from "../metadados";
 import type { BlocoModulo, Periodo, SupabaseServerClient } from "../types";
+import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -14,11 +15,14 @@ type Dados = { regioes: LinhaRegiao[]; totalGeral: number; periodo: Periodo };
 async function buscar(supabase: SupabaseServerClient, periodo?: Periodo): Promise<Dados> {
   if (!periodo) throw new Error("Bloco 'Volume por região' precisa de um período.");
 
-  const { data, error } = await supabase
-    .from("chamados")
-    .select("criado_em, rts(regioes(nome, zonas(nome)))")
-    .gte("criado_em", `${periodo.inicio}T00:00:00`)
-    .lte("criado_em", `${periodo.fim}T23:59:59`);
+  const { data, error } = await todasAsLinhas(() =>
+    supabase
+      .from("chamados")
+      .select("criado_em, rts(regioes(nome, zonas(nome)))")
+      .gte("criado_em", `${periodo.inicio}T00:00:00`)
+      .lte("criado_em", `${periodo.fim}T23:59:59`)
+      .order("id"),
+  );
   if (error) throw new Error(error.message);
 
   const porRegiao = new Map<string, LinhaRegiao>();

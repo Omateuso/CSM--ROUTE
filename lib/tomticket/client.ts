@@ -378,8 +378,12 @@ const SITUACOES_ABERTAS = "0,1,2,3,6,8,9,10,11";
 // conjunto de protocolos que ainda existem abertos. ~21 páginas / ~7s pro
 // departamento MANUTENÇÃO - SRT. Propaga o erro de qualquer página — quem chama
 // PRECISA saber que a leitura foi parcial e não reconciliar em cima disso.
-export async function listarProtocolosAbertos(departmentId: string): Promise<Set<string>> {
-  const protocolos = new Set<string>();
+//
+// Devolve protocolo -> ticket_id interno. O id é o que `/ticket/detail` pede,
+// e é o que permite RESGATAR um chamado aberto que a leitura incremental
+// nunca alcança (mais de 90 dias sem atualização, ver `limitarJanela`).
+export async function listarProtocolosAbertos(departmentId: string): Promise<Map<string, string>> {
+  const protocolos = new Map<string, string>();
 
   for (let pagina = 1; pagina <= 400; pagina++) {
     const corpo = await chamar("/ticket/list", {
@@ -395,7 +399,7 @@ export async function listarProtocolosAbertos(departmentId: string): Promise<Set
     if (itens.length === 0) break;
     for (const item of itens) {
       const protocolo = String(item.protocol ?? "").trim();
-      if (protocolo) protocolos.add(protocolo);
+      if (protocolo) protocolos.set(protocolo, String(item.id ?? "").trim());
     }
 
     const proxima = numeroOuNulo(corpo.next_page);
