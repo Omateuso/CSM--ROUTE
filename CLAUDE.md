@@ -151,6 +151,7 @@ Une a "Regra de processo" (dados) com o processo de design — nenhuma tela é c
 
 Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pelo título/data pra ler o detalhe completo.
 
+- [x] Registrar urgência em lote — barra do diálogo aceita mensagem crua do WhatsApp (Enter/colar), pesca os protocolos e registra vários chamados de uma vez, motivo = texto da linha — 17-18/09/2026 (sem migration; não testado no navegador)
 - [x] "Relatório de RT" — documento técnico avulso pra encaminhamento ao IGEDES (não é chamado, vínculo com chamado opcional) — 15-16/09/2026, feito pelo Mateus em paralelo
 - [x] Localização das RTs: endereço oficial (rua/número/CEP) vira a fonte de verdade da navegação — geocodificação Nominatim (backfill inicial), depois **substituída por planilha do usuário com coordenada verificada** (conta de luz/visita de campo) pras 98 RTs, corrigindo uma que estava 32km fora do lugar — 16-17/09/2026
 - [x] Backup dos dados de localização das RTs (limpeza cogitada, cancelada) — 16/09/2026
