@@ -194,3 +194,22 @@ export async function removerParadaRota(_prev: ActionState, formData: FormData):
   revalidatePath("/dashboard");
   return { error: null };
 }
+
+/**
+ * Campo de busca do "Adicionar RT" (18/09/2026): quando o gerente digita um
+ * número de protocolo do TomTicket (5-6 dígitos), descobre a RT dona daquele
+ * chamado. Busca por código/nome/bairro da RT é feita no cliente, sobre a
+ * lista já carregada.
+ */
+export async function buscarRtPorProtocolo(protocolo: string): Promise<{ rtId: string | null; chamadoId: string | null }> {
+  const limpo = protocolo.replace(/\D/g, "");
+  if (limpo.length < 5) return { rtId: null, chamadoId: null };
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("chamados")
+    .select("id, rt_id")
+    .eq("tomticket_id", limpo)
+    .limit(1)
+    .maybeSingle();
+  return { rtId: (data?.rt_id as string | null) ?? null, chamadoId: (data?.id as string | null) ?? null };
+}

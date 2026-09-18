@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useEhIOS } from "@/lib/ui/plataforma";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { PlacaRt } from "@/lib/ui/placa-rt";
 
@@ -20,6 +21,7 @@ export function RtGrupo({
   quantidade,
   paraRevisaoQuantidade = 0,
   urlNavegacao,
+  urlNavegacaoApple = null,
   children,
 }: {
   codigo: string;
@@ -34,8 +36,11 @@ export function RtGrupo({
   paraRevisaoQuantidade?: number;
   /** Link pro app de mapa do técnico. Ausente quando a RT não tem coordenada. */
   urlNavegacao?: string | null;
+  /** Apple Maps (só aparece no iPhone/iPad — nunca cai na App Store). */
+  urlNavegacaoApple?: string | null;
   children: ReactNode;
 }) {
+  const ios = useEhIOS();
   const [aberta, setAberta] = useState(false);
 
   return (
@@ -81,13 +86,27 @@ export function RtGrupo({
             href={urlNavegacao}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Navegar até ${codigo} no app de mapa`}
+            aria-label={`Navegar até ${codigo} no Google Maps`}
             className={`flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] border border-border px-3 text-[10px] font-medium text-accent transition-colors hover:bg-surface-input ${FOCUS_RING}`}
           >
             <span aria-hidden="true" className="text-base leading-none">
               ➤
             </span>
             Ir
+          </a>
+        )}
+        {ios && urlNavegacaoApple && (
+          <a
+            href={urlNavegacaoApple}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Navegar até ${codigo} no Apple Maps`}
+            className={`flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] border border-border px-2.5 text-[10px] font-medium text-text-secondary transition-colors hover:bg-surface-input ${FOCUS_RING}`}
+          >
+            <span aria-hidden="true" className="text-base leading-none">
+              ➤
+            </span>
+            Apple
           </a>
         )}
       </div>

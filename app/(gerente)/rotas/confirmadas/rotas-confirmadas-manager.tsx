@@ -30,8 +30,10 @@ export type RotaRow = {
     tecnicoNome: string | null;
     /** Atendentes além do principal (migration 0050, 14/09/2026). */
     tecnicosExtraNomes: string[];
-    /** Algum serviço da parada já saiu de `planejado` (não pode ser removida). */
-    iniciada: boolean;
+    /** Algum serviço da parada está em execução/revisão (remover cancela esse serviço). */
+    emAndamento: boolean;
+    /** Algum serviço da parada já foi concluído/validado (fica na Validação mesmo removendo a parada). */
+    concluida: boolean;
   }[];
   podeCorrigirData: boolean;
 };
@@ -366,7 +368,8 @@ export function RotasConfirmadasManager({
           codigo: p.codigo,
           endereco: p.endereco,
           tecnicoNome: p.tecnicoNome,
-          iniciada: p.iniciada,
+          emAndamento: p.emAndamento,
+          concluida: p.concluida,
         }))}
         rtsDisponiveis={rtsDisponiveis}
         tecnicos={tecnicos}

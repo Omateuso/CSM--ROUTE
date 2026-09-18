@@ -11,6 +11,7 @@ import { BotaoRotaOtimizada } from "./botao-rota-otimizada";
 import { BotaoAtualizarLocalizacao } from "./botao-atualizar-localizacao";
 import { LinhaDeRota, type Parada } from "@/lib/ui/linha-de-rota";
 import {
+  linkAppleMapsDestino,
   linkGoogleMapsDestino,
   linkGoogleMapsRota,
   paradasNavegaveis,
@@ -225,6 +226,7 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                       quantidade={doRt.length}
                       paraRevisaoQuantidade={paraRevisao.length}
                       urlNavegacao={doRt[0] ? linkGoogleMapsDestino(enderecoDaRt(doRt[0])) : null}
+                      urlNavegacaoApple={doRt[0] ? linkAppleMapsDestino(enderecoDaRt(doRt[0])) : null}
                     >
                       {(() => {
                         let numero = 0;

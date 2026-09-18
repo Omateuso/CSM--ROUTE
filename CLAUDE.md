@@ -151,7 +151,8 @@ Une a "Regra de processo" (dados) com o processo de design — nenhuma tela é c
 
 Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pelo título/data pra ler o detalhe completo.
 
-- [ ] Editar paradas de rota confirmada (adicionar/remover RT) — código completo e testado até o banco; **migration `0062` pendente** — 18/09/2026
+- [ ] Remover qualquer parada (`0063`, **pendente**) + busca de RT por nº da RT/nº do chamado no editar paradas + navegação iOS (rota em 2 etapas com links reais, Apple Maps no iPhone) — 18/09/2026; não testado em iPhone real
+- [x] Editar paradas de rota confirmada (adicionar/remover RT) — `0062` aplicada (confirmado ao vivo) — 18/09/2026
 - [~] Nova identidade visual "Azulejo" (operacional claro, teal `#0B6E68` único, IBM Plex, menu claro agrupado, celular nasce com menu fechado, placa da RT, badges-pílula) — rodadas 1 (tokens + casca + componentes compartilhados), 2 (placa da RT em toda tela, tags normalizadas, `LinhaDeRota` no Dashboard e no app do técnico) e 3 (tema claro/escuro por cookie `tema` + `prefers-color-scheme`, token `--on-accent`, KPIs clicáveis com filtros por URL em `/chamados`, busca rápida Ctrl+K, `IndicadorAoVivo`), 18/09/2026 (prévia aprovada: https://claude.ai/artifact/JmHYEUtpE6NP3KQ4aJkbEr; sem migration; commit `d935ab8` no GitHub e Gitea; linha de rota do técnico não vista com dados reais)
 - [x] Resgate dos chamados abertos antigos do TomTicket (fora da janela de 90 dias da API; 779 chamados entraram) + helper `todasAsLinhas` pra furar o cap de 1.000 linhas do PostgREST em toda consulta a `chamados` — 18/09/2026 (sem migration; rodado ao vivo, telas não abertas no navegador)
 - [x] Registrar urgência em lote — barra do diálogo aceita mensagem crua do WhatsApp (Enter/colar), pesca os protocolos e registra vários chamados de uma vez, motivo = texto da linha — 17-18/09/2026 (sem migration; não testado no navegador)
@@ -196,7 +197,8 @@ Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pel
 ### Pendências ativas — conferir/agir antes de assumir que algo funciona
 
 **Migrations — estado REAL do banco, checado ao vivo em 18/09/2026** (com service role, chamando cada função com a assinatura certa; `{}` dá falso-negativo por causa do cache do PostgREST — a lista muda a cada sessão, prefira rechecar antes de confiar):
-- `0062_editar_paradas_rota.sql` — **pendente** (criada em 18/09; a tela de Rotas confirmadas já mostra "rode a migration 0062" ao tentar usar)
+- `0063_remover_qualquer_parada.sql` — **pendente** (substitui `fn_remover_parada_rota`: remove qualquer parada, cancela só serviço não concluído)
+- `0062_editar_paradas_rota.sql` — **aplicada** (confirmado em 18/09 pelo teste do protocolo)
 - `0059_relatorios_rt.sql` (Mateus) — **pela metade**: tabelas existem, falta o trecho de storage (bucket `relatorios-rt` + 2 policies, linhas 105–124) — sem ele, foto/.docx do Relatório de RT falham
 - `0052_aumentar_limite_evidencias.sql` — **pendente** (bucket `evidencias` ainda em 10 MB)
 - `0048_realtime_mais_telas.sql` — sem como verificar por API (publicação do Postgres); rodar por garantia, é idempotente na prática
@@ -207,7 +209,7 @@ Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pel
 - `ORS_API_KEY` só está em `.env.local` (dev) — falta colar no ambiente de produção (Netlify) pra rota inteligente/navegação usarem tempo real de carro em vez de linha reta
 - Deploy Netlify: `netlify login` e as variáveis de ambiente do site ainda precisam ser configuradas pelo usuário (não consigo autenticar por aqui); 2 secrets do GitHub Actions (`SYNC_URL`, `SYNC_SECRET`) pendentes pra sincronização automática funcionar em produção
 - Logo CSM em alta resolução + endereço/CNPJ/selos institucionais pro relatório mensal — placeholders `[PREENCHER]` em `lib/relatorio-mensal/csm.ts`
-- "Abrir rota no Google Maps" caindo pra ordem planejada em vez da otimizada — causa raiz não 100% confirmada (ver entrada de 15/09 no histórico)
+- "Abrir rota no Google Maps" caindo pra ordem planejada / abrindo a App Store no iOS — causa provável achada e corrigida em 18/09 (URL trocada por script numa aba em branco; agora são links reais em 2 etapas + Apple Maps no iPhone); **falta confirmar num iPhone real**
 
 ## Como trabalhar comigo (Programador Pedro)
 

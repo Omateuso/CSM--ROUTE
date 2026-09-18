@@ -16,6 +16,7 @@ import {
 } from "@/lib/ui/styles";
 import {
   adicionarParadaRota,
+  buscarRtPorProtocolo,
   listarChamadosElegiveis,
   removerParadaRota,
   type ActionState,
@@ -41,8 +42,10 @@ export type ParadaEditavel = {
   codigo: string;
   endereco: string;
   tecnicoNome: string | null;
-  /** Já tem serviço fora de `planejado`: não pode ser removida. */
-  iniciada: boolean;
+  /** Serviço em execução/revisão — remover cancela esse atendimento. */
+  emAndamento: boolean;
+  /** Serviço já concluído/validado — fica na Validação mesmo removendo a parada. */
+  concluida: boolean;
 };
 
 export type RtOpcao = { id: string; codigo: string; nome: string; bairro: string | null; regiaoNome: string };
@@ -111,7 +114,10 @@ function RemoverParada({
         className={FIELD_INPUT}
       />
       <p className="text-xs text-text-secondary">
-        Os chamados dela saem da lista do técnico e voltam a ficar disponíveis pra próxima rota.
+        {parada.emAndamento
+          ? "Atenção: o técnico já começou aqui — o atendimento em andamento é cancelado e o chamado volta a ficar disponível pra próxima rota."
+          : "Os chamados dela saem da lista do técnico e voltam a ficar disponíveis pra próxima rota."}
+        {parada.concluida && " O que já foi concluído nesta parada continua na Validação."}
       </p>
       {state.error && (
         <p role="alert" className="text-xs text-danger">
@@ -158,6 +164,9 @@ export function EditarParadasDialog({
 }) {
   const uid = useId();
   const [rtEscolhida, setRtEscolhida] = useState("");
+  const [buscaRt, setBuscaRt] = useState("");
+  const [buscandoProtocolo, startBuscaProtocolo] = useTransition();
+  const [avisoBusca, setAvisoBusca] = useState<string | null>(null);
   const [tecnicoEscolhido, setTecnicoEscolhido] = useState("");
   const [categoria, setCategoria] = useState<"concluir_hoje" | "revisao_tecnica">("concluir_hoje");
   const [chamados, setChamados] = useState<ChamadoElegivel[] | null>(null);
@@ -175,7 +184,47 @@ export function EditarParadasDialog({
     () => rtsDisponiveis.filter((rt) => !naRota.has(rt.id)),
     [rtsDisponiveis, naRota],
   );
-  const regioes = useMemo(() => [...new Set(rtsForaDaRota.map((rt) => rt.regiaoNome))].sort(), [rtsForaDaRota]);
+  // Resultados da busca de RT: por número ("14", "SRT 14"), nome ou bairro.
+  // Protocolo de chamado (5+ dígitos) vai ao servidor descobrir a RT dona.
+  const resultadosRt = useMemo(() => {
+    const q = buscaRt.trim().toLowerCase();
+    if (!q) return [];
+    const digitos = q.replace(/\D/g, "");
+    const soNumero = /^\d+$/.test(q) || /^(s?rt)\s*\d+$/.test(q);
+    return rtsForaDaRota
+      .filter((rt) => {
+        const cod = rt.codigo.toLowerCase();
+        const codDigitos = cod.replace(/\D/g, "");
+        if (soNumero && digitos) return codDigitos === digitos || (digitos.length < 5 && codDigitos.startsWith(digitos));
+        return (
+          cod.includes(q) ||
+          rt.nome.toLowerCase().includes(q) ||
+          (rt.bairro ?? "").toLowerCase().includes(q) ||
+          rt.regiaoNome.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 8);
+  }, [buscaRt, rtsForaDaRota]);
+  const rtEscolhidaInfo = rtsDisponiveis.find((rt) => rt.id === rtEscolhida) ?? null;
+  const pareceProtocolo = /^\d{5,6}$/.test(buscaRt.trim());
+
+  function buscarPorProtocolo() {
+    const termo = buscaRt.trim();
+    setAvisoBusca(null);
+    startBuscaProtocolo(async () => {
+      const r = await buscarRtPorProtocolo(termo);
+      if (!r.rtId) {
+        setAvisoBusca(`Nenhum chamado com o protocolo #${termo}.`);
+        return;
+      }
+      if (naRota.has(r.rtId)) {
+        const rt = rtsDisponiveis.find((x) => x.id === r.rtId);
+        setAvisoBusca(`O chamado #${termo} é da ${rt?.codigo ?? "RT"}, que já está nesta rota.`);
+        return;
+      }
+      escolherRt(r.rtId);
+    });
+  }
   const tecnicosDaEquipe = useMemo(
     () => tecnicos.filter((t) => t.equipeId === equipeId),
     [tecnicos, equipeId],
@@ -184,6 +233,8 @@ export function EditarParadasDialog({
   // Escolheu a RT → busca os chamados elegíveis dela e marca todos.
   function escolherRt(id: string) {
     setRtEscolhida(id);
+    setBuscaRt("");
+    setAvisoBusca(null);
     setChamados(null);
     setErroChamados(null);
     setMarcados(new Set());
@@ -233,18 +284,22 @@ export function EditarParadasDialog({
                   </div>
                   <p className="mt-1 text-xs text-text-tertiary">
                     {p.tecnicoNome ?? "sem técnico"}
-                    {p.iniciada && " · atendimento já iniciado — não pode ser removida"}
+                    {p.emAndamento && (
+                      <span className="text-priority-alta"> · atendimento em andamento</span>
+                    )}
+                    {p.concluida && <span className="text-sla-dentro"> · tem serviço concluído</span>}
                   </p>
                 </div>
-                {!p.iniciada && paradas.length > 1 && rotaId && (
-                  <RemoverParada rotaId={rotaId} parada={p} onRemovido={() => undefined} />
-                )}
+                {rotaId && <RemoverParada rotaId={rotaId} parada={p} onRemovido={() => undefined} />}
               </li>
             ))}
           </ol>
+          {paradas.length === 0 && (
+            <p className="mt-2 text-xs text-text-tertiary">Nenhuma parada — a rota foi cancelada.</p>
+          )}
           {paradas.length === 1 && (
             <p className="mt-2 text-xs text-text-tertiary">
-              Única RT da rota — pra desfazer a rota inteira, use &quot;Cancelar rota&quot;.
+              Única RT da rota — se ela for removida sem nada concluído, a rota inteira é cancelada.
             </p>
           )}
         </section>
@@ -279,32 +334,95 @@ export function EditarParadasDialog({
             <input type="hidden" name="categoria" value={categoria} />
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1">
+              <div className="relative flex flex-col gap-1">
                 <label htmlFor={`${uid}-rt`} className={FIELD_LABEL}>
                   RT
                 </label>
-                <select
-                  id={`${uid}-rt`}
-                  name="rtId"
-                  value={rtEscolhida}
-                  onChange={(e) => escolherRt(e.target.value)}
-                  required
-                  className={FIELD_INPUT}
-                >
-                  <option value="">Escolha a RT…</option>
-                  {regioes.map((reg) => (
-                    <optgroup key={reg} label={reg}>
-                      {rtsForaDaRota
-                        .filter((rt) => rt.regiaoNome === reg)
-                        .map((rt) => (
-                          <option key={rt.id} value={rt.id}>
-                            {rt.codigo} — {nomeSemCodigo(rt.nome, rt.codigo)}
-                            {rt.bairro ? ` (${rt.bairro})` : ""}
-                          </option>
+                <input type="hidden" name="rtId" value={rtEscolhida} />
+                {rtEscolhidaInfo ? (
+                  <div className="flex h-[38px] items-center gap-2 rounded-[var(--radius-sm)] border border-accent bg-accent-tint px-2.5">
+                    <PlacaRt codigo={rtEscolhidaInfo.codigo} />
+                    <span className="min-w-0 flex-1 truncate text-sm text-text-primary">
+                      {nomeSemCodigo(rtEscolhidaInfo.nome, rtEscolhidaInfo.codigo)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => escolherRt("")}
+                      aria-label="Trocar a RT"
+                      className={`text-xs font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}
+                    >
+                      trocar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      id={`${uid}-rt`}
+                      type="text"
+                      value={buscaRt}
+                      onChange={(e) => {
+                        setBuscaRt(e.target.value);
+                        setAvisoBusca(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (resultadosRt.length === 1) escolherRt(resultadosRt[0].id);
+                          else if (pareceProtocolo) buscarPorProtocolo();
+                        }
+                      }}
+                      placeholder="Nº da RT (ex.: 14) ou nº do chamado (ex.: 335072)"
+                      autoComplete="off"
+                      role="combobox"
+                      aria-expanded={resultadosRt.length > 0}
+                      aria-controls={`${uid}-rt-lista`}
+                      className={FIELD_INPUT}
+                    />
+                    {(resultadosRt.length > 0 || pareceProtocolo || (buscaRt.trim() && !buscandoProtocolo)) && (
+                      <ul
+                        id={`${uid}-rt-lista`}
+                        role="listbox"
+                        className="absolute top-full right-0 left-0 z-10 mt-1 max-h-64 overflow-y-auto rounded-[var(--radius-sm)] bg-surface p-1 shadow-lift-overlay"
+                      >
+                        {resultadosRt.map((rt) => (
+                          <li key={rt.id} role="option" aria-selected={false}>
+                            <button
+                              type="button"
+                              onClick={() => escolherRt(rt.id)}
+                              className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-sm hover:bg-surface-hover"
+                            >
+                              <PlacaRt codigo={rt.codigo} />
+                              <span className="min-w-0 flex-1 truncate text-text-primary">
+                                {nomeSemCodigo(rt.nome, rt.codigo)}
+                              </span>
+                              <span className="shrink-0 text-xs text-text-tertiary">{rt.bairro ?? rt.regiaoNome}</span>
+                            </button>
+                          </li>
                         ))}
-                    </optgroup>
-                  ))}
-                </select>
+                        {pareceProtocolo && (
+                          <li role="option" aria-selected={false}>
+                            <button
+                              type="button"
+                              onClick={buscarPorProtocolo}
+                              disabled={buscandoProtocolo}
+                              className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-sm text-accent hover:bg-surface-hover disabled:opacity-60"
+                            >
+                              {buscandoProtocolo ? "Procurando o chamado…" : `Achar a RT do chamado #${buscaRt.trim()}`}
+                            </button>
+                          </li>
+                        )}
+                        {resultadosRt.length === 0 && !pareceProtocolo && buscaRt.trim() && (
+                          <li className="px-2 py-1.5 text-xs text-text-tertiary">Nenhuma RT fora da rota com esse termo.</li>
+                        )}
+                      </ul>
+                    )}
+                  </>
+                )}
+                {avisoBusca && (
+                  <p role="alert" className="text-xs text-danger">
+                    {avisoBusca}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <label htmlFor={`${uid}-tec`} className={FIELD_LABEL}>

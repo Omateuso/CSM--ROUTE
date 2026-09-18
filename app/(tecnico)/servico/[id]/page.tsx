@@ -12,7 +12,8 @@ import { PendenciaForm } from "./pendencia-form";
 import { AvaliarServicoForm } from "./avaliar-servico-form";
 import { ServicoRealtime } from "./servico-realtime";
 import { FOCUS_RING } from "@/lib/ui/styles";
-import { linkGoogleMapsDestino, linkWaze } from "@/lib/navegacao";
+import { linkAppleMapsDestino, linkGoogleMapsDestino, linkWaze } from "@/lib/navegacao";
+import { LinksNavegacao } from "@/lib/ui/links-navegacao";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
 import { PlacaRt } from "@/lib/ui/placa-rt";
@@ -211,6 +212,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
     lng: rt?.longitude == null ? null : Number(rt.longitude),
   };
   const urlGoogleMaps = linkGoogleMapsDestino(enderecoRt);
+  const urlAppleMaps = linkAppleMapsDestino(enderecoRt);
   const urlWaze = linkWaze(enderecoRt);
 
   return (
@@ -257,28 +259,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
             O destino vai como ENDEREÇO em texto, não coordenada: mandando o
             ponto, o Google mostra o endereço mais próximo dele e o técnico
             pode parar na casa errada (ver lib/navegacao.ts). */}
-        {urlGoogleMaps && (
-          <div className="mt-3 flex gap-2">
-            <a
-              href={urlGoogleMaps}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-accent bg-accent/5 px-4 py-2.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 ${FOCUS_RING}`}
-            >
-              <span aria-hidden="true">➤</span>
-              Como chegar
-            </a>
-            <a
-              href={urlWaze ?? urlGoogleMaps}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Abrir no Waze"
-              className={`flex shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border px-3 py-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-input ${FOCUS_RING}`}
-            >
-              Waze
-            </a>
-          </div>
-        )}
+        <LinksNavegacao google={urlGoogleMaps} apple={urlAppleMaps} waze={urlWaze} />
       </header>
 
       <div className="flex-1 px-4 py-5">

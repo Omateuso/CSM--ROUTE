@@ -91,10 +91,18 @@ export default async function RotasConfirmadasPage() {
   // Por parada (rota + RT): decide se "Remover" aparece no diálogo de editar
   // paradas — mesma regra de fn_remover_parada_rota, só pra não oferecer o
   // botão à toa.
-  const paradasIniciadas = new Set<string>();
+  // Por parada (rota + RT): o diálogo de editar paradas avisa o que a
+  // remoção faz — serviço em andamento é cancelado, serviço concluído fica
+  // (regra de fn_remover_parada_rota, 0063).
+  const paradasEmAndamento = new Set<string>();
+  const paradasConcluidas = new Set<string>();
+  const EM_ANDAMENTO = new Set(["em_deslocamento", "em_execucao", "em_revisao"]);
+  const CONCLUIDO = new Set(["concluido_tecnico", "aguardando_validacao", "validado"]);
   for (const s of servicosRaw ?? []) {
     if (s.status !== "planejado") temServicoIniciadoPorRota.add(s.rota_id as string);
-    if (s.status !== "planejado" && s.status !== "cancelado") paradasIniciadas.add(`${s.rota_id}-${s.rt_id}`);
+    const chave = `${s.rota_id}-${s.rt_id}`;
+    if (EM_ANDAMENTO.has(s.status as string)) paradasEmAndamento.add(chave);
+    if (CONCLUIDO.has(s.status as string)) paradasConcluidas.add(chave);
   }
 
   const regioes = (regioesRaw ?? []).map((r) => ({
@@ -159,7 +167,8 @@ export default async function RotasConfirmadasPage() {
       equipeId: r.equipe_id as string,
       rts: (rtsPorRota.get(r.id as string) ?? []).map((p) => ({
         ...p,
-        iniciada: paradasIniciadas.has(`${r.id}-${p.rtId}`),
+        emAndamento: paradasEmAndamento.has(`${r.id}-${p.rtId}`),
+        concluida: paradasConcluidas.has(`${r.id}-${p.rtId}`),
       })),
       podeCorrigirData: !temServicoIniciadoPorRota.has(r.id as string),
     };
@@ -185,8 +194,8 @@ export default async function RotasConfirmadasPage() {
         <p className="text-xs font-medium text-text-tertiary">Rotas</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Rotas confirmadas</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Rotas do dia já confirmadas. Nas rotas de hoje e futuras dá pra adicionar ou remover uma RT
-          enquanto o técnico ainda não iniciou aquela parada; o resto é registro fixo.
+          Rotas do dia já confirmadas. Nas rotas de hoje e futuras dá pra adicionar ou remover paradas; o que
+          já foi concluído pelo técnico continua na Validação.
         </p>
       </header>
 

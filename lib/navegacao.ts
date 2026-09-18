@@ -115,6 +115,28 @@ export function linkWaze(destino: EnderecoNavegacao): string | null {
     : `https://waze.com/ul?ll=${alvo.valor}&navigate=yes`;
 }
 
+/**
+ * Apple Maps (só faz sentido no iPhone/iPad): universal link que SEMPRE abre
+ * o app nativo — nunca cai na App Store, diferente do Google Maps quando o
+ * app não está instalado. Mesma escolha de alvo (endereço com CEP > coordenada).
+ */
+export function linkAppleMapsDestino(destino: EnderecoNavegacao): string | null {
+  const alvo = alvoNavegacao(destino);
+  if (!alvo) return null;
+  const q = new URLSearchParams({ daddr: alvo, dirflg: "d" });
+  return `https://maps.apple.com/?${q}`;
+}
+
+/** Rota inteira no Apple Maps: paradas encadeadas com `+to:` (limite prático de ~15). */
+export function linkAppleMapsRota(paradas: EnderecoNavegacao[]): string | null {
+  const alvos = paradas.map(alvoNavegacao).filter((a): a is string => a != null);
+  if (alvos.length === 0) return null;
+  const usadas = alvos.slice(0, MAX_WAYPOINTS + 1);
+  // `+to:` é sintaxe do Apple Maps, não pode ser escapado — só cada alvo.
+  const daddr = usadas.map((a) => encodeURIComponent(a)).join("+to:");
+  return `https://maps.apple.com/?daddr=${daddr}&dirflg=d`;
+}
+
 export type RotaNavegacao = {
   /** Quantas paradas o link realmente cobre (o Google corta em 9 intermediárias). */
   paradasNoLink: number;
