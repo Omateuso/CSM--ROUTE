@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Modal } from "@/lib/ui/modal";
 import { CorrigirDataDialog } from "./corrigir-data-dialog";
 import { CancelarRotaDialog } from "./cancelar-rota-dialog";
+import { EditarParadasDialog, type RtOpcao, type TecnicoOpcao } from "./editar-paradas-dialog";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 import { StatusDot } from "@/lib/ui/status-dot";
 import { PlacaRt } from "@/lib/ui/placa-rt";
@@ -19,12 +20,18 @@ export type RotaRow = {
   zonaNome: string;
   equipeNome: string;
   responsavelNome: string;
+  /** Equipe da rota — filtra os técnicos oferecidos ao adicionar parada (0062). */
+  equipeId: string;
   rts: {
+    rtId: string;
     codigo: string;
     endereco: string;
+    tecnicoId: string | null;
     tecnicoNome: string | null;
     /** Atendentes além do principal (migration 0050, 14/09/2026). */
     tecnicosExtraNomes: string[];
+    /** Algum serviço da parada já saiu de `planejado` (não pode ser removida). */
+    iniciada: boolean;
   }[];
   podeCorrigirData: boolean;
 };
@@ -55,7 +62,20 @@ function StatusRotaBadge({ status }: { status: string }) {
   );
 }
 
-export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; regioes: Regiao[] }) {
+export function RotasConfirmadasManager({
+  rotas,
+  regioes,
+  rtsDisponiveis,
+  tecnicos,
+  hoje,
+}: {
+  rotas: RotaRow[];
+  regioes: Regiao[];
+  rtsDisponiveis: RtOpcao[];
+  tecnicos: TecnicoOpcao[];
+  /** Data de hoje (AAAA-MM-DD) calculada no servidor — rota passada não é editável. */
+  hoje: string;
+}) {
   const [dataFiltro, setDataFiltro] = useState("");
   const [regiaoFiltro, setRegiaoFiltro] = useState("todas");
   const [equipeFiltro, setEquipeFiltro] = useState("todas");
@@ -64,6 +84,12 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
   const [corrigirInstancia, setCorrigirInstancia] = useState(0);
   const [rotaCancelando, setRotaCancelando] = useState<RotaRow | null>(null);
   const [cancelarInstancia, setCancelarInstancia] = useState(0);
+  // Editar paradas (0062): guarda só o id e deriva a linha de `rotas` — assim
+  // a lista de paradas dentro do diálogo acompanha o revalidatePath depois
+  // de adicionar/remover, em vez de congelar no estado de quando abriu.
+  const [rotaEditandoId, setRotaEditandoId] = useState<string | null>(null);
+  const [editarInstancia, setEditarInstancia] = useState(0);
+  const rotaEditando = rotaEditandoId ? (rotas.find((r) => r.id === rotaEditandoId) ?? null) : null;
 
   const equipesDisponiveis = useMemo(
     () => [...new Set(rotas.map((r) => r.equipeNome))].sort(),
@@ -201,6 +227,19 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
                         Corrigir data
                       </button>
                     )}
+                    {r.status === "confirmada" && r.data >= hoje && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditarInstancia((n) => n + 1);
+                          setRotaEditandoId(r.id);
+                        }}
+                        aria-label={`Editar paradas da rota de ${formatoData.format(new Date(`${r.data}T00:00:00`))}`}
+                        className={`text-xs font-medium text-accent transition-colors hover:text-accent-hover ${FOCUS_RING} ${TAP_TARGET}`}
+                      >
+                        Editar paradas
+                      </button>
+                    )}
                     {r.podeCorrigirData && r.status !== "cancelada" && (
                       <button
                         type="button"
@@ -315,6 +354,25 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
           </div>
         )}
       </Modal>
+      <EditarParadasDialog
+        key={`editar-${editarInstancia}`}
+        open={rotaEditando !== null}
+        rotaId={rotaEditando?.id ?? null}
+        rotaData={rotaEditando?.data ?? null}
+        equipeId={rotaEditando?.equipeId ?? null}
+        equipeNome={rotaEditando?.equipeNome ?? ""}
+        paradas={(rotaEditando?.rts ?? []).map((p) => ({
+          rtId: p.rtId,
+          codigo: p.codigo,
+          endereco: p.endereco,
+          tecnicoNome: p.tecnicoNome,
+          iniciada: p.iniciada,
+        }))}
+        rtsDisponiveis={rtsDisponiveis}
+        tecnicos={tecnicos}
+        onClose={() => setRotaEditandoId(null)}
+      />
+
       <CancelarRotaDialog
         key={`cancelar-${cancelarInstancia}`}
         open={rotaCancelando !== null}

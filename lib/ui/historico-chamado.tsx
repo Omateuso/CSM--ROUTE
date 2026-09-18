@@ -30,6 +30,9 @@ const EVENTO_LABEL: Record<string, string> = {
   servico_validado: "Validado pelo gerente",
   rota_data_corrigida: "Data da rota corrigida",
   rota_cancelada: "Rota cancelada",
+  // Editar paradas (0062, 18/09/2026): RT tirada de uma rota confirmada —
+  // o serviço planejado é cancelado e o chamado volta a ficar elegível.
+  servico_removido_rota: "Removido da rota",
   tecnico_trocado: "Técnico trocado",
   servico_recusado: "Recusado pelo gerente", // nome antigo (0025) — mantido pros registros já gravados
   servico_correcao_solicitada: "Correção solicitada", // 0039 — "Recusar" virou "Solicitar correção"

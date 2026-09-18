@@ -35,6 +35,8 @@ export default async function RotasConfirmadasPage() {
     { data: regioesRaw, error: regioesError },
     { data: servicosRaw, error: servicosError },
     { data: extrasRaw, error: extrasError },
+    { data: rtsAtivasRaw },
+    { data: tecnicosRaw },
   ] = await Promise.all([
     supabase
       .from("rotas")
@@ -48,11 +50,24 @@ export default async function RotasConfirmadasPage() {
       .select("rota_id, rt_id, ordem, tecnico_id, rts(codigo, endereco), tecnico:tecnico_id(nome)")
       .order("ordem", { ascending: true }),
     supabase.from("regioes").select("id, nome, zonas(nome)").order("nome", { ascending: true }),
-    supabase.from("servicos").select("rota_id, status"),
+    supabase.from("servicos").select("rota_id, rt_id, status"),
     // Atendentes além do principal (migration 0050, 14/09/2026) — a query de
     // `rota_rts` acima só traz `tecnico_id` (o principal); isto complementa
     // com quem mais foi vinculado à mesma parada.
     supabase.from("rota_rts_tecnicos").select("rota_id, rt_id, tecnico_id, tecnico:tecnico_id(nome)"),
+    // Editar paradas (0062, 18/09/2026): opções do diálogo "adicionar RT" —
+    // RTs ativas e técnicos ativos (filtrados pela equipe da rota no cliente).
+    supabase
+      .from("rts")
+      .select("id, codigo, nome, bairro, regioes(nome)")
+      .eq("ativo", true)
+      .order("codigo", { ascending: true }),
+    supabase
+      .from("profiles")
+      .select("id, nome, equipe_id")
+      .eq("role", "tecnico")
+      .eq("ativo", true)
+      .order("nome", { ascending: true }),
   ]);
 
   if (rotasError || rotaRtsError || regioesError || servicosError || extrasError) {
@@ -73,8 +88,13 @@ export default async function RotasConfirmadasPage() {
   // checagem que a função faz no servidor, só pra não oferecer o botão à
   // toa (a garantia de verdade é a função, isso aqui é só UX).
   const temServicoIniciadoPorRota = new Set<string>();
+  // Por parada (rota + RT): decide se "Remover" aparece no diálogo de editar
+  // paradas — mesma regra de fn_remover_parada_rota, só pra não oferecer o
+  // botão à toa.
+  const paradasIniciadas = new Set<string>();
   for (const s of servicosRaw ?? []) {
     if (s.status !== "planejado") temServicoIniciadoPorRota.add(s.rota_id as string);
+    if (s.status !== "planejado" && s.status !== "cancelado") paradasIniciadas.add(`${s.rota_id}-${s.rt_id}`);
   }
 
   const regioes = (regioesRaw ?? []).map((r) => ({
@@ -96,7 +116,14 @@ export default async function RotasConfirmadasPage() {
 
   const rtsPorRota = new Map<
     string,
-    { codigo: string; endereco: string; tecnicoNome: string | null; tecnicosExtraNomes: string[] }[]
+    {
+      rtId: string;
+      codigo: string;
+      endereco: string;
+      tecnicoId: string | null;
+      tecnicoNome: string | null;
+      tecnicosExtraNomes: string[];
+    }[]
   >();
   for (const rr of rotaRtsRaw ?? []) {
     const rt = unwrapOne(rr.rts);
@@ -108,8 +135,10 @@ export default async function RotasConfirmadasPage() {
       (t) => t.id !== principalId,
     );
     lista.push({
+      rtId: rr.rt_id as string,
       codigo: rt.codigo as string,
       endereco: rt.endereco as string,
+      tecnicoId: principalId,
       tecnicoNome: unwrapOne(rr.tecnico)?.nome ?? null,
       tecnicosExtraNomes: extras.map((t) => t.nome),
     });
@@ -127,10 +156,28 @@ export default async function RotasConfirmadasPage() {
       zonaNome: unwrapOne(regiao?.zonas)?.nome ?? "—",
       equipeNome: unwrapOne(r.equipes)?.nome ?? "—",
       responsavelNome: unwrapOne(r.responsavel)?.nome ?? "—",
-      rts: rtsPorRota.get(r.id as string) ?? [],
+      equipeId: r.equipe_id as string,
+      rts: (rtsPorRota.get(r.id as string) ?? []).map((p) => ({
+        ...p,
+        iniciada: paradasIniciadas.has(`${r.id}-${p.rtId}`),
+      })),
       podeCorrigirData: !temServicoIniciadoPorRota.has(r.id as string),
     };
   });
+
+  const rtsDisponiveis = (rtsAtivasRaw ?? []).map((rt) => ({
+    id: rt.id as string,
+    codigo: rt.codigo as string,
+    nome: rt.nome as string,
+    bairro: (rt.bairro as string | null) ?? null,
+    regiaoNome: unwrapOne(rt.regioes)?.nome ?? "—",
+  }));
+  const tecnicos = (tecnicosRaw ?? []).map((t) => ({
+    id: t.id as string,
+    nome: t.nome as string,
+    equipeId: (t.equipe_id as string | null) ?? null,
+  }));
+  const hoje = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
@@ -138,11 +185,18 @@ export default async function RotasConfirmadasPage() {
         <p className="text-xs font-medium text-text-tertiary">Rotas</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Rotas confirmadas</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          Histórico de rotas do dia já confirmadas — registro fixo, não editável por aqui.
+          Rotas do dia já confirmadas. Nas rotas de hoje e futuras dá pra adicionar ou remover uma RT
+          enquanto o técnico ainda não iniciou aquela parada; o resto é registro fixo.
         </p>
       </header>
 
-      <RotasConfirmadasManager rotas={rotas} regioes={regioes} />
+      <RotasConfirmadasManager
+        rotas={rotas}
+        regioes={regioes}
+        rtsDisponiveis={rtsDisponiveis}
+        tecnicos={tecnicos}
+        hoje={hoje}
+      />
     </div>
   );
 }

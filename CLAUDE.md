@@ -151,7 +151,8 @@ Une a "Regra de processo" (dados) com o processo de design — nenhuma tela é c
 
 Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pelo título/data pra ler o detalhe completo.
 
-- [~] Nova identidade visual "Azulejo" (operacional claro, teal `#0B6E68` único, IBM Plex, menu claro agrupado, celular nasce com menu fechado, placa da RT, badges-pílula) — rodadas 1 (tokens + casca + componentes compartilhados), 2 (placa da RT em toda tela, tags normalizadas, `LinhaDeRota` no Dashboard e no app do técnico) e 3 (tema claro/escuro por cookie `tema` + `prefers-color-scheme`, token `--on-accent`, KPIs clicáveis com filtros por URL em `/chamados`, busca rápida Ctrl+K, `IndicadorAoVivo`), 18/09/2026 (prévia aprovada: https://claude.ai/artifact/JmHYEUtpE6NP3KQ4aJkbEr; sem migration; não commitado; linha de rota do técnico não vista com dados reais)
+- [ ] Editar paradas de rota confirmada (adicionar/remover RT) — código completo e testado até o banco; **migration `0062` pendente** — 18/09/2026
+- [~] Nova identidade visual "Azulejo" (operacional claro, teal `#0B6E68` único, IBM Plex, menu claro agrupado, celular nasce com menu fechado, placa da RT, badges-pílula) — rodadas 1 (tokens + casca + componentes compartilhados), 2 (placa da RT em toda tela, tags normalizadas, `LinhaDeRota` no Dashboard e no app do técnico) e 3 (tema claro/escuro por cookie `tema` + `prefers-color-scheme`, token `--on-accent`, KPIs clicáveis com filtros por URL em `/chamados`, busca rápida Ctrl+K, `IndicadorAoVivo`), 18/09/2026 (prévia aprovada: https://claude.ai/artifact/JmHYEUtpE6NP3KQ4aJkbEr; sem migration; commit `d935ab8` no GitHub e Gitea; linha de rota do técnico não vista com dados reais)
 - [x] Resgate dos chamados abertos antigos do TomTicket (fora da janela de 90 dias da API; 779 chamados entraram) + helper `todasAsLinhas` pra furar o cap de 1.000 linhas do PostgREST em toda consulta a `chamados` — 18/09/2026 (sem migration; rodado ao vivo, telas não abertas no navegador)
 - [x] Registrar urgência em lote — barra do diálogo aceita mensagem crua do WhatsApp (Enter/colar), pesca os protocolos e registra vários chamados de uma vez, motivo = texto da linha — 17-18/09/2026 (sem migration; não testado no navegador)
 - [x] "Relatório de RT" — documento técnico avulso pra encaminhamento ao IGEDES (não é chamado, vínculo com chamado opcional) — 15-16/09/2026, feito pelo Mateus em paralelo
@@ -194,13 +195,13 @@ Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pel
 
 ### Pendências ativas — conferir/agir antes de assumir que algo funciona
 
-**Migrations com último status conhecido "ainda não rodada" pelo usuário** (a lista de migrations aplicadas muda a cada sessão — antes de confiar nesta lista, prefira checar ao vivo: chamar a função com um id inexistente e ver se o erro é "de negócio" ou "função não existe", método já usado várias vezes porque o cache do PostgREST dá falso-negativo pra `{}`):
-- `0028_resposta_tomticket.sql` — status incerto (marcada pendente em 08/09, mas funcionalidade relacionada foi expandida depois como se estivesse ativa; confirmar antes de assumir qualquer lado)
-- `0045_urgencias_chamado_first.sql` — confirmada aplicada em 11/09 (registrada aqui só pra não confundir com as pendentes abaixo)
-- `0047_revisar_servico.sql`, `0048_realtime_mais_telas.sql`, `0050_multiplos_tecnicos_por_rt.sql`, `0051_evidencia_audio.sql`, `0052_aumentar_limite_evidencias.sql` — sem confirmação de execução no histórico
-- `0059_relatorios_rt.sql` (Mateus) — usuário ainda precisa rodar
-- `0061_urgencia_rt_ja_na_rota.sql` — usuário ainda precisa rodar (renumerada de 0059 em 17/09/2026 por colisão com `0059_relatorios_rt.sql`, do Mateus, mergeado do Gitea nessa mesma sessão)
-- `0053`-`0058`, `0060` — confirmadas aplicadas (15-16/09)
+**Migrations — estado REAL do banco, checado ao vivo em 18/09/2026** (com service role, chamando cada função com a assinatura certa; `{}` dá falso-negativo por causa do cache do PostgREST — a lista muda a cada sessão, prefira rechecar antes de confiar):
+- `0062_editar_paradas_rota.sql` — **pendente** (criada em 18/09; a tela de Rotas confirmadas já mostra "rode a migration 0062" ao tentar usar)
+- `0059_relatorios_rt.sql` (Mateus) — **pela metade**: tabelas existem, falta o trecho de storage (bucket `relatorios-rt` + 2 policies, linhas 105–124) — sem ele, foto/.docx do Relatório de RT falham
+- `0052_aumentar_limite_evidencias.sql` — **pendente** (bucket `evidencias` ainda em 10 MB)
+- `0048_realtime_mais_telas.sql` — sem como verificar por API (publicação do Postgres); rodar por garantia, é idempotente na prática
+- `0028`, `0045`, `0047`, `0050`, `0051`, `0053`–`0058`, `0060`, `0061` — **confirmadas aplicadas**
+- Depois de rodar qualquer uma: `notify pgrst, 'reload schema';`
 
 **Outras pendências:**
 - `ORS_API_KEY` só está em `.env.local` (dev) — falta colar no ambiente de produção (Netlify) pra rota inteligente/navegação usarem tempo real de carro em vez de linha reta
