@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 // em toda página automaticamente, sem os problemas de empilhamento que a
 // versão HTML teve (motor de layout próprio do react-pdf, não é o DOM/CSS
 // do navegador).
-const TEAL = "#008a83";
+const TEAL = "#0b6e68";
 const TINTA_SUAVE = "#57534e";
 
 const styles = StyleSheet.create({

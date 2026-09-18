@@ -28,7 +28,7 @@ export type OpcoesAssinatura = {
   alvos: readonly AlvoRealtime[];
   /** Chamado a cada mudança relevante. */
   aoMudar: () => void;
-  /** Reflete o estado da conexão (o indicador "Ao vivo" do dashboard). */
+  /** Reflete o estado da conexão (o indicador "Atualizado" do dashboard). */
   aoConectar?: (conectado: boolean) => void;
 };
 

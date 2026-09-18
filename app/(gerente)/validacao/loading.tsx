@@ -9,7 +9,6 @@ export default function Loading() {
     <PaginaCarregando
       secao="Execução"
       titulo="Validação"
-      uppercase
       descricao="Confira o que o técnico concluiu e feche o ciclo, ou reagende o que ficou parado numa rota que já passou."
     >
       <EsqueletoCards quantidade={4} colunas="sm:grid-cols-2 lg:grid-cols-4" />

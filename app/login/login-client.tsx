@@ -298,13 +298,6 @@ export default function LoginClient() {
             </button>
           </form>
 
-          <div className={styles.foot}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1 1 0 0 1 1.6 0C14.6 3.8 17 5 19 5a1 1 0 0 1 1 1Z" />
-            </svg>
-            Acesso restrito — uso monitorado e registrado.
-          </div>
-
           {process.env.NODE_ENV !== "production" && (
             <div className={styles.devContas}>
               <p>Contas de teste (dev)</p>

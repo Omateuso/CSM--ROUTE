@@ -142,8 +142,8 @@ export default async function MontarRotaPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="mx-auto w-full max-w-6xl px-6 pt-12 pb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Rotas</p>
+      <header className="mx-auto w-full max-w-6xl px-4 pt-7 pb-5 sm:px-6 sm:pt-10 sm:pb-6">
+        <p className="text-xs font-medium text-text-tertiary">Rotas</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Montar rota</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
           Escolha as RTs da rota de hoje. A cada escolha, o sistema sugere as
@@ -151,7 +151,7 @@ export default async function MontarRotaPage() {
         </p>
       </header>
 
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pb-12">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 pb-8 sm:px-6 sm:pb-10">
         <MontarRotaClient
           regioes={regioes}
           rts={rts}

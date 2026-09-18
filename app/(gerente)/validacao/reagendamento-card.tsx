@@ -7,6 +7,7 @@ import { StatusServicoBadge, type StatusServico } from "@/app/(tecnico)/status-s
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { ReagendarDialog } from "./reagendar-dialog";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 
 export type ServicoTravadoRow = {
   servicoId: string;
@@ -29,10 +30,10 @@ export function ReagendamentoCard({ servico }: { servico: ServicoTravadoRow }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <article className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border bg-surface p-4">
+    <article className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-xs text-text-secondary">{servico.rtCodigo}</span>
+          <PlacaRt codigo={servico.rtCodigo} />
           {servico.tomticketId && (
             <span className="font-mono text-xs text-text-tertiary">#{servico.tomticketId}</span>
           )}
@@ -40,7 +41,7 @@ export function ReagendamentoCard({ servico }: { servico: ServicoTravadoRow }) {
         </div>
         <p className="mt-0.5 truncate text-sm font-medium text-text-primary">{servico.chamadoAssunto}</p>
         <p className="mt-0.5 text-xs text-text-tertiary">
-          {servico.rtNome} · técnico <strong className="text-text-secondary">{servico.tecnicoNome}</strong> ·
+          {nomeSemCodigo(servico.rtNome, servico.rtCodigo)} · técnico <strong className="text-text-secondary">{servico.tecnicoNome}</strong> ·
           rota de {formatoData.format(new Date(`${servico.rotaData}T00:00:00`))}
         </p>
       </div>

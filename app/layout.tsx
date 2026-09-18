@@ -1,20 +1,26 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 import RegisterServiceWorker from "./register-service-worker";
 import { AppNav } from "./app-nav";
 import { NovasRespostasToast } from "./novas-respostas-toast";
 import { createClient } from "@/lib/supabase/server";
+import type { Tema } from "@/lib/ui/theme-toggle";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// IBM Plex (18/09/2026, nova identidade visual): voz técnica de formulário
+// de OS/ordem de serviço, ótimos números tabulares e acentos do português;
+// Plex Mono só pra dado estrutural (placa da RT, protocolo, horário).
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -43,7 +49,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#008a83",
+  // Barra do navegador acompanha o tema do sistema; a preferência explícita
+  // (cookie) não chega aqui, mas a diferença é só o tom da barra.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0b6e68" },
+    { media: "(prefers-color-scheme: dark)", color: "#161514" },
+  ],
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -80,12 +91,19 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // como prop — servidor e cliente renderizam o mesmo estado desde o
   // primeiro paint. Ler isso de localStorage num efeito daria descasamento
   // de hidratação e exigiria `setState` dentro de efeito. Padrão = aberto.
-  const menuAberto = (await cookies()).get("menu-lateral")?.value !== "0";
+  const cookieStore = await cookies();
+  const menuAberto = cookieStore.get("menu-lateral")?.value !== "0";
+  // Tema (18/09/2026): preferência explícita vira `data-theme` no <html> já
+  // no servidor — sem flash. Sem cookie, o CSS segue o sistema
+  // (prefers-color-scheme), ver app/globals.css.
+  const temaCookie = cookieStore.get("tema")?.value;
+  const tema: Tema = temaCookie === "dark" || temaCookie === "light" ? temaCookie : null;
 
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme={tema ?? undefined}
+      className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {role ? (
@@ -95,6 +113,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               nome={nome}
               respostasNaoVistas={respostasNaoVistas}
               menuAberto={menuAberto}
+              tema={tema}
             >
               {children}
             </AppNav>

@@ -10,7 +10,7 @@ import { FOCUS_RING } from "@/lib/ui/styles";
 // text-lg = h-7, text-sm = h-5, text-xs = h-4), pra nada pular quando chegar.
 export default function Loading() {
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-12" role="status">
+    <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10" role="status">
       <span className="sr-only">Carregando a RT…</span>
       <Link
         href="/rts"
@@ -36,7 +36,7 @@ export default function Loading() {
       </dl>
 
       <section className="mt-8">
-        <p className="text-xs font-medium tracking-wide text-text-tertiary uppercase">
+        <p className="text-xs font-medium text-text-secondary">
           Endereço atual
         </p>
         <div className="mt-2 rounded-[var(--radius-md)] border border-border-strong bg-surface p-4">
@@ -46,12 +46,12 @@ export default function Loading() {
       </section>
 
       <section className="mt-8">
-        <p className="text-xs font-medium tracking-wide text-text-tertiary uppercase">
+        <p className="text-xs font-medium text-text-secondary">
           Histórico de endereços
         </p>
         <div className="mt-2 flex flex-col gap-3">
           {Array.from({ length: 2 }, (_, i) => (
-            <div key={i} className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+            <div key={i} className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
               <EsqueletoBloco className="h-5 w-2/3" />
               <EsqueletoBloco className="mt-2 h-4 w-2/5" />
             </div>

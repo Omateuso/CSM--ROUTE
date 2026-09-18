@@ -11,6 +11,7 @@ import { IntegridadeBadge } from "./integridade-badge";
 import { ResponderTomticket } from "../responder-tomticket";
 import { avaliarLocalizacaoConclusao, type EvidenciaComGeo, type OsIntegridadeInfo } from "./integridade";
 import { mensagemConclusao, mensagemRevisao, type Saudacao } from "@/lib/tomticket/mensagens";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 
 export type ValidadoRow = {
   validacaoId: string;
@@ -84,23 +85,23 @@ function ValidadoCard({
     : mensagemConclusao(saudacaoAtual);
 
   return (
-    <article className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+    <article className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-text-secondary">{servico.rtCodigo}</span>
+            <PlacaRt codigo={servico.rtCodigo} />
             {servico.tomticketId && (
               <span className="font-mono text-xs text-text-tertiary">#{servico.tomticketId}</span>
             )}
           </div>
-          <p className="mt-0.5 text-sm font-semibold text-text-primary">{servico.rtNome}</p>
+          <p className="mt-1.5 text-sm font-semibold text-text-primary">{nomeSemCodigo(servico.rtNome, servico.rtCodigo)}</p>
           <p className="text-xs text-text-tertiary">{servico.rtEndereco}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <PrioridadeBadge prioridade={servico.prioridade} />
           <SlaBadge slaPrazo={servico.slaPrazo} status={servico.chamadoStatus} />
           {servico.categoria === "revisao_tecnica" && (
-            <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-proximo uppercase">
+            <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-proximo-tint text-sla-proximo">
               Revisão
             </span>
           )}
@@ -260,17 +261,17 @@ export function ValidadosRecentes({
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por assunto, RT ou protocolo..."
-            className="w-full rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="w-full rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
         </div>
       )}
 
       {validados.length === 0 ? (
-        <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+        <p className="mt-3 rounded-[var(--radius-md)] bg-surface shadow-lift px-4 py-8 text-center text-sm text-text-tertiary">
           Nenhum serviço validado ainda.
         </p>
       ) : filtrados.length === 0 ? (
-        <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+        <p className="mt-3 rounded-[var(--radius-md)] bg-surface shadow-lift px-4 py-8 text-center text-sm text-text-tertiary">
           Nenhum validado encontrado com essa busca.
         </p>
       ) : (

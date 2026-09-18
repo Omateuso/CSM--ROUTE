@@ -251,7 +251,7 @@ export function CampoTranscricao({
             aria-pressed={gravando}
             aria-label={gravando ? "Parar gravação" : "Gravar por voz"}
             title={gravando ? "Parar gravação" : "Gravar por voz"}
-            className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full p-3.5 text-white shadow-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent ${
+            className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full p-3.5 text-on-accent shadow-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent ${
               gravando ? "bg-danger" : "bg-success hover:bg-success-hover"
             }`}
           >

@@ -20,7 +20,7 @@ export function GerarRelatorioButton() {
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+        className="rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-hover"
       >
         Gerar relatório
       </button>
@@ -100,7 +100,7 @@ function GeradorRelatorioModal({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={gerar}
             disabled={selecionados.size === 0}
-            className="rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             Gerar relatório
           </button>

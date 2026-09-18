@@ -69,8 +69,8 @@ export function ResponderTomticket(props: ResponderTomticketProps) {
         onClick={() => setAberto(true)}
         className={`rounded-[var(--radius-sm)] px-4 py-2 text-sm font-medium transition-colors ${
           props.cor === "amarelo"
-            ? "bg-sla-proximo text-white hover:opacity-90"
-            : "bg-accent text-white hover:bg-accent-hover"
+            ? "bg-sla-proximo text-on-accent hover:opacity-90"
+            : "bg-accent text-on-accent hover:bg-accent-hover"
         } ${FOCUS_RING}`}
       >
         {props.rotuloBotao}
@@ -211,7 +211,7 @@ function ResponderDialog({
           <button
             type="submit"
             disabled={isPending || excedeu || vazia || state.ok}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
             {isPending
               ? "Enviando..."

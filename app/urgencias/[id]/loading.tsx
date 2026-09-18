@@ -10,7 +10,7 @@ import { FOCUS_RING } from "@/lib/ui/styles";
 // h-8, text-sm = h-5, text-xs = h-4), pra nada pular quando o dado chegar.
 export default function Loading() {
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-12" role="status">
+    <div className="mx-auto w-full max-w-4xl px-4 py-7 sm:px-6 sm:py-10" role="status">
       <span className="sr-only">Carregando a urgência…</span>
       <Link href="/urgencias" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
         ← Central de urgências

@@ -99,7 +99,7 @@ Cor nunca é o único sinal — sempre acompanhar de ícone e/ou texto (acessibi
 
 Três skills cobrem a qualidade visual do projeto — cada uma com uma função própria, não são intercambiáveis. Guia completo em [`docs/guia-skills-design.md`](docs/guia-skills-design.md).
 
-1. **`frontend-design`** (oficial Anthropic, já disponível no ambiente) — direção visual e identidade da interface.
+1. **`frontend-design`** (oficial Anthropic, já disponível no ambiente) — direção visual e identidade da interface. **A identidade vigente ("Azulejo", 18/09/2026) está documentada em `.interface-design/system.md` — tokens, medidas, botões e a placa da RT; toda tela nova parte dali, não do zero.**
 2. **`interface-design`** (terceiros, `.claude/skills/interface-design`) — arquitetura de interface de produto: densidade, hierarquia, navegação, consistência entre telas.
 3. **`frontend-design-audit`** (terceiros, `.claude/skills/frontend-design-audit`) — auditoria crítica depois de implementar.
 
@@ -151,6 +151,7 @@ Une a "Regra de processo" (dados) com o processo de design — nenhuma tela é c
 
 Cada linha é um evento de sessão — ver `docs/historico-implementacao.md` pelo título/data pra ler o detalhe completo.
 
+- [~] Nova identidade visual "Azulejo" (operacional claro, teal `#0B6E68` único, IBM Plex, menu claro agrupado, celular nasce com menu fechado, placa da RT, badges-pílula) — rodadas 1 (tokens + casca + componentes compartilhados), 2 (placa da RT em toda tela, tags normalizadas, `LinhaDeRota` no Dashboard e no app do técnico) e 3 (tema claro/escuro por cookie `tema` + `prefers-color-scheme`, token `--on-accent`, KPIs clicáveis com filtros por URL em `/chamados`, busca rápida Ctrl+K, `IndicadorAoVivo`), 18/09/2026 (prévia aprovada: https://claude.ai/artifact/JmHYEUtpE6NP3KQ4aJkbEr; sem migration; não commitado; linha de rota do técnico não vista com dados reais)
 - [x] Resgate dos chamados abertos antigos do TomTicket (fora da janela de 90 dias da API; 779 chamados entraram) + helper `todasAsLinhas` pra furar o cap de 1.000 linhas do PostgREST em toda consulta a `chamados` — 18/09/2026 (sem migration; rodado ao vivo, telas não abertas no navegador)
 - [x] Registrar urgência em lote — barra do diálogo aceita mensagem crua do WhatsApp (Enter/colar), pesca os protocolos e registra vários chamados de uma vez, motivo = texto da linha — 17-18/09/2026 (sem migration; não testado no navegador)
 - [x] "Relatório de RT" — documento técnico avulso pra encaminhamento ao IGEDES (não é chamado, vínculo com chamado opcional) — 15-16/09/2026, feito pelo Mateus em paralelo

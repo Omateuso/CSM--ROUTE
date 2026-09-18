@@ -11,6 +11,7 @@ import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chama
 import { EvidenciaThumbs, rotuloEvidencia } from "@/lib/ui/evidencia-thumbs";
 import { IntegridadeBadge } from "./integridade-badge";
 import { avaliarLocalizacaoConclusao, type EvidenciaComGeo, type OsIntegridadeInfo } from "./integridade";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 
 export type ServicoConcluidoRow = {
   servicoId: string;
@@ -55,23 +56,23 @@ export function ValidacaoCard({ servico }: { servico: ServicoConcluidoRow }) {
   });
 
   return (
-    <article className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+    <article className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-text-secondary">{servico.rtCodigo}</span>
+            <PlacaRt codigo={servico.rtCodigo} />
             {servico.tomticketId && (
               <span className="font-mono text-xs text-text-tertiary">#{servico.tomticketId}</span>
             )}
           </div>
-          <p className="mt-0.5 text-sm font-semibold text-text-primary">{servico.rtNome}</p>
+          <p className="mt-1.5 text-sm font-semibold text-text-primary">{nomeSemCodigo(servico.rtNome, servico.rtCodigo)}</p>
           <p className="text-xs text-text-tertiary">{servico.rtEndereco}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <PrioridadeBadge prioridade={servico.prioridade} />
           <SlaBadge slaPrazo={servico.slaPrazo} status={servico.chamadoStatus} />
           {servico.categoria === "revisao_tecnica" && (
-            <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-proximo uppercase">
+            <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-proximo-tint text-sla-proximo">
               Revisão
             </span>
           )}
@@ -166,7 +167,7 @@ export function ValidacaoCard({ servico }: { servico: ServicoConcluidoRow }) {
           <button
             type="submit"
             disabled={isPending}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
             {isPending ? "Validando..." : "Validar"}
           </button>
@@ -247,7 +248,7 @@ function CorrecaoDialog({
           <button
             type="submit"
             disabled={isPending}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
             {isPending ? "Enviando..." : "Enviar solicitação"}
           </button>

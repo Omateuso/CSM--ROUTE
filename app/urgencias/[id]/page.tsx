@@ -15,6 +15,7 @@ import { HistoricoChamado } from "@/lib/ui/historico-chamado";
 import { LightboxImage } from "@/lib/ui/image-lightbox";
 import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { FOCUS_RING } from "@/lib/ui/styles";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 import {
   calcularImpactoUrgencia,
   type RotaAtivaHoje,
@@ -320,14 +321,14 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
   const regiaoNome = unwrapOne(rt.regioes)?.nome ?? "—";
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-12">
+    <div className="mx-auto w-full max-w-4xl px-4 py-7 sm:px-6 sm:py-10">
       <Link href="/urgencias" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
         ← Central de urgências
       </Link>
 
       <header className="mt-4 mb-6">
         <div className="flex flex-wrap items-center gap-3">
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">{urgencia.codigo}</p>
+          <p className="text-xs font-medium text-text-tertiary">{urgencia.codigo}</p>
           <UrgenciaStatusBadge status={statusDisplay} />
         </div>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">{chamado.assunto as string}</h1>
@@ -346,13 +347,13 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
       </header>
 
       <div className="flex flex-col gap-4">
-        <section className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+        <section className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
           <p className="text-sm font-semibold text-text-primary">Chamado</p>
           <dl className="mt-2 grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-xs text-text-tertiary">RT</dt>
               <dd className="text-text-primary">
-                <span className="font-mono text-xs">{rt.codigo}</span> — {rt.nome} ({rt.bairro})
+                <PlacaRt codigo={rt.codigo} /> {nomeSemCodigo(rt.nome, rt.codigo)} ({rt.bairro})
               </dd>
             </div>
             <div>
@@ -389,7 +390,7 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
           {detalheChamado.descricao && (
             <div className="mt-3">
               <p className="mb-1 text-xs text-text-tertiary">Mensagem</p>
-              <p className="max-h-40 overflow-y-auto rounded-[var(--radius-sm)] border border-border bg-surface-input p-3 text-sm whitespace-pre-wrap text-text-primary">
+              <p className="max-h-40 overflow-y-auto rounded-[var(--radius-sm)] border border-border-strong bg-surface-input p-3 text-sm whitespace-pre-wrap text-text-primary">
                 {detalheChamado.descricao}
               </p>
             </div>
@@ -418,7 +419,7 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
           )}
         </section>
 
-        <section className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+        <section className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
           <p className="text-sm font-semibold text-text-primary">Urgência</p>
           <dl className="mt-2 grid grid-cols-2 gap-3 text-sm">
             <div>
@@ -484,7 +485,7 @@ export default async function UrgenciaDetalhePage({ params }: { params: Promise<
         )}
 
         {detalheChamado.historico.length > 0 && (
-          <section className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+          <section className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
             <HistoricoChamado eventos={detalheChamado.historico} />
           </section>
         )}

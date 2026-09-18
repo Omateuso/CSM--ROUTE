@@ -1,6 +1,7 @@
 "use client";
 
 import { useRealtimeRefresh } from "@/lib/realtime/use-realtime";
+import { IndicadorAoVivo } from "@/lib/ui/indicador-ao-vivo";
 
 // Sem F5 (pedido do usuário, 14/09/2026): `servicos` cobre concluído/
 // travado/validado; `historico` cobre apontamento do técnico
@@ -10,12 +11,6 @@ export function ValidacaoRealtime() {
   const conectado = useRealtimeRefresh("validacao", [{ tabela: "servicos" }, { tabela: "historico" }]);
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary" role="status">
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${conectado ? "bg-sla-dentro" : "border border-text-tertiary"}`}
-        aria-hidden="true"
-      />
-      {conectado ? "Ao vivo" : "Conectando..."}
-    </span>
+    <IndicadorAoVivo conectado={conectado} />
   );
 }

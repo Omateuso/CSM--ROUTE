@@ -9,6 +9,7 @@ import { URGENCIA_ORIGEM_LABEL } from "./urgencia-origem";
 import { tomticketSearchUrl } from "@/lib/tomticket/busca";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import type { UrgenciaRow } from "./types";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 function formatarTempoDecorrido(criadoEm: string): string {
   const ms = Date.now() - new Date(criadoEm).getTime();
@@ -44,10 +45,10 @@ export function UrgenciaCard({ urgencia }: { urgencia: UrgenciaRow }) {
   // 11/09/2026). Padrão "stretched link": o <Link> fica no título e um
   // ::after dele cobre o card; o link do protocolo sobe com z-10 por cima.
   return (
-    <article className="relative rounded-[var(--radius-md)] border border-border bg-surface p-4 transition-colors hover:border-border-strong focus-within:border-border-strong">
+    <article className="relative rounded-[var(--radius-md)] bg-surface shadow-lift p-4 transition-colors hover:border-border-strong focus-within:border-border-strong">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-xs text-text-secondary">{urgencia.codigo}</span>
-        <span className="font-mono text-xs text-text-tertiary">{urgencia.rtCodigo}</span>
+        <PlacaRt codigo={urgencia.rtCodigo} />
         {urgencia.tomticketId && (
           <a
             href={tomticketSearchUrl(urgencia.tomticketId)}

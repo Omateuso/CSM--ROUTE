@@ -7,6 +7,7 @@ import { RegiaoSection } from "./regiao-section";
 import { RtsSection } from "./rts-section";
 import { PainelRealtime } from "./painel-realtime";
 import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 // Mesma situação das demais telas: sem Database types gerados ainda, embed
 // aninhado fica ambíguo pro TypeScript (array vs objeto único), embora em
@@ -168,10 +169,10 @@ export default async function PainelGestaoPage() {
   const formatoData = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Visão geral</p>
+          <p className="text-xs font-medium text-text-tertiary">Visão geral</p>
           <h1 className="mt-1 text-2xl font-semibold text-text-primary">Painel da gestão</h1>
           <p className="mt-2 text-sm leading-relaxed text-text-secondary">
             Panorama consolidado, só leitura — chamados, execução e rotas.
@@ -181,9 +182,21 @@ export default async function PainelGestaoPage() {
       </header>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <StatCard label="Chamados abertos" value={totalAbertos} />
-        <StatCard label="Críticos (emergencial)" value={totalCriticos} tom="emergencial" />
-        <StatCard label="SLA vencido" value={totalSlaVencido} tom="vencido" />
+        <StatCard label="Chamados abertos" value={totalAbertos} href="/chamados" dica="Ver todos os chamados em aberto" />
+        <StatCard
+          label="Críticos (emergencial)"
+          value={totalCriticos}
+          tom="emergencial"
+          href="/chamados?prioridade=emergencial"
+          dica="Ver chamados emergenciais"
+        />
+        <StatCard
+          label="SLA vencido"
+          value={totalSlaVencido}
+          tom="vencido"
+          href="/chamados?sla=vencido"
+          dica="Ver chamados com SLA vencido"
+        />
       </div>
 
       <section className="mt-10">
@@ -207,7 +220,7 @@ export default async function PainelGestaoPage() {
         <p className="mt-1 text-xs text-text-tertiary">
           As últimas rotas do pipeline, mais recente primeiro — as de hoje ficam destacadas.
         </p>
-        <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+        <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
           <table className="w-full min-w-[560px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
@@ -234,7 +247,7 @@ export default async function PainelGestaoPage() {
                         <span className="inline-flex items-center gap-2">
                           {formatoData.format(new Date(`${r.data as string}T00:00:00`))}
                           {ehHoje && (
-                            <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            <span className="inline-flex h-5 items-center rounded-full bg-accent px-2 text-[11px] font-semibold text-on-accent">
                               Hoje
                             </span>
                           )}
@@ -248,7 +261,7 @@ export default async function PainelGestaoPage() {
                           <ul className="flex flex-col gap-0.5">
                             {rts.map((rt, indice) => (
                               <li key={indice} className="text-xs">
-                                <span className="font-mono text-text-secondary">{rt.codigo}</span>{" "}
+                                <PlacaRt codigo={rt.codigo} />{" "}
                                 <span className="text-text-tertiary">— {rt.endereco}</span>
                               </li>
                             ))}
@@ -270,10 +283,10 @@ export default async function PainelGestaoPage() {
       <section className="mt-10">
         <h2 className="text-sm font-semibold text-text-primary">Por criticidade</h2>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard label="Emergencial" value={porPrioridade.emergencial} tom="emergencial" />
-          <StatCard label="Alta" value={porPrioridade.alta} />
-          <StatCard label="Normal" value={porPrioridade.normal} />
-          <StatCard label="Baixa" value={porPrioridade.baixa} />
+          <StatCard label="Emergencial" value={porPrioridade.emergencial} tom="emergencial" href="/chamados?prioridade=emergencial" dica="Ver chamados emergenciais" />
+          <StatCard label="Alta" value={porPrioridade.alta} href="/chamados?prioridade=alta" dica="Ver chamados de prioridade alta" />
+          <StatCard label="Normal" value={porPrioridade.normal} href="/chamados?prioridade=normal" dica="Ver chamados de prioridade normal" />
+          <StatCard label="Baixa" value={porPrioridade.baixa} href="/chamados?prioridade=baixa" dica="Ver chamados de prioridade baixa" />
         </div>
       </section>
 

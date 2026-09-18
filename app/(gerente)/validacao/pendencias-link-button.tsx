@@ -1,16 +1,27 @@
 import Link from "next/link";
-import styles from "./pendencias-link-button.module.css";
+import { SECONDARY_BUTTON } from "@/lib/ui/styles";
 
 // Navega pra /pendencias (página própria desde 22/08/2026 — antes era um
-// modal aqui mesmo). Estilo fornecido pelo usuário, mantido como veio.
+// modal aqui mesmo). Nova identidade (18/09/2026): era uma pílula rosa
+// fornecida pelo usuário — a única cor fora da paleta em toda a tela, e
+// competia com o botão "Validar", que é a ação principal daqui. Agora é
+// um botão secundário: visível, mas não grita.
 export function PendenciasLinkButton() {
   return (
-    <Link href="/pendencias" className={styles.button}>
+    <Link href="/pendencias" className={SECONDARY_BUTTON}>
       <span>Pendências</span>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 66 43">
-        <polygon points="39.58,4.46 44.11,0 66,21.5 44.11,43 39.58,38.54 56.94,21.5"></polygon>
-        <polygon points="19.79,4.46 24.32,0 46.21,21.5 24.32,43 19.79,38.54 37.15,21.5"></polygon>
-        <polygon points="0,4.46 4.53,0 26.42,21.5 4.53,43 0,38.54 17.36,21.5"></polygon>
+      <svg
+        viewBox="0 0 24 24"
+        width="16"
+        height="16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m9 6 6 6-6 6" />
       </svg>
     </Link>
   );

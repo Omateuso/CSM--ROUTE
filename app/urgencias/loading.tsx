@@ -5,7 +5,6 @@ export default function Loading() {
     <PaginaCarregando
       secao="Execução"
       titulo="Central de urgências"
-      uppercase
       descricao="Ocorrências excepcionais recebidas fora do ciclo normal de rota — o sistema observa e calcula, quem decide é sempre o gerente."
     >
       <section>

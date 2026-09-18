@@ -369,7 +369,7 @@ export default async function ValidacaoPage() {
         Aguardando validação <span className="font-normal text-text-tertiary">({concluidos.length})</span>
       </h2>
       {concluidos.length === 0 ? (
-        <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+        <p className="mt-3 rounded-[var(--radius-md)] bg-surface shadow-lift px-4 py-8 text-center text-sm text-text-tertiary">
           Nenhum serviço concluído aguardando validação.
         </p>
       ) : (
@@ -393,7 +393,7 @@ export default async function ValidacaoPage() {
         ignore se o técnico deve seguir mesmo assim.
       </p>
       {apontamentos.length === 0 ? (
-        <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+        <p className="mt-3 rounded-[var(--radius-md)] bg-surface shadow-lift px-4 py-8 text-center text-sm text-text-tertiary">
           Nenhum apontamento em aberto.
         </p>
       ) : (
@@ -412,7 +412,7 @@ export default async function ValidacaoPage() {
         Travados em rota já passada <span className="font-normal text-text-tertiary">({travados.length})</span>
       </h2>
       {travados.length === 0 ? (
-        <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+        <p className="mt-3 rounded-[var(--radius-md)] bg-surface shadow-lift px-4 py-8 text-center text-sm text-text-tertiary">
           Nenhum serviço travado.
         </p>
       ) : (
@@ -444,11 +444,11 @@ export default async function ValidacaoPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Execução</p>
-          <h1 className="mt-1 text-2xl font-semibold text-text-primary uppercase">Validação</h1>
+          <p className="text-xs font-medium text-text-tertiary">Execução</p>
+          <h1 className="mt-1 text-2xl font-semibold text-text-primary">Validação</h1>
           <p className="mt-2 text-sm leading-relaxed text-text-secondary">
             Confira o que o técnico concluiu e feche o ciclo, ou reagende o que ficou parado numa rota
             que já passou.

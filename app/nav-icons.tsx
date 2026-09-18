@@ -99,4 +99,13 @@ export const NavIcons = {
       <path d="M9 12h6M9 16h6" />
     </svg>
   ),
+  // Novo (nova identidade visual, 18/09/2026) — sino do item "Respostas
+  // novas" no rodapé do menu, no lugar do emoji 🔔 (emoji renderiza
+  // diferente em cada sistema e não herda `currentColor`).
+  bell: (
+    <svg viewBox="0 0 24 24" {...stroke}>
+      <path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+      <path d="M10 21h4" />
+    </svg>
+  ),
 } satisfies Record<string, ReactNode>;

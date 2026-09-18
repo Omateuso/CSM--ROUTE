@@ -6,6 +6,7 @@ import { CorrigirDataDialog } from "./corrigir-data-dialog";
 import { CancelarRotaDialog } from "./cancelar-rota-dialog";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 import { StatusDot } from "@/lib/ui/status-dot";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 type Regiao = { id: string; nome: string; zonaNome: string };
 
@@ -90,7 +91,7 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
           type="date"
           value={dataFiltro}
           onChange={(e) => setDataFiltro(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
 
         <label className="sr-only" htmlFor="filtro-regiao-historico">
@@ -100,7 +101,7 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
           id="filtro-regiao-historico"
           value={regiaoFiltro}
           onChange={(e) => setRegiaoFiltro(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="todas">Todas as regiões</option>
           {zonas.map((zonaNome) => (
@@ -123,7 +124,7 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
           id="filtro-equipe-historico"
           value={equipeFiltro}
           onChange={(e) => setEquipeFiltro(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="todas">Todas as equipes</option>
           {equipesDisponiveis.map((nome) => (
@@ -152,7 +153,7 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
         {linhasFiltradas.length} de {rotas.length} rotas
       </p>
 
-      <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+      <div className="overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
@@ -275,14 +276,14 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
                 {rotaSelecionada.rts.map((rt, indice) => (
                   <li
                     key={`${rt.codigo}-${indice}`}
-                    className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-border bg-surface-input px-2.5 py-1.5"
+                    className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-2.5 py-1.5"
                   >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-on-accent">
                       {indice + 1}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-text-secondary">{rt.codigo}</span>
+                        <PlacaRt codigo={rt.codigo} className="h-5 text-[11px]" />
                         <span className="truncate text-xs text-text-tertiary">{rt.endereco}</span>
                       </div>
                     </div>
@@ -290,7 +291,7 @@ export function RotasConfirmadasManager({ rotas, regioes }: { rotas: RotaRow[]; 
                       {rt.tecnicoNome ?? "— (rota anterior à atribuição por RT)"}
                       {rt.tecnicosExtraNomes.length > 0 && (
                         <span
-                          className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold text-accent"
+                          className="inline-flex h-5 items-center rounded-full bg-accent-tint px-1.5 text-[11px] font-semibold text-accent-on-tint"
                           title={`Também vinculados: ${rt.tecnicosExtraNomes.join(", ")}`}
                         >
                           +{rt.tecnicosExtraNomes.length}

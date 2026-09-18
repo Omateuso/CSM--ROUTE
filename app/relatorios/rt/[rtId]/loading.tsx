@@ -6,7 +6,7 @@ import { FOCUS_RING } from "@/lib/ui/styles";
 // RT, que vem da consulta. Só o link de voltar vai real (fixo).
 export default function Loading() {
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-12" role="status">
+    <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10" role="status">
       <span className="sr-only">Carregando o histórico da RT…</span>
       <Link href="/relatorios/rt" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
         ← Relatório de RT
@@ -22,7 +22,7 @@ export default function Loading() {
 
       <div className="mt-6 flex flex-col gap-3">
         {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+          <div key={i} className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
             <EsqueletoBloco className="h-3.5 w-2/3" />
             <EsqueletoBloco className="mt-2 h-2.5 w-1/3" />
           </div>

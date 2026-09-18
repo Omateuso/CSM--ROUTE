@@ -16,7 +16,7 @@ export default function Loading() {
       {/* Hero "Atenção agora" — o card real troca de tratamento conforme o
           número (AtencaoAgoraCard animado quando > 0, neutro quando 0), mas
           a caixa tem o mesmo tamanho nos dois casos. */}
-      <div className="rounded-[var(--radius-md)] border border-border bg-surface p-6">
+      <div className="rounded-[var(--radius-md)] bg-surface shadow-lift p-6">
         <EsqueletoBloco className="h-2.5 w-28" />
         <EsqueletoBloco className="mt-3 h-9 w-20" />
         <EsqueletoBloco className="mt-3 h-3 w-64" />

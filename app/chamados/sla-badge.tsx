@@ -3,17 +3,26 @@ import { StatusDot } from "@/lib/ui/status-dot";
 
 type StatusChamado = "aberto" | "em_andamento" | "finalizado" | "cancelado";
 
+// Pílula com fundo tingido (nova identidade visual, 18/09/2026) — mesma
+// forma da PrioridadeBadge, escala de cor própria (SLA ≠ prioridade).
 const CONFIG = {
-  dentro: { label: "Dentro do SLA", dotClass: "bg-sla-dentro", textClass: "text-text-secondary" },
+  dentro: {
+    label: "Dentro do SLA",
+    dotClass: "bg-sla-dentro",
+    textClass: "text-sla-dentro",
+    pillClass: "bg-sla-dentro-tint",
+  },
   proximo: {
     label: "Próximo do vencimento",
     dotClass: "bg-sla-proximo",
-    textClass: "text-text-secondary",
+    textClass: "text-sla-proximo",
+    pillClass: "bg-sla-proximo-tint",
   },
   vencido: {
     label: "SLA vencido",
     dotClass: "bg-sla-vencido",
     textClass: "font-semibold text-sla-vencido",
+    pillClass: "bg-sla-vencido-tint",
   },
 };
 
@@ -35,5 +44,12 @@ export function SlaBadge({
   }
 
   const c = CONFIG[computeSlaStatus(slaPrazo)];
-  return <StatusDot label={c.label} dotClassName={c.dotClass} textClassName={c.textClass} />;
+  return (
+    <StatusDot
+      label={c.label}
+      dotClassName={c.dotClass}
+      textClassName={c.textClass}
+      pillClassName={c.pillClass}
+    />
+  );
 }

@@ -9,6 +9,7 @@ import { StatusServicoBadge, type StatusServico } from "../status-servico-badge"
 import { MapaDoDia } from "./mapa-do-dia";
 import { BotaoRotaOtimizada } from "./botao-rota-otimizada";
 import { BotaoAtualizarLocalizacao } from "./botao-atualizar-localizacao";
+import { LinhaDeRota, type Parada } from "@/lib/ui/linha-de-rota";
 import {
   linkGoogleMapsDestino,
   linkGoogleMapsRota,
@@ -49,6 +50,29 @@ export type ServicoItem = {
   slaPrazo: string | null;
   chamadoStatus: "aberto" | "em_andamento" | "finalizado" | "cancelado";
 };
+
+const FECHADO = new Set<StatusServico>(["concluido_tecnico", "aguardando_validacao", "validado", "cancelado"]);
+
+// Paradas da linha de rota do dia: uma por RT (na ordem da rota). RT
+// "fechada" = nenhum serviço dela ainda em aberto; a parada atual é a
+// primeira ainda aberta.
+function paradasDaLinha(rts: [string, ServicoItem[]][]): Parada[] {
+  let atualMarcada = false;
+  return rts.map(([codigo, doRt], i) => {
+    const fechada = doRt.every((s) => FECHADO.has(s.status));
+    const emAndamento = doRt.some((s) => s.status === "em_execucao" || s.status === "em_revisao");
+    const atual = !fechada && !atualMarcada;
+    if (atual) atualMarcada = true;
+    return {
+      rotulo: codigo,
+      valor: fechada ? "✓" : i + 1,
+      tom: fechada ? "sucesso" : emAndamento || atual ? "accent" : "info",
+      cheio: fechada,
+      atual,
+      descricao: `${codigo}: ${fechada ? "concluída" : emAndamento ? "em andamento" : atual ? "próxima parada" : "a fazer"}`,
+    };
+  });
+}
 
 // Endereço estruturado da RT no formato que lib/navegacao.ts consome — é o
 // que entra no link do Google Maps/Waze. A coordenada vai junto só como
@@ -134,7 +158,7 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar por RT, endereço, assunto ou protocolo..."
-              className="w-full rounded-[var(--radius-md)] border border-border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+              className="w-full rounded-[var(--radius-md)] bg-surface shadow-lift px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
             />
           </div>
           <BotaoAtualizarLocalizacao />
@@ -152,12 +176,25 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
               <h2 className="mb-2 text-sm font-semibold text-text-primary">
                 Rota dia {formatoDataCurta.format(new Date(`${dia}T00:00:00`))}
                 {dia === hoje && (
-                  <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-white">
+                  <span className="ml-2 inline-flex h-5 items-center rounded-full bg-accent px-2 text-[11px] font-semibold text-on-accent">
                     hoje
                   </span>
                 )}
               </h2>
 
+              {/* Onde estou na rota: uma parada por RT, na ordem, ✓ nas que
+                  já não têm nada em aberto; a atual é a primeira ainda
+                  aberta. Só até 8 paradas — acima disso os rótulos não
+                  cabem no celular e a lista abaixo já conta a história. */}
+              {rts.length > 1 && rts.length <= 8 && (
+                <div className="mb-4 rounded-[var(--radius-md)] bg-surface px-3 pt-4 pb-3 shadow-lift">
+                  <LinhaDeRota
+                    tamanho="compacto"
+                    ariaLabel={`Paradas da rota de ${formatoDataCurta.format(new Date(`${dia}T00:00:00`))}`}
+                    paradas={paradasDaLinha(rts)}
+                  />
+                </div>
+              )}
               {navegacao && <BotaoRotaOtimizada paradas={paradasComCodigo} linkPadrao={navegacao} />}
               <MapaDoDia paradas={paradasComCodigo} />
 
@@ -205,7 +242,7 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
-                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white">
+                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-on-accent">
                                     {numero}
                                   </span>
                                   {s.protocolo && (
@@ -217,8 +254,8 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                                     </span>
                                   )}
                                   {s.reexecucao && (
-                                    <span className="rounded-full bg-priority-alta/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-priority-alta uppercase">
-                                      ↩ Retorno
+                                    <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-priority-alta-tint text-priority-alta">
+                                      Retorno
                                     </span>
                                   )}
                                   <span className="ml-auto">
@@ -230,11 +267,11 @@ export function ServicosDoDiaLista({ servicos, hoje }: { servicos: ServicoItem[]
                                   <PrioridadeBadge prioridade={s.prioridade} />
                                   <SlaBadge slaPrazo={s.slaPrazo} status={s.chamadoStatus} />
                                   {s.categoria === "concluir_hoje" ? (
-                                    <span className="rounded-full bg-sla-dentro/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-dentro uppercase">
+                                    <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-dentro-tint text-sla-dentro">
                                       Hoje
                                     </span>
                                   ) : (
-                                    <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-proximo uppercase">
+                                    <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-proximo-tint text-sla-proximo">
                                       Para revisão
                                     </span>
                                   )}

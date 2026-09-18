@@ -48,13 +48,13 @@ export function UrgenciasManager({ urgencias, podeGerenciar }: { urgencias: Urge
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar por código, RT, protocolo ou assunto..."
-          className="w-full max-w-sm rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="w-full max-w-sm rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
         {podeGerenciar && (
           <button
             type="button"
             onClick={() => setRegistrarAberto(true)}
-            className={`ml-auto rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+            className={`ml-auto rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
           >
             + Registrar urgência
           </button>

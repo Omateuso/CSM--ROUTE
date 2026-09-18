@@ -36,7 +36,7 @@ export function ZonaCard({
   }, [regioes, busca]);
 
   return (
-    <section className="rounded-[var(--radius-md)] border border-border bg-surface p-5">
+    <section className="rounded-[var(--radius-md)] bg-surface shadow-lift p-5">
       <header>
         {modo === "editando" && (
           <InlineTextForm

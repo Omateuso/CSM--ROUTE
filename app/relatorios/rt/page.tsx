@@ -56,10 +56,10 @@ export default async function RelatorioRtIndexPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Relatórios · perfil gerente</p>
+          <p className="text-xs font-medium text-text-tertiary">Relatórios · perfil gerente</p>
           <h1 className="mt-1 text-2xl font-semibold text-text-primary">Relatório de RT</h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-secondary">
             Documenta uma ocorrência identificada numa residência terapêutica — em visita, por relato de técnico ou
@@ -68,7 +68,7 @@ export default async function RelatorioRtIndexPage() {
         </div>
         <Link
           href="/relatorios/rt/novo"
-          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium whitespace-nowrap text-on-accent transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
         >
           + Novo relatório
         </Link>

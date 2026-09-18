@@ -26,7 +26,7 @@ export function IniciarRevisaoForm({ servicoId }: { servicoId: string }) {
       <button
         type="submit"
         disabled={isPending}
-        className={`w-full rounded-[var(--radius-sm)] bg-sla-proximo px-4 py-3.5 text-base font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
+        className={`w-full rounded-[var(--radius-sm)] bg-sla-proximo px-4 py-3.5 text-base font-semibold text-on-accent transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}
       >
         {isPending ? "Iniciando..." : "Começar a revisar"}
       </button>

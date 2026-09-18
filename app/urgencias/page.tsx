@@ -156,10 +156,10 @@ export default async function UrgenciasPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Execução</p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary uppercase">Central de urgências</h1>
+        <p className="text-xs font-medium text-text-tertiary">Execução</p>
+        <h1 className="mt-1 text-2xl font-semibold text-text-primary">Central de urgências</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
           Ocorrências excepcionais recebidas fora do ciclo normal de rota — o sistema observa e calcula, quem decide
           é sempre o gerente. Toda urgência parte de um chamado já existente; nada é cadastrado de novo aqui.

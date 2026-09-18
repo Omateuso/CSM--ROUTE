@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 // hierarquia visual, mas react-pdf tem motor de layout próprio (Yoga),
 // sem <table>/CSS de verdade, então a API muda: Tabela aqui recebe linhas
 // como array de valores, não JSX <tr> cru como a versão HTML.
-const TEAL = "#008a83";
+const TEAL = "#0b6e68";
 const RED = "#d22b1c";
 const TINTA = "#1c1917";
 const TINTA_SUAVE = "#57534e";

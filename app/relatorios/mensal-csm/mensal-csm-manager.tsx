@@ -82,7 +82,7 @@ export function MensalCsmManager({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 rounded-[var(--radius-md)] border border-border bg-surface p-4 sm:grid-cols-2">
+      <div className="grid gap-4 rounded-[var(--radius-md)] bg-surface shadow-lift p-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs font-medium text-text-secondary">
           Mês de referência
           <input
@@ -90,7 +90,7 @@ export function MensalCsmManager({
             value={mes}
             max={mesMaximo}
             onChange={(e) => trocarMes(e.target.value)}
-            className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
         </label>
 
@@ -101,7 +101,7 @@ export function MensalCsmManager({
             value={nf}
             onChange={(e) => setNf(e.target.value)}
             placeholder="Aparece na capa; em branco fica [N° DA NF]"
-            className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
         </label>
 
@@ -110,7 +110,7 @@ export function MensalCsmManager({
           <select
             value={capsId}
             onChange={(e) => trocarCaps(e.target.value)}
-            className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           >
             <option value="">Todos os CAPS</option>
             {caps.map((c) => (
@@ -126,7 +126,7 @@ export function MensalCsmManager({
           <select
             value={regiaoId}
             onChange={(e) => trocarRegiao(e.target.value)}
-            className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           >
             <option value="">Todas as regiões</option>
             {regioes.map((r) => (
@@ -138,7 +138,7 @@ export function MensalCsmManager({
         </label>
       </div>
 
-      <section className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+      <section className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold text-text-primary">Prévia — {rotularMes(mes)}</h2>
           <span className="text-xs text-text-tertiary">
@@ -245,7 +245,7 @@ function BotaoDownload({ href, rotulo, desabilitado }: { href: string; rotulo: s
   return (
     <a
       href={href}
-      className="rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+      className="rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-hover"
     >
       {rotulo}
     </a>

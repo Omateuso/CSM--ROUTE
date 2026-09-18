@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FIELD_INPUT, FIELD_LABEL, FOCUS_RING } from "@/lib/ui/styles";
 import { salvarRelatorioRt, buscarChamadosDaRt, removerFotoRelatorio, type ActionState, type ChamadoDaRt } from "../actions";
 import { RtPicker, type RtOpcao } from "../rt-picker";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 const ESTADO_INICIAL: ActionState = { error: null };
 
@@ -131,9 +132,9 @@ export function RelatorioRtForm({
           <RtPicker rts={rts} onSelecionar={selecionarRt} autoFocus />
         ) : (
           rtSelecionada && (
-            <div className="rounded-[var(--radius-md)] border border-border bg-surface-input p-4">
+            <div className="rounded-[var(--radius-md)] bg-surface shadow-lift-input p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs font-semibold text-text-primary">{rtSelecionada.codigo}</span>
+                <PlacaRt codigo={rtSelecionada.codigo} />
                 <span className="text-sm font-medium text-text-primary">{rtSelecionada.nome}</span>
                 {!rtTravada && (
                   <button
@@ -245,7 +246,7 @@ export function RelatorioRtForm({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {fotosExistentes.map((f) => (
               <div key={f.id} className="flex flex-col gap-1">
-                <div className="aspect-[4/3] overflow-hidden rounded-[var(--radius-sm)] border border-border bg-surface-input">
+                <div className="aspect-[4/3] overflow-hidden rounded-[var(--radius-sm)] border border-border-strong bg-surface-input">
                   {f.url && (
                     // eslint-disable-next-line @next/next/no-img-element -- URL assinada de bucket privado
                     <img src={f.url} alt="" className="h-full w-full object-cover" />
@@ -266,7 +267,7 @@ export function RelatorioRtForm({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {pendentes.map((p) => (
               <div key={p.id} className="flex flex-col gap-1">
-                <div className="aspect-[4/3] overflow-hidden rounded-[var(--radius-sm)] border border-border bg-surface-input">
+                <div className="aspect-[4/3] overflow-hidden rounded-[var(--radius-sm)] border border-border-strong bg-surface-input">
                   {/* eslint-disable-next-line @next/next/no-img-element -- pré-visualização local (blob:), next/image não serve blob URL */}
                   <img src={p.previewUrl} alt="" className="h-full w-full object-cover" />
                 </div>
@@ -339,7 +340,7 @@ export function RelatorioRtForm({
           name="acao"
           value="gerar"
           disabled={!podeSalvar}
-          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
         >
           {isPending ? "Gerando..." : "GERAR RELATÓRIO DOCX"}
         </button>
@@ -372,7 +373,7 @@ function ChamadoPicker({
         type="button"
         onClick={() => onSelecionar(null)}
         className={`self-start rounded-[var(--radius-sm)] px-2 py-1 text-xs font-medium ${
-          selecionadoId === null ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"
+          selecionadoId === null ? "bg-accent text-on-accent" : "text-text-secondary hover:text-text-primary"
         } ${FOCUS_RING}`}
       >
         Nenhum

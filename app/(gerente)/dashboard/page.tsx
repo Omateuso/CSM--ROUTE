@@ -4,7 +4,8 @@ import { computeSlaStatus } from "@/lib/sla";
 import { DashboardRealtime } from "./dashboard-realtime";
 import { RtsVolumeSection } from "./rts-volume-section";
 import { AtencaoAgoraCard } from "./atencao-agora-card";
-import { OperacaoHojeCard } from "@/lib/ui/operacao-hoje-card";
+import { LinhaDeRota } from "@/lib/ui/linha-de-rota";
+import { CARD } from "@/lib/ui/styles";
 import { todasAsLinhas } from "@/lib/supabase/todas-as-linhas";
 
 // Mesma situação de app/chamados/page.tsx: sem Database types gerados
@@ -28,7 +29,7 @@ type BucketHoje = { pendente: number; emExecucao: number; emRevisao: number; con
 // todo número — parte da escala tipográfica nova (Etapa 4 do plano),
 // mais discreto que o `text-xs` genérico que existia antes.
 function Rotulo({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] font-medium tracking-wide text-text-tertiary uppercase">{children}</p>;
+  return <p className="text-xs font-medium text-text-secondary">{children}</p>;
 }
 
 
@@ -185,6 +186,12 @@ export default async function DashboardPage() {
   let naoIniciadosHoje = 0;
   let emExecucaoHoje = 0;
   let emRevisaoHoje = 0;
+  // Paradas seguintes da linha de rota de hoje: o que o técnico já fechou
+  // e o que o gerente já validou — só dos serviços das rotas de HOJE (a
+  // contagem "Concluídos hoje" abaixo é por data do evento, escopo
+  // diferente, e continua alimentando o resumo em texto).
+  let concluidoTecnicoHoje = 0;
+  let validadosHoje = 0;
   const porRegiaoHoje = new Map<string, BucketHoje>();
   const porTecnicoHoje = new Map<string, BucketHoje>();
 
@@ -193,6 +200,8 @@ export default async function DashboardPage() {
     if (status === "planejado") naoIniciadosHoje++;
     if (status === "em_execucao") emExecucaoHoje++;
     if (status === "em_revisao") emRevisaoHoje++;
+    if (status === "concluido_tecnico" || status === "aguardando_validacao") concluidoTecnicoHoje++;
+    if (status === "validado") validadosHoje++;
     if (status === "cancelado") continue; // já reagendado — não entra na visão "operação de hoje"
 
     // `em_revisao` (0053/0054) nunca deve cair no bucket "concluido" por
@@ -222,6 +231,7 @@ export default async function DashboardPage() {
     porTecnicoHoje.set(tecnicoNome, atualTecnico);
   }
 
+  const totalServicosHoje = (servicosHojeRaw ?? []).filter((s) => s.status !== "cancelado").length;
   const totalConcluidosHoje = concluidosHojeCount ?? 0;
   const totalReagendadosHoje = reagendadosHojeCount ?? 0;
 
@@ -234,10 +244,10 @@ export default async function DashboardPage() {
   const atencaoAgora = (aguardandoValidacaoCount ?? 0) + (travadosCount ?? 0);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6">
         <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">
+          <p className="text-xs font-medium text-text-tertiary">
             Visão geral
           </p>
           <DashboardRealtime />
@@ -249,44 +259,71 @@ export default async function DashboardPage() {
       </header>
 
       {/* Atenção agora — foco único da tela: o que o gerente precisa
-          resolver antes de qualquer outra coisa. Só ganha o tratamento
-          animado (AtencaoAgoraCard) quando há algo pendente — "tudo em
-          dia" fica no card neutro simples, sem motivo pra chamar atenção. */}
-      {atencaoAgora > 0 ? (
-        <AtencaoAgoraCard
-          total={atencaoAgora}
-          aguardandoValidacao={aguardandoValidacaoCount ?? 0}
-          travados={travadosCount ?? 0}
-        />
-      ) : (
-        <div className="rounded-[var(--radius-md)] border border-border bg-surface p-6">
-          <Rotulo>Atenção agora</Rotulo>
-          <p className="mt-2 text-4xl font-bold tabular-nums text-sla-dentro">0</p>
-          <p className="mt-2 text-sm text-text-secondary">
-            Nada aguardando validação ou travado — operação em dia.
+          resolver antes de qualquer outra coisa. O card cuida do estado
+          "tudo em dia" sozinho (total = 0). */}
+      <AtencaoAgoraCard
+        total={atencaoAgora}
+        aguardandoValidacao={aguardandoValidacaoCount ?? 0}
+        travados={travadosCount ?? 0}
+      />
+
+      {/* Operação de hoje como LINHA DE ROTA (nova identidade, 18/09/2026):
+          o pipeline de status vira paradas ligadas — e a regra "concluído
+          pelo técnico ≠ validado" fica visível como a parada que ainda
+          falta. Em campo = em_execucao + em_revisao (a nota separa). */}
+      <section aria-labelledby="operacao-hoje" className={`${CARD} mt-8 px-5 pt-5 pb-6 sm:px-7`}>
+        <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 id="operacao-hoje" className="text-[15px] font-semibold text-text-primary">
+            Operação de hoje
+          </h2>
+          <p className="text-xs text-text-tertiary">
+            {totalServicosHoje === 0
+              ? "Nenhuma rota confirmada pra hoje."
+              : `${totalServicosHoje} serviço${totalServicosHoje === 1 ? "" : "s"} nas rotas de hoje · ${totalConcluidosHoje} concluído${totalConcluidosHoje === 1 ? "" : "s"} · ${totalReagendadosHoje} reagendado${totalReagendadosHoje === 1 ? "" : "s"}`}
           </p>
         </div>
-      )}
-
-      <section className="mt-10">
-        <h2 className="text-sm font-semibold text-text-primary">Operação de hoje</h2>
-        <p className="mt-1 text-xs text-text-tertiary">
-          Serviços das rotas confirmadas pra hoje, por status.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
-          <OperacaoHojeCard label="Não iniciados" value={naoIniciadosHoje} />
-          <OperacaoHojeCard label="Em execução" value={emExecucaoHoje} />
-          <OperacaoHojeCard label="Em revisão" value={emRevisaoHoje} />
-          <OperacaoHojeCard label="Concluídos" value={totalConcluidosHoje} />
-          <OperacaoHojeCard label="Reagendados" value={totalReagendadosHoje} />
-        </div>
+        <LinhaDeRota
+          ariaLabel="Serviços das rotas de hoje, por etapa"
+          paradas={[
+            {
+              rotulo: "A fazer",
+              valor: naoIniciadosHoje,
+              tom: "info",
+              href: "/rotas/confirmadas",
+              descricao: `${naoIniciadosHoje} a fazer — ver rotas confirmadas`,
+            },
+            {
+              rotulo: "Em campo",
+              valor: emExecucaoHoje + emRevisaoHoje,
+              tom: "accent",
+              nota: emRevisaoHoje > 0 ? `${emRevisaoHoje} em revisão` : undefined,
+              href: "/rotas/confirmadas",
+              descricao: `${emExecucaoHoje + emRevisaoHoje} em campo — ver rotas confirmadas`,
+            },
+            {
+              rotulo: "Concluído pelo técnico",
+              valor: concluidoTecnicoHoje,
+              tom: "atencao",
+              href: "/validacao#aguardando-validacao",
+              descricao: `${concluidoTecnicoHoje} concluídos pelo técnico — ir para a validação`,
+            },
+            {
+              rotulo: "Validado",
+              valor: validadosHoje,
+              tom: "sucesso",
+              cheio: validadosHoje > 0,
+              href: "/validacao#validados-recentemente",
+              descricao: `${validadosHoje} validados — ver validados recentemente`,
+            },
+          ]}
+        />
       </section>
 
       {(regioesOrdenadas.length > 0 || tecnicosOrdenados.length > 0) && (
         <section className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Por região, hoje</h2>
-            <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+            <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
               <table className="w-full min-w-[460px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
@@ -322,7 +359,7 @@ export default async function DashboardPage() {
 
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Por técnico, hoje</h2>
-            <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+            <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
               <table className="w-full min-w-[460px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
@@ -364,7 +401,7 @@ export default async function DashboardPage() {
           Chamados em aberto por RT, ordenado do maior pro menor.
         </p>
 
-        <div className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface">
+        <div className="mt-4 rounded-[var(--radius-md)] bg-surface shadow-lift">
           {rtsOrdenadas.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-text-tertiary">
               Nenhum chamado em aberto no momento.
@@ -378,7 +415,7 @@ export default async function DashboardPage() {
       </section>
 
       <section className="mt-10">
-        <div className="flex flex-wrap gap-x-10 gap-y-4 rounded-[var(--radius-md)] border border-border bg-surface-input px-5 py-4">
+        <div className="flex flex-wrap gap-x-10 gap-y-4 rounded-[var(--radius-md)] bg-surface shadow-lift-input px-5 py-4">
           <ContextoStat label="Chamados abertos" value={totalAbertos} />
           <ContextoStat label="Críticos" value={totalCriticos} tom="emergencial" />
           <ContextoStat label="SLA vencido" value={totalSlaVencido} tom="vencido" />

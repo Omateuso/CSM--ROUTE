@@ -48,7 +48,7 @@ export default async function HistoricoRelatoriosRtPage({ params }: PageProps<"/
 
   if (!rtRaw) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
         <Link href="/relatorios/rt" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
           ← Relatório de RT
         </Link>
@@ -71,7 +71,7 @@ export default async function HistoricoRelatoriosRtPage({ params }: PageProps<"/
   const capsNome = unwrapOne(rtRaw.caps)?.nome ?? "—";
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
       <Link href="/relatorios/rt" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
         ← Relatório de RT
       </Link>
@@ -88,7 +88,7 @@ export default async function HistoricoRelatoriosRtPage({ params }: PageProps<"/
         </div>
         <Link
           href={`/relatorios/rt/novo?rt=${rtId}`}
-          className={`rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+          className={`rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-sm font-medium whitespace-nowrap text-on-accent transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
         >
           + Novo relatório para esta RT
         </Link>
@@ -105,7 +105,7 @@ export default async function HistoricoRelatoriosRtPage({ params }: PageProps<"/
               const responsavel = unwrapOne(r.profiles)?.nome ?? "—";
               const url = r.docx_path ? urlPorCaminho.get(r.docx_path) : null;
               return (
-                <li key={r.id} className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+                <li key={r.id} className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-medium text-text-primary">{r.assunto || "(sem assunto)"}</p>
                     <span

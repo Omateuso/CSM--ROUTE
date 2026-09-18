@@ -15,6 +15,7 @@ import { FOCUS_RING } from "@/lib/ui/styles";
 import { linkGoogleMapsDestino, linkWaze } from "@/lib/navegacao";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { PENDENCIA_CATEGORIA_LABEL, type PendenciaCategoria } from "@/lib/ui/pendencia-categoria";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -223,7 +224,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
           ← Meus serviços
         </Link>
         <div className="mt-2 flex items-center gap-2">
-          <span className="font-mono text-xs text-text-secondary">{rt?.codigo}</span>
+          <PlacaRt codigo={rt?.codigo ?? "—"} />
           {chamado?.tomticket_id && (
             <span className="font-mono text-xs text-text-tertiary">#{chamado.tomticket_id}</span>
           )}
@@ -233,16 +234,16 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
             </span>
           )}
           {tentativaAnterior && (
-            <span className="rounded-full bg-priority-alta/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-priority-alta uppercase">
-              ↩ Retorno
+            <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-priority-alta-tint text-priority-alta">
+              Retorno
             </span>
           )}
           {servicoRaw.categoria === "concluir_hoje" ? (
-            <span className="rounded-full bg-sla-dentro/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-dentro uppercase">
+            <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-dentro-tint text-sla-dentro">
               Hoje
             </span>
           ) : (
-            <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sla-proximo uppercase">
+            <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-proximo-tint text-sla-proximo">
               Para revisão
             </span>
           )}
@@ -281,7 +282,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
       </header>
 
       <div className="flex-1 px-4 py-5">
-        <section className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+        <section className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
           <div className="flex flex-wrap items-center gap-3">
             <PrioridadeBadge prioridade={chamado?.prioridade as Prioridade} />
             <SlaBadge slaPrazo={slaPrazo} status={chamadoStatus} />
@@ -302,8 +303,8 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
         </section>
 
         {anexosCliente.length > 0 && (
-          <section className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface p-4">
-            <p className="text-xs font-semibold tracking-wide text-text-tertiary uppercase">
+          <section className="mt-4 rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
+            <p className="text-xs font-medium text-text-secondary">
               Evidências do cliente
             </p>
             <div className="mt-2 flex flex-wrap gap-3">
@@ -338,7 +339,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
 
         {tentativaAnterior && (
           <section className="mt-4 rounded-[var(--radius-md)] border-2 border-priority-alta/40 bg-priority-alta/5 p-4">
-            <p className="text-xs font-semibold tracking-wide text-priority-alta uppercase">
+            <p className="text-xs font-semibold text-priority-alta">
               ↩ Tentativa anterior
             </p>
             <p className="mt-1 text-sm text-text-primary">
@@ -376,7 +377,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
         )}
 
         {historico.length > 0 && (
-          <section className="mt-4 rounded-[var(--radius-md)] border border-border bg-surface p-4">
+          <section className="mt-4 rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
             <HistoricoChamado eventos={historico} />
           </section>
         )}
@@ -391,7 +392,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
               )}
 
               {apontamentoDesteServico ? (
-                <p className="rounded-[var(--radius-md)] border border-border bg-surface-input p-3 text-xs text-text-secondary">
+                <p className="rounded-[var(--radius-md)] bg-surface shadow-lift-input p-3 text-xs text-text-secondary">
                   ⚠ Você apontou um problema neste serviço em{" "}
                   {formatoDataCurta.format(new Date(apontamentoDesteServico.criado_em as string))} — o
                   gerente foi avisado.
@@ -449,7 +450,7 @@ export default async function ServicoPage({ params }: PageProps<"/servico/[id]">
           )}
 
           {status === "cancelado" && (
-            <p className="rounded-[var(--radius-md)] border border-border bg-surface-input p-4 text-sm text-text-secondary">
+            <p className="rounded-[var(--radius-md)] bg-surface shadow-lift-input p-4 text-sm text-text-secondary">
               Atendimento cancelado — o chamado voltou a ficar disponível pra uma próxima rota.
             </p>
           )}

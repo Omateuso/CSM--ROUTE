@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { FIELD_INPUT, FOCUS_RING } from "@/lib/ui/styles";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 // Sem componente genérico de busca de RT no projeto — os dois precedentes
 // mais próximos (rts-manager.tsx, montar-rota-client.tsx) fazem preload
@@ -77,7 +78,7 @@ export function RtPicker({
               className={`flex flex-col gap-0.5 rounded-[var(--radius-sm)] border border-border p-3 text-left transition-colors hover:border-accent hover:bg-surface-input ${FOCUS_RING}`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs font-semibold text-text-primary">{rt.codigo}</span>
+                <PlacaRt codigo={rt.codigo} />
                 <span className="text-sm text-text-primary">{rt.nome}</span>
                 {!!contagemPorRt?.[rt.id] && (
                   <span className="ml-auto rounded-full bg-surface-input px-2 py-0.5 text-xs text-text-tertiary">

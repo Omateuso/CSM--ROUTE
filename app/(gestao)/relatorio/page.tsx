@@ -50,10 +50,10 @@ export default async function RelatorioPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-12">
+    <div className="mx-auto w-full max-w-4xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Visão geral</p>
+          <p className="text-xs font-medium text-text-tertiary">Visão geral</p>
           <h1 className="mt-1 text-2xl font-semibold text-text-primary">Relatório diário</h1>
           <p className="mt-2 text-sm leading-relaxed text-text-secondary">
             Operação do dia por região, a partir das rotas confirmadas.

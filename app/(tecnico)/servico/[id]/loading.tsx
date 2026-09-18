@@ -28,7 +28,7 @@ export default function Loading() {
       </header>
 
       <div className="flex-1 px-4 py-5">
-        <div className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+        <div className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
           <EsqueletoBloco className="h-4 w-32" />
           <EsqueletoTexto className="mt-3" linhas={3} />
         </div>

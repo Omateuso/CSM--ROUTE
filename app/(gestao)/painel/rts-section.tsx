@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/lib/ui/modal";
 import { FOCUS_RING } from "@/lib/ui/styles";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 export type RtLinha = { codigo: string; nome: string; total: number };
 
@@ -20,7 +21,7 @@ function ListaRts({ rts, maxVolume }: { rts: RtLinha[]; maxVolume: number }) {
       {rts.map((rt) => (
         <li key={rt.codigo} className="flex items-center gap-4 px-4 py-2.5">
           <div className="w-20 shrink-0">
-            <p className="font-mono text-xs tabular-nums text-text-secondary">{rt.codigo}</p>
+            <PlacaRt codigo={rt.codigo} />
           </div>
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-input">
             <div className="h-full rounded-full bg-accent" style={{ width: `${(rt.total / maxVolume) * 100}%` }} />
@@ -44,7 +45,7 @@ export function RtsSection({ rts }: { rts: RtLinha[] }) {
     <div>
       <h2 className="text-sm font-semibold text-text-primary">RTs com maior volume</h2>
       <p className="mt-1 text-xs text-text-tertiary">Chamados em aberto por RT.</p>
-      <div className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface">
+      <div className="mt-3 rounded-[var(--radius-md)] bg-surface shadow-lift">
         <ListaRts rts={inline} maxVolume={maxVolume} />
       </div>
 

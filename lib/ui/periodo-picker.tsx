@@ -48,7 +48,7 @@ export function PeriodoPicker({
               onClick={() => onChange(atalho.periodo)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 ativo
-                  ? "border-accent bg-accent text-white"
+                  ? "border-accent bg-accent text-on-accent"
                   : "border-border bg-surface text-text-secondary hover:bg-surface-input"
               }`}
             >
@@ -65,7 +65,7 @@ export function PeriodoPicker({
             value={valor.inicio}
             max={valor.fim}
             onChange={(event) => onChange({ ...valor, inicio: event.target.value })}
-            className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-2 py-1 text-sm text-text-primary"
+            className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-2 py-1 text-sm text-text-primary"
           />
         </label>
         <label className="flex items-center gap-1.5">
@@ -75,7 +75,7 @@ export function PeriodoPicker({
             value={valor.fim}
             min={valor.inicio}
             onChange={(event) => onChange({ ...valor, fim: event.target.value })}
-            className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-2 py-1 text-sm text-text-primary"
+            className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-2 py-1 text-sm text-text-primary"
           />
         </label>
       </div>

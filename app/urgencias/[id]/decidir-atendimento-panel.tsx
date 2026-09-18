@@ -59,7 +59,7 @@ export function DecidirAtendimentoPanel({
   const [escolha, setEscolha] = useState<Escolha | null>(null);
 
   return (
-    <div className="flex flex-col gap-4 rounded-[var(--radius-md)] border border-border bg-surface p-4">
+    <div className="flex flex-col gap-4 rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
       <div>
         <p className="text-sm font-semibold text-text-primary">Despachar atendimento</p>
         <p className="mt-1 text-xs text-text-secondary">
@@ -92,7 +92,7 @@ export function DecidirAtendimentoPanel({
               >
                 <div className="flex flex-wrap items-center gap-2">
                   {recomendada && (
-                    <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-white">
+                    <span className="inline-flex h-5 items-center rounded-full bg-accent px-2 text-[11px] font-semibold text-on-accent">
                       RECOMENDADO
                     </span>
                   )}
@@ -310,7 +310,7 @@ function ConfirmarDespacho({
         <button
           type="submit"
           disabled={isPending || !tecnicoId}
-          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
         >
           {isPending ? "Despachando..." : "Despachar técnico"}
         </button>
@@ -411,7 +411,7 @@ function AtendimentoAvulso({
           <button
             type="submit"
             disabled={isPending || !equipeId || !tecnicoId}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
             {isPending ? "Despachando..." : "Abrir rota avulsa e despachar"}
           </button>

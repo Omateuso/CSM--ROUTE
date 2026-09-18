@@ -52,9 +52,9 @@ export default async function ZonasPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-12">
+    <div className="mx-auto w-full max-w-2xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-8">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">
+        <p className="text-xs font-medium text-text-tertiary">
           Cadastro
         </p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">

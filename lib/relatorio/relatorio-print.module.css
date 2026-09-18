@@ -18,7 +18,7 @@
    motor de paginação de impressão, não um hack) — a marca d'água entra
    como elemento posicionado dentro do `<thead>` (que repete), não solta. */
 .shell {
-  --teal: #008a83;
+  --teal: #0b6e68;
   --red: #d22b1c;
   --tinta: #1c1917;
   --tinta-suave: #57534e;

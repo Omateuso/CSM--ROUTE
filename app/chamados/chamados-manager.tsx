@@ -10,6 +10,7 @@ import { StatusChamadoBadge, type StatusChamado } from "./status-chamado-badge";
 import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 import { computeSlaStatus, type SlaStatus } from "@/lib/sla";
 import { buscarDetalheChamado, marcarRespostasVistas, type DetalheChamado } from "./actions";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 
 const DETALHE_VAZIO: DetalheChamado = { descricao: null, historico: [], respostas: [], anexosCliente: [] };
 
@@ -58,6 +59,7 @@ export function ChamadosManager({
   podeResponder,
   chamadoIdInicial = null,
   detalheInicial = null,
+  filtrosIniciais,
 }: {
   chamados: ChamadoRow[];
   rts: Rt[];
@@ -67,6 +69,8 @@ export function ChamadosManager({
   chamadoIdInicial?: string | null;
   /** Detalhe já buscado no server pro chamado do deep-link. */
   detalheInicial?: DetalheChamado | null;
+  /** Filtros vindos da URL (?busca=&prioridade=&sla=&regiao=) — ver page.tsx. */
+  filtrosIniciais?: { busca: string; prioridade: string; sla: string; regiao: string };
 }) {
   // Linha do deep-link (const, não state: o componente remonta por `key` quando
   // o ?chamado= muda, então isto é recalculado a cada montagem).
@@ -75,10 +79,16 @@ export function ChamadosManager({
     : null;
 
   const router = useRouter();
-  const [busca, setBusca] = useState("");
-  const [prioridadeFiltro, setPrioridadeFiltro] = useState("todas");
-  const [regiaoFiltro, setRegiaoFiltro] = useState("todas");
-  const [slaFiltro, setSlaFiltro] = useState("todos");
+  const PRIORIDADES_VALIDAS = ["emergencial", "alta", "normal", "baixa"];
+  const SLAS_VALIDOS = ["dentro", "proximo", "vencido"];
+  const [busca, setBusca] = useState(filtrosIniciais?.busca ?? "");
+  const [prioridadeFiltro, setPrioridadeFiltro] = useState(
+    filtrosIniciais && PRIORIDADES_VALIDAS.includes(filtrosIniciais.prioridade) ? filtrosIniciais.prioridade : "todas",
+  );
+  const [regiaoFiltro, setRegiaoFiltro] = useState(filtrosIniciais?.regiao || "todas");
+  const [slaFiltro, setSlaFiltro] = useState(
+    filtrosIniciais && SLAS_VALIDOS.includes(filtrosIniciais.sla) ? filtrosIniciais.sla : "todos",
+  );
   // Chamado encerrado (finalizado OU cancelado — inclui o excluído no TomTicket,
   // migration 0044) some da lista por padrão (pedido do usuário, 10/09/2026) — a
   // tela é o espelho/busca do TomTicket, não a fila de trabalho; o toggle traz
@@ -202,7 +212,7 @@ export function ChamadosManager({
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar por assunto, RT ou protocolo..."
-          className="min-w-64 flex-1 rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="min-w-64 flex-1 rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
 
         <label className="sr-only" htmlFor="filtro-prioridade">
@@ -212,7 +222,7 @@ export function ChamadosManager({
           id="filtro-prioridade"
           value={prioridadeFiltro}
           onChange={(e) => setPrioridadeFiltro(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="todas">Todas as prioridades</option>
           <option value="emergencial">Emergencial</option>
@@ -228,7 +238,7 @@ export function ChamadosManager({
           id="filtro-regiao"
           value={regiaoFiltro}
           onChange={(e) => setRegiaoFiltro(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="todas">Todas as regiões</option>
           {regioesPorZona.map(({ zona, regioes }) => (
@@ -249,7 +259,7 @@ export function ChamadosManager({
           id="filtro-sla"
           value={slaFiltro}
           onChange={(e) => setSlaFiltro(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="todos">Todos os status de SLA</option>
           {SLA_OPTIONS.map((s) => (
@@ -276,7 +286,7 @@ export function ChamadosManager({
             aria-pressed={soRespostaNova}
             className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${FOCUS_RING} ${
               soRespostaNova
-                ? "border-accent bg-accent text-white"
+                ? "border-accent bg-accent text-on-accent"
                 : "border-accent/40 bg-accent/10 text-accent hover:bg-accent/20"
             }`}
           >
@@ -294,7 +304,7 @@ export function ChamadosManager({
                 ? undefined
                 : "Em avaliação pela gestão — por enquanto, chamados criados manualmente entram pela tela da gestão."
             }
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-text-muted disabled:hover:bg-text-muted ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-text-muted disabled:hover:bg-text-muted ${FOCUS_RING}`}
           >
             + Novo chamado
           </button>
@@ -311,7 +321,7 @@ export function ChamadosManager({
         {linhasFiltradas.length !== chamados.length && ` (${chamados.length} no total)`}
       </p>
 
-      <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+      <div className="overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
         <table className="w-full min-w-[920px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
@@ -334,10 +344,8 @@ export function ChamadosManager({
                 className="cursor-pointer transition-colors hover:bg-surface-input"
               >
                 <td className="px-4 py-2.5 align-top">
-                  <p className="font-mono text-xs tabular-nums text-text-secondary">
-                    {c.rtCodigo}
-                  </p>
-                  <p className="mt-0.5 text-xs text-text-tertiary">{c.rtNome}</p>
+                  <PlacaRt codigo={c.rtCodigo} />
+                  <p className="mt-1 text-xs text-text-tertiary">{nomeSemCodigo(c.rtNome, c.rtCodigo)}</p>
                 </td>
                 <td className="px-4 py-2.5 align-top">
                   <p className="text-text-primary">

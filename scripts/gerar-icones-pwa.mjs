@@ -9,7 +9,7 @@
 // Glifo: a mesma "rota" (dois pontos + curva em S) já usada no ícone
 // `route` do menu lateral (app/nav-icons.tsx) — reaproveita a identidade
 // visual que já existe no produto em vez de inventar uma nova. Cor de
-// fundo: teal `#008a83`, a cor "unificada" do sistema (botão Entrar do
+// fundo: teal `#0b6e68`, a cor "unificada" do sistema (botão Entrar do
 // login, badge do menu, OperacaoHojeCard — decisão de 27/08/2026).
 //
 // Roda sob demanda (não faz parte do build) — reexecute se a cor/glifo
@@ -24,7 +24,7 @@ const raiz = path.resolve(__dirname, "..");
 const publicDir = path.join(raiz, "public");
 const appDir = path.join(raiz, "app");
 
-const TEAL = "#008a83";
+const TEAL = "#0b6e68";
 
 // Glifo em viewBox 24x24 (path data idêntico ao ícone `route` do menu) —
 // bounding box aproximado: x 3.6–20.4, y 2.6–21.4 (~15px de padding natural

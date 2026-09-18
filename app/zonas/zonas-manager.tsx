@@ -44,7 +44,7 @@ export function ZonasManager({
       ))}
 
       {podeCriar && (
-        <div className="rounded-[var(--radius-md)] border border-border bg-surface p-5">
+        <div className="rounded-[var(--radius-md)] bg-surface shadow-lift p-5">
           {criandoZona ? (
             <InlineTextForm
               action={criarZona}

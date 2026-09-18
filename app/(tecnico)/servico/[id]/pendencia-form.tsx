@@ -74,7 +74,7 @@ export function PendenciaForm({ servicoId }: { servicoId: string }) {
       <button
         type="submit"
         disabled={isPending || !fotoPronta || !osPronta}
-        className={`w-full rounded-[var(--radius-sm)] bg-priority-alta px-4 py-3 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+        className={`w-full rounded-[var(--radius-sm)] bg-priority-alta px-4 py-3 text-sm font-semibold text-on-accent transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
       >
         {isPending ? "Enviando..." : "Reportar pendência"}
       </button>

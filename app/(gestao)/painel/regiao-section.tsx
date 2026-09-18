@@ -51,7 +51,7 @@ export function RegiaoSection({ regioes }: { regioes: RegiaoLinha[] }) {
     <div>
       <h2 className="text-sm font-semibold text-text-primary">Por região</h2>
       <p className="mt-1 text-xs text-text-tertiary">Chamados em aberto e SLA vencido, por região.</p>
-      <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+      <div className="mt-3 overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
         <TabelaRegioes regioes={inline} />
       </div>
 

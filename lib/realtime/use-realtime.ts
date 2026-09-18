@@ -9,7 +9,7 @@ import type { AlvoRealtime } from "./tipos";
 // Component a cada mudança. `router.refresh()` preserva scroll e estado do
 // client — quem garante isso é o Next, não precisamos rebuscar nada aqui.
 //
-// Devolve o estado da conexão pro indicador "Ao vivo" do dashboard.
+// Devolve o estado da conexão pro indicador "Atualizado" do dashboard.
 export function useRealtimeRefresh(canal: string, alvos: readonly AlvoRealtime[]): boolean {
   const router = useRouter();
   const [conectado, setConectado] = useState(false);

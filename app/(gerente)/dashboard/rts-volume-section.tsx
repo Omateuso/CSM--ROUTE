@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { ResumoComModal } from "@/lib/ui/resumo-com-modal";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 
 // Client component só pra poder passar a função `renderLista` pro
 // ResumoComModal (client) — Server Component não pode passar função como
@@ -19,11 +21,16 @@ export function RtsVolumeSection({ rts, maxVolume }: { rts: Rt[]; maxVolume: num
       renderLista={(lista) => (
         <ul className="divide-y divide-border">
           {lista.map((rt) => (
-            <li key={rt.codigo} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
-              <div className="w-24 shrink-0">
-                <p className="font-mono text-xs tabular-nums text-text-secondary">{rt.codigo}</p>
-                <p className="mt-0.5 truncate text-xs text-text-tertiary" title={rt.nome}>
-                  {rt.nome}
+            <li key={rt.codigo}>
+              <Link
+                href={`/chamados?busca=${encodeURIComponent(rt.codigo)}`}
+                title={`Ver os ${rt.total} chamados em aberto de ${rt.codigo}`}
+                className="group -mx-2 flex items-center gap-4 rounded-[var(--radius-sm)] px-2 py-3 transition-colors duration-150 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+              <div className="flex w-44 shrink-0 items-center gap-2">
+                <PlacaRt codigo={rt.codigo} />
+                <p className="truncate text-xs text-text-secondary" title={rt.nome}>
+                  {nomeSemCodigo(rt.nome, rt.codigo)}
                 </p>
               </div>
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-input">
@@ -35,6 +42,7 @@ export function RtsVolumeSection({ rts, maxVolume }: { rts: Rt[]; maxVolume: num
               <p className="w-6 shrink-0 text-right text-sm font-medium tabular-nums text-text-primary">
                 {rt.total}
               </p>
+              </Link>
             </li>
           ))}
         </ul>

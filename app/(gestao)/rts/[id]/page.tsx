@@ -57,7 +57,7 @@ export default async function RtDetalhePage({ params }: PageProps<"/rts/[id]">) 
 
   if (!rtRaw) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
         <Link href="/rts" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
           ← RTs
         </Link>
@@ -75,7 +75,7 @@ export default async function RtDetalhePage({ params }: PageProps<"/rts/[id]">) 
   const anteriores = periodos.filter((p) => !p.atual);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
       <Link href="/rts" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
         ← RTs
       </Link>
@@ -108,7 +108,7 @@ export default async function RtDetalhePage({ params }: PageProps<"/rts/[id]">) 
       ) : (
         <>
           <section className="mt-8">
-            <p className="text-xs font-medium tracking-wide text-text-tertiary uppercase">Endereço atual</p>
+            <p className="text-xs font-medium text-text-secondary">Endereço atual</p>
             {atual ? (
               <div className="mt-2 rounded-[var(--radius-md)] border border-border-strong bg-surface p-4">
                 <p className="text-base font-medium text-text-primary">{atual.endereco}</p>
@@ -128,7 +128,7 @@ export default async function RtDetalhePage({ params }: PageProps<"/rts/[id]">) 
           </section>
 
           <section className="mt-8">
-            <p className="text-xs font-medium tracking-wide text-text-tertiary uppercase">
+            <p className="text-xs font-medium text-text-secondary">
               Histórico de endereços
             </p>
             {anteriores.length === 0 ? (
@@ -138,7 +138,7 @@ export default async function RtDetalhePage({ params }: PageProps<"/rts/[id]">) 
             ) : (
               <ol className="mt-2 flex flex-col gap-2">
                 {anteriores.map((p) => (
-                  <li key={p.endereco_id} className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+                  <li key={p.endereco_id} className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
                     <p className="text-sm font-medium text-text-primary">{p.endereco}</p>
                     <p className="text-sm text-text-tertiary">
                       {p.bairro} · {p.regiao_nome}

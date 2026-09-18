@@ -94,9 +94,9 @@ export default async function EquipesPage() {
     }));
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">
+        <p className="text-xs font-medium text-text-tertiary">
           Cadastro
         </p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Equipes e técnicos</h1>

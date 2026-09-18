@@ -69,7 +69,7 @@ export function ReagendarDialog({
           <button
             type="submit"
             disabled={isPending}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
             {isPending ? "Reagendando..." : "Confirmar reagendamento"}
           </button>

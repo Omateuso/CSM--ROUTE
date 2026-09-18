@@ -1,33 +1,36 @@
-/* CSS fornecido pelo usuário (27/08/2026), cores/efeito mantidos
-   exatamente como vieram — mesma convenção já usada pro botão de
-   Pendências/"Iniciar atendimento"/o próprio picker de raio. Único ajuste
-   estrutural: min-width removido (era 200px fixo no exemplo original,
-   pensado pra um texto curto tipo "BUTTON" — aqui o texto é dinâmico,
-   "Proximidade de rota: N km", então deixar a largura fluir com o
-   conteúdo evita sobra de espaço vazio nos raios de 2 dígitos). */
+/* Botão que abre o ajuste do raio de proximidade. Base fornecida pelo
+   usuário (27/08/2026) — o efeito de ondas (ripple) foi mantido porque é o
+   que dá a ideia de "raio". Nova identidade (18/09/2026): cor, raio e
+   tipografia vieram pros tokens globais (mesmo botão primário do resto do
+   sistema, texto em caixa normal) — antes era um teal próprio, canto de
+   4px e caixa alta espaçada, destoando de tudo em volta. */
 .btn {
   outline: 0;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  background: #008a83;
+  background: var(--accent);
   border: 0;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-sm);
   box-sizing: border-box;
-  padding: 16px 20px;
-  color: #fff;
-  font-size: 12px;
+  height: 40px;
+  padding: 0 16px;
+  color: var(--on-accent);
+  font-size: 13.5px;
   font-weight: 600;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
   overflow: hidden;
   cursor: pointer;
+  transition:
+    background 150ms var(--ease-out),
+    transform 120ms var(--ease-out);
 }
 
 .btn:hover {
-  opacity: 0.95;
+  background: var(--accent-hover);
+}
+.btn:active {
+  transform: scale(0.97);
 }
 
 /* Não estava no CSS original (que zera outline com outline:0) — mesmo
@@ -35,7 +38,7 @@
    Module deste projeto (iniciar-servico-form.module.css etc.), pra não
    perder o foco de teclado. */
 .btn:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 

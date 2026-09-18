@@ -97,7 +97,7 @@ export function RtsManager({
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar por código, nome, bairro, endereço ou CAPS..."
-          className="min-w-64 flex-1 rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="min-w-64 flex-1 rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
 
         <label className="sr-only" htmlFor="filtro-zona">
@@ -107,7 +107,7 @@ export function RtsManager({
           id="filtro-zona"
           value={zonaFiltro}
           onChange={(e) => setZonaFiltro(e.target.value)}
-          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         >
           <option value="todas">Todas as zonas</option>
           {zonas.map((z) => (
@@ -120,7 +120,7 @@ export function RtsManager({
         <button
           type="button"
           onClick={() => abrir("criar")}
-          className={`ml-auto rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+          className={`ml-auto rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
         >
           + Nova RT
         </button>
@@ -130,7 +130,7 @@ export function RtsManager({
         {linhasFiltradas.length} de {rts.length} RTs
       </p>
 
-      <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+      <div className="overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
         <table className="w-full min-w-[820px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">

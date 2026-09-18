@@ -1,6 +1,7 @@
 "use client";
 
 import { useRealtimeRefresh } from "@/lib/realtime/use-realtime";
+import { IndicadorAoVivo } from "@/lib/ui/indicador-ao-vivo";
 
 // Mudança em qualquer `servico` (rota nova confirmada, chamado que chegou
 // depois via fn_atualizar_servicos_rota, gerente reagendando/trocando
@@ -18,12 +19,6 @@ export function ServicosRealtime() {
   const conectado = useRealtimeRefresh("servicos-do-dia", [{ tabela: "servicos" }]);
 
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] text-text-tertiary" role="status">
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${conectado ? "bg-sla-dentro" : "border border-text-tertiary"}`}
-        aria-hidden="true"
-      />
-      {conectado ? "Ao vivo" : "Conectando..."}
-    </span>
+    <IndicadorAoVivo conectado={conectado} compacto />
   );
 }

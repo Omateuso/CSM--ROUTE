@@ -11,6 +11,7 @@ import { FOCUS_RING, TAP_TARGET } from "@/lib/ui/styles";
 import { ROUTE_PROXIMITY_RADIUS_KM } from "@/lib/routing/config";
 import type { Candidata } from "@/lib/routing/intelligent-route";
 import type { Nucleo } from "@/lib/routing/clusters";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 type Equipe = { id: string; nome: string };
 type Tecnico = { id: string; nome: string; equipeId: string | null; ativo: boolean };
@@ -211,7 +212,7 @@ export function MontarRotaClient({
           value={regiaoId}
           onChange={(e) => handleTrocarRegiao(e.target.value)}
           disabled={rotaIds.length > 0}
-          className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
         >
           <option value="">Todas as regiões</option>
           {zonas.map((zonaNome) => (
@@ -284,7 +285,7 @@ export function MontarRotaClient({
             <button
               type="button"
               onClick={aceitarForcaTarefa}
-              className={`rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+              className={`rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-xs font-medium text-on-accent transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
             >
               Aceitar força-tarefa
             </button>
@@ -309,7 +310,7 @@ export function MontarRotaClient({
           value={buscaCandidata}
           onChange={(e) => setBuscaCandidata(e.target.value)}
           placeholder="Buscar por código ou endereço — útil quando várias RTs caem no mesmo ponto do mapa..."
-          className="w-full rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="w-full rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
       </div>
 
@@ -332,7 +333,7 @@ export function MontarRotaClient({
                     key={id}
                     className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-border bg-surface p-2.5"
                   >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-on-accent">
                       {indice + 1}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -388,7 +389,7 @@ export function MontarRotaClient({
                   setConfirmarAberto(true);
                 }
               }}
-              className={`mt-3 w-full rounded-[var(--radius-sm)] bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+              className={`mt-3 w-full rounded-[var(--radius-sm)] bg-accent px-3 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
             >
               {carregandoChamados ? "Carregando chamados..." : "Confirmar rota do dia"}
             </button>
@@ -426,11 +427,11 @@ export function MontarRotaClient({
                 return (
                   <li
                     key={c.rtId}
-                    className="flex items-start justify-between gap-3 rounded-[var(--radius-md)] border border-border bg-surface p-3"
+                    className="flex items-start justify-between gap-3 rounded-[var(--radius-md)] bg-surface shadow-lift p-3"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-text-secondary">{c.codigo}</span>
+                        <PlacaRt codigo={c.codigo} />
                         <span className={`inline-flex items-center gap-1 text-xs ${info.corTexto}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${info.corDot}`} aria-hidden="true" />
                           {info.label}
@@ -438,10 +439,7 @@ export function MontarRotaClient({
                       </div>
                       <p className="mt-0.5 text-sm text-text-primary">
                         {c.endereco}{" "}
-                        <span
-                          className="font-semibold tabular-nums"
-                          style={{ color: "#ff1472", fontSize: "0.75rem" }}
-                        >
+                        <span className="text-xs font-semibold tabular-nums text-priority-emergencial">
                           {c.totalAbertos} chamado{c.totalAbertos === 1 ? "" : "s"} em aberto
                         </span>
                       </p>
@@ -452,7 +450,7 @@ export function MontarRotaClient({
                         type="button"
                         onClick={() => adicionarRt(c.rtId)}
                         aria-label={`Adicionar ${c.codigo} à rota`}
-                        className={`rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+                        className={`rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-xs font-medium text-on-accent transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
                       >
                         + Adicionar
                       </button>

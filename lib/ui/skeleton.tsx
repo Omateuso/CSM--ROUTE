@@ -60,7 +60,7 @@ export function EsqueletoCards({
   return (
     <div className={`grid grid-cols-2 gap-4 ${colunas} ${className}`}>
       {Array.from({ length: quantidade }, (_, i) => (
-        <div key={i} className="rounded-[var(--radius-md)] border border-border bg-surface p-5">
+        <div key={i} className="rounded-[var(--radius-md)] bg-surface shadow-lift p-5">
           <EsqueletoBloco className="h-2.5 w-2/3" />
           <EsqueletoBloco className="mt-3 h-6 w-12" />
         </div>
@@ -80,7 +80,7 @@ export function EsqueletoTabela({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-[var(--radius-md)] border border-border bg-surface ${className}`}
+      className={`overflow-hidden rounded-[var(--radius-md)] bg-surface shadow-lift ${className}`}
     >
       <div className="flex gap-4 border-b border-border bg-surface-input px-4 py-3">
         {Array.from({ length: colunas }, (_, i) => (
@@ -110,7 +110,7 @@ export function EsqueletoLista({
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
       {Array.from({ length: quantidade }, (_, i) => (
-        <div key={i} className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+        <div key={i} className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
           <div className="flex items-center justify-between gap-4">
             <EsqueletoBloco className="h-3.5 w-36" />
             <EsqueletoBloco className="h-3 w-20" />
@@ -133,19 +133,14 @@ type CabecalhoProps = {
   secao: string;
   titulo: string;
   descricao: ReactNode;
-  uppercase?: boolean;
   larguraTexto?: string;
 };
 
-function Cabecalho({ secao, titulo, descricao, uppercase, larguraTexto = "" }: CabecalhoProps) {
+function Cabecalho({ secao, titulo, descricao, larguraTexto = "" }: CabecalhoProps) {
   return (
     <div className={larguraTexto}>
-      <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">{secao}</p>
-      <h1
-        className={`mt-1 text-2xl font-semibold text-text-primary${uppercase ? " uppercase" : ""}`}
-      >
-        {titulo}
-      </h1>
+      <p className="text-xs font-medium text-text-tertiary">{secao}</p>
+      <h1 className="mt-1 text-2xl font-semibold text-text-primary">{titulo}</h1>
       <p className="mt-2 text-sm leading-relaxed text-text-secondary">{descricao}</p>
     </div>
   );
@@ -178,10 +173,10 @@ export function PaginaCarregando({
   if (fluida) {
     return (
       <div className="flex flex-1 flex-col">
-        <header className={`mx-auto w-full ${largura} px-6 pt-12 pb-6`}>
+        <header className={`mx-auto w-full ${largura} px-4 pt-7 pb-5 sm:px-6 sm:pt-10 sm:pb-6`}>
           <Cabecalho {...cabecalho} />
         </header>
-        <div className={`mx-auto w-full ${largura} flex-1 px-6 pb-12`} role="status">
+        <div className={`mx-auto w-full ${largura} flex-1 px-4 pb-8 sm:px-6 sm:pb-10`} role="status">
           {corpo}
         </div>
       </div>
@@ -189,7 +184,7 @@ export function PaginaCarregando({
   }
 
   return (
-    <div className={`mx-auto w-full ${largura} px-6 py-12`}>
+    <div className={`mx-auto w-full ${largura} px-4 py-7 sm:px-6 sm:py-10`}>
       <header className={margemHeader}>
         <Cabecalho {...cabecalho} />
       </header>

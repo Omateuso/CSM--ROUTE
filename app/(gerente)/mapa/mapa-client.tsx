@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { MapaBase, type MarcadorMapa } from "@/lib/ui/mapa/mapa-base";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 export type Nivel = "critico" | "emergencial" | "vencido" | "alta" | "ok" | "sem_chamados";
 
@@ -53,10 +54,10 @@ export function MapaClient({ rts }: { rts: RtMarker[] }) {
           titulo: rt.codigo,
           popup: (
             <div className="min-w-48">
-              <p className="font-mono text-xs text-neutral-500">{rt.codigo}</p>
-              <p className="text-sm font-medium text-neutral-900">{rt.endereco}</p>
-              <p className="mt-2 text-xs text-neutral-600">{info.label}</p>
-              <p className="mt-1 text-xs text-neutral-600">
+              <p><PlacaRt codigo={rt.codigo} /></p>
+              <p className="text-sm font-medium text-text-primary">{rt.endereco}</p>
+              <p className="mt-2 text-xs text-text-secondary">{info.label}</p>
+              <p className="mt-1 text-xs text-text-secondary">
                 {rt.totalAbertos} chamado{rt.totalAbertos === 1 ? "" : "s"} em aberto
                 {rt.emergenciais > 0 && ` · ${rt.emergenciais} emergencial(is)`}
                 {rt.vencidos > 0 && ` · ${rt.vencidos} com SLA vencido`}

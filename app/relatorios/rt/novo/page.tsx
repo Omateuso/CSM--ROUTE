@@ -72,7 +72,7 @@ export default async function NovoRelatorioRtPage(props: PageProps<"/relatorios/
 
     if (!relatorioRaw) {
       return (
-        <div className="mx-auto w-full max-w-3xl px-6 py-12">
+        <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
           <Link href="/relatorios/rt" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
             ← Relatório de RT
           </Link>
@@ -87,7 +87,7 @@ export default async function NovoRelatorioRtPage(props: PageProps<"/relatorios/
     // deixar o usuário preencher algo que vai falhar ao salvar.
     if (relatorioRaw.status === "finalizado") {
       return (
-        <div className="mx-auto w-full max-w-3xl px-6 py-12">
+        <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
           <Link href="/relatorios/rt" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
             ← Relatório de RT
           </Link>
@@ -153,7 +153,7 @@ export default async function NovoRelatorioRtPage(props: PageProps<"/relatorios/
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
       <Link href="/relatorios/rt" className={`text-sm font-medium text-accent hover:text-accent-hover ${FOCUS_RING}`}>
         ← Relatório de RT
       </Link>

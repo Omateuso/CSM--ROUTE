@@ -90,13 +90,13 @@ export function EquipesManager({
           <button
             type="button"
             onClick={() => abrir("criar")}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
           >
             + Nova equipe
           </button>
         </div>
 
-        <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+        <div className="overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
@@ -171,7 +171,7 @@ export function EquipesManager({
           fora desta tela.
         </p>
 
-        <div className="overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+        <div className="overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">
@@ -204,7 +204,7 @@ export function EquipesManager({
                       value={t.equipeId ?? ""}
                       onChange={(ev) => handleMudarEquipeTecnico(t, ev.target.value)}
                       disabled={idPendente === t.id}
-                      className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option value="">Sem equipe</option>
                       {equipes.map((e) => (

@@ -32,7 +32,7 @@ export function UrgenciaAcoes({
   if (status === "nao_validada" || status === "cancelada") return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-border bg-surface p-4">
+    <div className="flex flex-col gap-3 rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
       <p className="text-sm font-semibold text-text-primary">Triagem</p>
 
       {status === "solicitada" && (
@@ -41,7 +41,7 @@ export function UrgenciaAcoes({
           <button
             type="submit"
             disabled={analisarPending}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
             {analisarPending ? "Iniciando..." : "Iniciar análise"}
           </button>
@@ -61,7 +61,7 @@ export function UrgenciaAcoes({
           <button
             type="button"
             onClick={() => setModal("validar")}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover ${FOCUS_RING}`}
           >
             Validar urgência
           </button>
@@ -184,7 +184,7 @@ function MotivoModal({
           <button
             type="submit"
             disabled={isPending}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
             {isPending ? "Enviando..." : botao}
           </button>

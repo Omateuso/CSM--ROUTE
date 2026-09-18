@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import LogoutButton from "@/app/logout-button";
+import { ThemeToggle, type Tema } from "@/lib/ui/theme-toggle";
+import { ICON_BUTTON } from "@/lib/ui/styles";
 import { ServicosDoDiaLista, type ServicoItem } from "./servicos-do-dia-lista";
 import { ServicosRealtime } from "./servicos-realtime";
 import type { Prioridade } from "@/app/chamados/prioridade-badge";
@@ -125,18 +128,27 @@ export default async function ServicosDoDiaPage() {
     })
     .sort((a, b) => (a.rotaData === b.rotaData ? a.ordem - b.ordem : a.rotaData.localeCompare(b.rotaData)));
 
+  // Técnico não tem o menu lateral (e o alternador de tema que mora lá),
+  // então o cabeçalho dele carrega o próprio — mesma leitura de cookie que
+  // app/layout.tsx faz.
+  const temaCookie = (await cookies()).get("tema")?.value;
+  const tema: Tema = temaCookie === "dark" || temaCookie === "light" ? temaCookie : null;
+
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-start justify-between gap-3 border-b border-border px-4 pt-8 pb-4">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-4 pt-6 pb-4 sm:pt-8">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">
+          <p className="text-xs font-medium text-text-tertiary">
             {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" }).format(new Date())}
           </p>
           <h1 className="mt-1 text-xl font-semibold text-text-primary">Meus serviços</h1>
           <p className="mt-1 text-sm text-text-secondary">Olá, {profile?.nome ?? "técnico"}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <LogoutButton />
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle inicial={tema} className={ICON_BUTTON} iconClassName="h-5 w-5" />
+            <LogoutButton />
+          </div>
           <ServicosRealtime />
         </div>
       </header>

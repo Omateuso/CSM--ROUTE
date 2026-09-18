@@ -133,9 +133,9 @@ export default async function RotasConfirmadasPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Rotas</p>
+        <p className="text-xs font-medium text-text-tertiary">Rotas</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Rotas confirmadas</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
           Histórico de rotas do dia já confirmadas — registro fixo, não editável por aqui.

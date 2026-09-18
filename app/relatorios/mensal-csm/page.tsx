@@ -39,9 +39,9 @@ export default async function RelatorioMensalCsmPage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Exportação · perfil gerente</p>
+        <p className="text-xs font-medium text-text-tertiary">Exportação · perfil gerente</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Relatório mensal CSM</h1>
         <p className="mt-2 text-sm leading-relaxed text-text-secondary">
           Gera o pacote entregue ao IGEDES: a planilha <strong>ANEXO 1</strong> (.xlsx) e o documento com uma página por

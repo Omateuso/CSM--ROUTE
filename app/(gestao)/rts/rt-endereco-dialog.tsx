@@ -68,7 +68,7 @@ export function RtEnderecoDialog({
       <form action={formAction} className="flex flex-col gap-4">
         <input type="hidden" name="id" value={rt.id} />
 
-        <div className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-2.5 py-1.5 text-xs text-text-tertiary">
+        <div className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-2.5 py-1.5 text-xs text-text-tertiary">
           <span className="font-medium text-text-secondary">Endereço atual: </span>
           {rt.endereco}
         </div>
@@ -194,7 +194,7 @@ export function RtEnderecoDialog({
           <button
             type="submit"
             disabled={isPending}
-            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+            className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
           >
             {isPending ? "Salvando..." : "Trocar endereço"}
           </button>

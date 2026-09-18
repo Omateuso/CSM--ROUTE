@@ -6,6 +6,7 @@ import { SlaBadge } from "@/app/chamados/sla-badge";
 import { FOCUS_RING } from "@/lib/ui/styles";
 import { HistoricoChamado, type HistoricoEvento } from "@/lib/ui/historico-chamado";
 import { ReagendarDialog } from "./reagendar-dialog";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 
 // Fase 4 (seção 7, migration 0037) — serviço `planejado` em que o técnico
 // apontou um problema antes de iniciar. O serviço NÃO muda de status por
@@ -36,18 +37,18 @@ export function ApontamentoCard({ servico }: { servico: ApontamentoRow }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <article className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+    <article className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-text-secondary">{servico.rtCodigo}</span>
+            <PlacaRt codigo={servico.rtCodigo} />
             {servico.tomticketId && (
               <span className="font-mono text-xs text-text-tertiary">#{servico.tomticketId}</span>
             )}
           </div>
           <p className="mt-0.5 truncate text-sm font-medium text-text-primary">{servico.chamadoAssunto}</p>
           <p className="mt-0.5 text-xs text-text-tertiary">
-            {servico.rtNome} · técnico <strong className="text-text-secondary">{servico.tecnicoNome}</strong>
+            {nomeSemCodigo(servico.rtNome, servico.rtCodigo)} · técnico <strong className="text-text-secondary">{servico.tecnicoNome}</strong>
             {servico.rotaData && (
               <> · rota de {formatoData.format(new Date(`${servico.rotaData}T00:00:00`))}</>
             )}{" "}
@@ -68,8 +69,8 @@ export function ApontamentoCard({ servico }: { servico: ApontamentoRow }) {
         </div>
       </div>
 
-      <div className="mt-3 rounded-[var(--radius-sm)] border border-border bg-surface-input p-3">
-        <p className="text-xs font-semibold tracking-wide text-text-tertiary uppercase">
+      <div className="mt-3 rounded-[var(--radius-sm)] border border-border-strong bg-surface-input p-3">
+        <p className="text-xs font-medium text-text-secondary">
           Problema apontado pelo técnico
         </p>
         <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">{servico.descricao}</p>

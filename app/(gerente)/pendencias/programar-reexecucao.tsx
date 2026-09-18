@@ -5,6 +5,7 @@ import { programarReexecucao, type ReexecucaoState } from "./actions";
 import { Modal } from "@/lib/ui/modal";
 import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
 import { FOCUS_RING, FIELD_INPUT, FIELD_LABEL } from "@/lib/ui/styles";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 export type RotaParaReexecucao = {
   id: string;
@@ -37,7 +38,7 @@ export function ProgramarReexecucao({
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className={`shrink-0 rounded-[var(--radius-sm)] border border-accent px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent hover:text-white ${FOCUS_RING}`}
+        className={`shrink-0 rounded-[var(--radius-sm)] border border-accent px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent hover:text-on-accent ${FOCUS_RING}`}
       >
         Programar nova execução
       </button>
@@ -108,7 +109,7 @@ function ReexecucaoDialog({
           <input type="hidden" name="tecnicoId" value={tecnicoId} />
 
           <p className="text-sm text-text-secondary">
-            <span className="font-mono font-semibold text-text-primary">{rtCodigo}</span> — {chamadoAssunto}
+            <PlacaRt codigo={rtCodigo} /> — {chamadoAssunto}
           </p>
 
           <div className="flex flex-col gap-1">
@@ -196,7 +197,7 @@ function ReexecucaoDialog({
             <button
               type="submit"
               disabled={isPending || !rotaId || !tecnicoId}
-              className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+              className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
             >
               {isPending ? "Programando..." : "Programar"}
             </button>

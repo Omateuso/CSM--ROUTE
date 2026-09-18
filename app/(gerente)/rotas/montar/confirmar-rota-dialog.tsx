@@ -7,6 +7,7 @@ import { Modal } from "@/lib/ui/modal";
 import { useCloseOnSuccess } from "@/lib/ui/use-close-on-success";
 import { FOCUS_RING, FIELD_INPUT, FIELD_LABEL } from "@/lib/ui/styles";
 import { PrioridadeBadge } from "@/app/chamados/prioridade-badge";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 type Equipe = { id: string; nome: string };
 type RtResumo = { id: string; codigo: string; endereco: string };
@@ -243,7 +244,7 @@ export function ConfirmarRotaDialog({
                   return (
                     <li key={rt.id} className="rounded-[var(--radius-sm)] border border-border p-2">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-white">
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent text-[9px] font-semibold text-on-accent">
                           {indice + 1}
                         </span>
                         {chamados.length > 0 ? (
@@ -257,7 +258,7 @@ export function ConfirmarRotaDialog({
                               {aberta ? "▾" : "▸"}
                             </span>
                             <span className="min-w-0 flex-1 truncate text-xs">
-                              <span className="font-mono font-semibold text-text-primary">{rt.codigo}</span>{" "}
+                              <PlacaRt codigo={rt.codigo} />{" "}
                               <span className="text-text-tertiary">{rt.endereco}</span>
                             </span>
                             <span
@@ -272,7 +273,7 @@ export function ConfirmarRotaDialog({
                           </button>
                         ) : (
                           <span className="min-w-0 flex-1 truncate text-xs">
-                            <span className="font-mono font-semibold text-text-primary">{rt.codigo}</span>{" "}
+                            <PlacaRt codigo={rt.codigo} />{" "}
                             <span className="text-text-tertiary">{rt.endereco}</span>
                           </span>
                         )}
@@ -404,7 +405,7 @@ export function ConfirmarRotaDialog({
             <button
               type="submit"
               disabled={isPending}
-              className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+              className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
             >
               {isPending ? "Confirmando..." : "Confirmar rota"}
             </button>

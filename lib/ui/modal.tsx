@@ -55,10 +55,10 @@ export function Modal({
       // deles (confirmar rota, correção, reagendamento, urgência, etc). Pra
       // `position:fixed`, `%` resolve contra o viewport, então `calc(100%-2rem)`
       // já garante 1rem (16px) de respiro de cada lado.
-      className="fixed top-1/2 left-1/2 m-0 max-h-[90vh] w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-lg)] border border-border bg-surface p-0 text-text-primary backdrop:bg-text-primary/40"
+      className="fixed top-1/2 left-1/2 m-0 max-h-[90vh] w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-lg)] bg-surface p-0 text-text-primary shadow-lift-overlay backdrop:bg-text-primary/35 backdrop:backdrop-blur-[2px] open:motion-safe:animate-[modal-in_180ms_var(--ease-out)]"
     >
       <div className="p-6">
-        <h2 id={titleId} className="mb-4 text-base font-semibold text-text-primary">
+        <h2 id={titleId} className="mb-4 text-lg font-semibold tracking-[-0.01em] text-text-primary">
           {title}
         </h2>
         {children}

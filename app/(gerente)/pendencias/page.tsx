@@ -9,6 +9,7 @@ import { ProgramarReexecucao, type RotaParaReexecucao } from "./programar-reexec
 import { mensagemPendencia, mensagemReagendamento } from "@/lib/tomticket/mensagens";
 import { tomticketConfigurado } from "@/lib/tomticket/config";
 import { PendenciasRealtime } from "./pendencias-realtime";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 
 // Página própria desde 22/08/2026 (pedido do usuário) — antes era um modal
 // dentro de /validacao. Mesma consulta que vivia lá: `historico` com
@@ -178,11 +179,11 @@ export default async function PendenciasPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">Execução</p>
-          <h1 className="mt-1 text-2xl font-semibold text-text-primary uppercase">Pendências</h1>
+          <p className="text-xs font-medium text-text-tertiary">Execução</p>
+          <h1 className="mt-1 text-2xl font-semibold text-text-primary">Pendências</h1>
           <p className="mt-2 text-sm leading-relaxed text-text-secondary">
             Atendimentos que ficaram para trás — o técnico não concluiu, ou o serviço foi reagendado.
             Some sozinha daqui assim que o chamado entrar numa rota nova.
@@ -192,23 +193,23 @@ export default async function PendenciasPage() {
       </header>
 
       {pendencias.length === 0 ? (
-        <p className="rounded-[var(--radius-md)] border border-border bg-surface px-4 py-8 text-center text-sm text-text-tertiary">
+        <p className="rounded-[var(--radius-md)] bg-surface shadow-lift px-4 py-8 text-center text-sm text-text-tertiary">
           Nenhuma pendência em aberto.
         </p>
       ) : (
         <div className="flex flex-col gap-3">
           {pendencias.map((p) => (
-            <article key={p.historicoId} className="rounded-[var(--radius-md)] border border-border bg-surface p-4">
+            <article key={p.historicoId} className="rounded-[var(--radius-md)] bg-surface shadow-lift p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-text-secondary">{p.rtCodigo}</span>
+                    <PlacaRt codigo={p.rtCodigo} />
                     {p.tomticketId && (
                       <span className="font-mono text-xs text-text-tertiary">#{p.tomticketId}</span>
                     )}
                   </div>
                   <p className="mt-0.5 text-sm font-medium text-text-primary">{p.chamadoAssunto}</p>
-                  <p className="text-xs text-text-tertiary">{p.rtNome}</p>
+                  <p className="mt-1 text-xs text-text-tertiary">{nomeSemCodigo(p.rtNome, p.rtCodigo)}</p>
                 </div>
                 {p.tomticketId && (
                   <a

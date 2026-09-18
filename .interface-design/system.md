@@ -5,42 +5,106 @@ Fase 1 / Parte B). Reaproveitar em toda tela nova — não reinventar por págin
 
 ## Direção e sensação
 
-"Registro/cadastro territorial" — vocabulário e composição inspirados em
-planta baixa / cadastro civil (o próprio domínio: manutenção predial,
-zoneamento). Neutro e restrito, não maximalista. Prioriza clareza
-operacional sobre impacto visual (o público é interno, denso, recorrente).
+**"Operacional claro" — identidade "Azulejo" (18/09/2026).** Ferramenta de
+trabalho interna, densa, usada todo dia: fundo claro contínuo, menu lateral
+na mesma cor do fundo (separado só por borda fina), UMA cor de destaque, e
+as cores operacionais (prioridade/SLA) sendo as únicas coisas que "gritam"
+na tela. Vocabulário do domínio: a placa de número da casa (RT) e a rota
+como linha de paradas. Prévia aprovada pelo usuário (opção A entre 3):
+https://claude.ai/artifact/JmHYEUtpE6NP3KQ4aJkbEr — substitui a moldura
+escura + teal/azul/rosa competindo que existia antes.
+
+**Login** continua deliberadamente divergente (versão escura, preto +
+laranja, decisão de 24/08/2026) — só herda a tipografia.
 
 ## Tokens (`app/globals.css`)
 
-- **Base neutra quente** (stone, não zinc/gray frio): `--background:
-  #faf9f7`, `--surface: #ffffff`, `--surface-input: #f5f4f2`.
-- **Texto — 3 níveis usáveis** (todos ≥ WCAG AA 4.5:1 sobre `--background`):
-  `--text-primary: #1c1917`, `--text-secondary: #57534e`,
-  `--text-tertiary: #6b6560` (~5.3:1). `--text-muted: #a8a29e` existe mas
-  **não passa AA (~2.2:1) — nunca usar em texto que precisa ser lido**, só
-  em contexto puramente decorativo (hoje, nenhum uso real).
-- **Um único accent**: `--accent: #1e3a6e` (azul "planta baixa"), hover
-  `--accent-hover: #16305a`. Não usar as cores operacionais
-  (vermelho/laranja/amarelo/verde/roxo do CLAUDE.md) fora dos badges de
-  prioridade/SLA — são um vocabulário à parte, reservado.
-- **Danger**: `--danger: #b91c1c`, hover `--danger-hover: #991b1b`.
-- **Bordas**: `--border: rgba(28,25,23,.08)`, `--border-strong:
-  rgba(28,25,23,.16)` — hairline intencional (ver Depth abaixo).
-- **Radius**: `--radius-sm: 6px` (inputs/botões), `--radius-md: 10px`
-  (cards), `--radius-lg: 14px` (reservado pra modais, ainda sem uso).
-- Fontes: Geist Sans (`--font-sans`, corpo/UI) + Geist Mono (`--font-mono`,
-  só pra dado tabular/estrutural — contagens, códigos — nunca corpo de
-  texto).
+- **Base neutra quente** (stone): `--background: #F7F6F3`, `--surface:
+  #FFFFFF`, `--surface-input: #F1EFEA` (campo é "rebaixado", mais escuro
+  que a superfície), `--surface-hover: rgba(28,25,23,.04)`.
+- **Texto — 3 níveis usáveis** (≥ AA 4.5:1 sobre `--background`):
+  `--text-primary: #1C1917`, `--text-secondary: #57534E`,
+  `--text-tertiary: #6B665F`. `--text-muted: #A8A29E` **não passa AA —
+  nunca em texto que precisa ser lido.**
+- **Um único destaque**: `--accent: #0B6E68` (o teal `#008A83` do ícone
+  PWA/login escurecido pra 5.8:1 com texto branco), hover `#095B56`,
+  `--accent-tint: #E3F1EF` (item ativo do menu, chip selecionado),
+  `--accent-tint-strong: #C6E3E0`, `--accent-on-tint: #0A5C57` (texto em
+  cima da tinta). O azul-marinho `#1E3A6E` e o rosa `#FF0F7B`/`#FF135A`
+  foram aposentados — não reintroduzir.
+- **Feedback de UI**: `--danger: #B42318` (+`-tint`), `--success: #15803D`
+  (+`-tint`; selo de localização OK e botões do técnico), `--info: #1D4ED8`
+  (+`-tint`; "planejado/informação").
+- **Cores operacionais** (só badges de prioridade/SLA): emergencial
+  `#B42318`, alta `#B4400B`, normal `#946200`; SLA dentro `#15803D`,
+  próximo `#946200`, vencido `#6D28D9`. Cada uma tem `-tint` pro fundo da
+  pílula. Nunca como destaque genérico.
+- **Bordas**: `--border: rgba(28,25,23,.08)` (divisor), `--border-strong:
+  rgba(28,25,23,.16)` (campo, botão secundário, placa).
+- **Radius**: `--radius-sm: 8px` (campo/botão), `--radius-md: 12px`
+  (card), `--radius-lg: 16px` (diálogo). Concêntrico: card 12 + padding 4
+  → filho 8.
+- **Sombras** (`shadow-lift`, `shadow-lift-hover`, `shadow-lift-overlay`):
+  anel de 1px + duas sombras suaves. Ver "Depth".
+- **Movimento**: `--ease-out: cubic-bezier(.23,1,.32,1)`; durações
+  120–180ms; só `transform`/`opacity`/cor, nunca `transition-all`;
+  `active:scale-[.97]` em todo botão; `prefers-reduced-motion` respeitado.
+- **Fontes**: IBM Plex Sans (`--font-sans`, corpo/UI, pesos 400–700) + IBM
+  Plex Mono (`--font-mono`, só dado estrutural: placa da RT, protocolo,
+  horário — nunca corpo de texto nem rótulo). Trocadas da Geist em
+  18/09/2026 (`app/layout.tsx`).
 
-## Depth — bordas finas, sem sombra
+## Tema claro / escuro
 
-Escolha única e deliberada: hairline borders (`--border`/`--border-strong`)
-para separar cards/linhas, nunca `box-shadow` decorativo. Combina com o
-tom "documento/registro" e evita o visual genérico de dashboard de IA.
-Consequência aceita conscientemente: bordas nesse nível de opacidade
-provavelmente não atingem 3:1 de contraste não-textual (WCAG 1.4.11) —
-mitigado nos inputs por eles também terem `--surface-input` distinto do
-fundo (duas pistas redundantes, não só a borda).
+Dois blocos de tokens em `app/globals.css`: o `:root` (claro) e o escuro,
+aplicado por `:root[data-theme="dark"]` ou por `prefers-color-scheme: dark`
+quando não há `data-theme="light"`. Um matiz só (stone quente); no escuro
+muda a luminosidade (`#161514` → `#201F1D` → `#2A2826`), operacionais
+dessaturadas e clareadas com fundo em alpha, sombras viram anel. A
+preferência vai no cookie `tema` (lido em `app/layout.tsx` → `data-theme`
+no `<html>`, sem flash); o alternador é `lib/ui/theme-toggle.tsx`
+(automático → claro → escuro). **Regras:** nunca `text-white` em cima de
+fundo colorido — usar `text-on-accent` (`--on-accent`: branco no claro,
+quase-preto no escuro); nunca `neutral-*`/`zinc-*`/hex solto — só tokens;
+imagem/mapa recebem tratamento próprio (Leaflet: popup nos tokens, tiles
+com filtro no escuro).
+
+## Interatividade — o que todo KPI e lista deve ter
+
+- **KPI é link** quando existe uma tela/filtro que explica o número:
+  `StatCard href/dica`, `LinhaDeRota` com `href` por parada, tiles do
+  "Atenção agora". O card inteiro é o alvo; seta à direita, sobe no hover
+  (`CARD_INTERACTIVE`), `title` + texto `sr-only` dizendo aonde vai.
+- **Filtros por URL** em `/chamados` (`?busca=&prioridade=&sla=&regiao=`):
+  todo link "ver chamados X" aponta pra lá, nunca pra lista sem filtro.
+- **Busca rápida** (Ctrl+K): páginas, RTs, protocolo, texto livre.
+- **Feedback:** `active:scale-[.97]` em botão; hover em linha de tabela e
+  card clicável; `IndicadorAoVivo` ("Atualizado", ponto pulsando) em tela com Realtime.
+
+## Depth — UMA estratégia: sombra discreta pra card, borda pra campo
+
+Card/superfície que "sobe" usa `CARD` (`bg-surface shadow-lift`), nunca
+`border border-border` — a borda hairline fica só pra divisor de linha
+(`divide-border`) e pra campo/botão secundário (`border-strong`). Card
+clicável: `CARD_INTERACTIVE` (sobe pra `shadow-lift-hover` no hover).
+Diálogo: `shadow-lift-overlay` + backdrop escurecido/desfocado + entrada de
+180ms a partir de `scale(.96)`. Menu lateral: sem sombra, só a borda.
+
+## Hierarquia e densidade
+
+- Escala tipográfica (~1.25 sobre 13.5/14px): apoio 12 · corpo 13.5–14 ·
+  título de seção 15/600 · título de diálogo 18/600 · título de página
+  24–26/600 · número de card 24–28/600 · número herói 40–56/600. Títulos
+  com `tracking -0.015em a -0.03em`; nunca caixa alta em título/rótulo
+  (o "VISÃO GERAL"/"VALIDAÇÃO" em caixa alta saiu em 18/09).
+- Peso e cor fazem mais hierarquia que tamanho: num mesmo 13.5px, valor
+  600/primary · rótulo 500/secondary · meta 400/tertiary.
+- Densidade: padding de card `p-5` (20px), gap entre cards `gap-4`,
+  linha de tabela `py-2.5`, item de menu 36px (44px no celular), botão
+  36px, botão do técnico 52px.
+- Um foco por tela: o número que exige decisão lidera (Atenção agora no
+  Dashboard); o resto é demovido de propósito.
+- Página: `mx-auto w-full max-w-5xl px-4 py-7 sm:px-6 sm:py-10`.
 
 ## Spacing
 
@@ -54,10 +118,28 @@ Gap entre cards: `gap-4` (16px). Linhas de lista: `py-2` (8px vertical).
   (ação positiva/"+"), hover mais escuro. Sempre com `FOCUS_RING` e
   `TAP_TARGET`, importados de `lib/ui/styles.ts` (extraído aqui porque já
   é a 2ª tela reaproveitando — zonas e RTs importam do mesmo lugar).
-- **Botão primário** (submit de form pequeno): `bg-accent text-white
-  rounded-sm px-3 py-1.5 text-xs font-medium`.
-- **Input de texto inline**: `border-border bg-surface-input rounded-sm
-  px-2.5 py-1.5 text-sm`, foco = `border-accent` + `ring-1 ring-accent`.
+- **Botões** — sempre importar de `lib/ui/styles.ts`, nunca montar a
+  string na tela: `PRIMARY_BUTTON` (teal sólido, 1 por contexto),
+  `SECONDARY_BUTTON` (branco com borda), `DANGER_BUTTON`, `GHOST_BUTTON`
+  (texto no destaque, sem moldura), `ICON_BUTTON` (36×36). Todos 36px,
+  13.5/600, raio 8, `active:scale-[.97]`, anel de foco. App do técnico:
+  `PRIMARY_ACTION_BUTTON` (verde, 52px, largura total) e
+  `SECONDARY_ACTION_BUTTON`.
+- **Placa da RT** (`PlacaRt` em `lib/ui/placa-rt.tsx`, classe `PLACA_RT`):
+  assinatura do produto — código da RT em mono 11.5/600, tracking .04em,
+  moldura `border-strong` sobre `surface-input`, raio 5, altura 22. Usar
+  SEMPRE que um código de RT aparecer; ao lado dela, o nome vai sem o
+  código repetido (`nomeSemCodigo`).
+- **Badge de prioridade/SLA**: pílula 22px com fundo `-tint` + ponto +
+  texto na cor escura da escala (`StatusDot` com `pillClassName`). Os
+  outros status (serviço, chamado, rota, RT) continuam "dot + texto",
+  mais quietos — são duas camadas de barulho de propósito.
+- **Card de indicador** (`StatCard`/`OperacaoHojeCard`): rótulo 12/500
+  secondary em cima, número 24–40/600 embaixo, sem borda lateral colorida
+  (a cor só aparece quando informa: `tom="emergencial"|"vencido"`).
+- **Input de texto** (`FIELD_INPUT`): `border-border-strong
+  bg-surface-input rounded-[var(--radius-sm)] px-3 py-2 text-sm`, foco =
+  `border-accent` + `ring-2 ring-accent/25`.
   **Sempre** com `<label>` associada (pode ser `sr-only` em formulários
   inline compactos) — nunca só `placeholder`.
 - **Badge de contagem**: `border-border-strong rounded-sm px-1.5 py-0.5
@@ -132,11 +214,27 @@ Gap entre cards: `gap-4` (16px). Linhas de lista: `py-2` (8px vertical).
   linha): mesmo tratamento do "Renomear" acima — `aria-label` com o
   identificador da linha (`Editar RT ${codigo}`).
 
+## Navegação (`app/app-nav.tsx`)
+
+Menu lateral 248px (68px recolhido), mesma cor do fundo, borda direita
+fina. Links agrupados por momento do fluxo (`NAV_GRUPOS`): Operação /
+Fechamento / Relatórios / Cadastros (gerente); Acompanhamento / Cadastros
+(gestão). Item 36px, 13.5/500; ativo = `accent-tint` + texto `on-tint` +
+ícone `accent` + `aria-current="page"`. Celular (≤860px): barra de 56px no
+topo, painel desce POR CIMA do conteúdo e **nasce fechado** (estado
+próprio, independente do cookie do desktop), fecha ao escolher link.
+
 ## Pendências conhecidas (não bloqueiam, revisitar se acumular)
 
-- Sem sistema de navegação/nav global ainda — cada tela por enquanto tem
-  seu próprio link de volta. Decidir isso quando o dashboard (próxima
-  tela com nav real) for implementado.
+- Rodadas 1 e 2 da identidade (18/09) cobriram tokens, casca,
+  componentes compartilhados, placa da RT em toda tela, tags e a linha de
+  rota. Ainda fora: Login (escuro de propósito), `OperacaoHojeCard` em
+  Validação/Painel (poderia virar `LinhaDeRota` também), e os formulários
+  maiores (registrar urgência, confirmar rota) que só herdaram tokens.
+- **Linha de rota** (`LinhaDeRota`, `lib/ui/linha-de-rota.tsx`): paradas
+  36px (26px compacto) ligadas por linha de 2px `border-strong`; tom por
+  parada (info/accent/atencao/sucesso), `cheio` = concluída, `atual` =
+  anel `accent/20`. Um `<ol>` com `aria-label`; nunca mais de 8 paradas.
 - Botões de texto (Renomear/Excluir) em estado de repouso têm sinalização
   de clicabilidade relativamente sutil (cor neutra, sem sublinhado). Aceito
   por ora — é um padrão comum em ferramentas densas — mas se usuários

@@ -26,6 +26,18 @@ export default async function ChamadosPage(props: PageProps<"/chamados">) {
   // Carimbo do clique no toast (ver app/novas-respostas-toast.tsx): entra na
   // `key` pra reabrir o modal quando o MESMO chamado chega de novo.
   const aberturaInicial = typeof searchParams.t === "string" ? searchParams.t : "";
+  // Filtros por URL (18/09/2026) — é o que faz os KPIs do Dashboard/Painel
+  // serem clicáveis: "SLA vencido" abre /chamados?sla=vencido já filtrado,
+  // a RT da lista de volume abre /chamados?busca=SRT%2011. Valores
+  // inválidos são ignorados (cai no "todos").
+  const str = (k: string) => (typeof searchParams[k] === "string" ? (searchParams[k] as string) : "");
+  const filtrosIniciais = {
+    busca: str("busca"),
+    prioridade: str("prioridade"),
+    sla: str("sla"),
+    regiao: str("regiao"),
+  };
+  const chaveFiltros = Object.values(filtrosIniciais).join("|");
 
   const {
     data: { user },
@@ -165,12 +177,12 @@ export default async function ChamadosPage(props: PageProps<"/chamados">) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-12">
+    <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         {/* max-w no texto: sem isso a descrição ocupa a linha inteira e empurra
             o botão de sincronizar pra baixo, desalinhado. */}
         <div className="max-w-xl">
-          <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">
+          <p className="text-xs font-medium text-text-tertiary">
             Cadastro
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-text-primary">Chamados</h1>
@@ -188,8 +200,9 @@ export default async function ChamadosPage(props: PageProps<"/chamados">) {
       </header>
 
       <ChamadosManager
-        key={chamadoIdInicial ? `${chamadoIdInicial}-${aberturaInicial}` : "lista"}
+        key={`${chamadoIdInicial ? `${chamadoIdInicial}-${aberturaInicial}` : "lista"}#${chaveFiltros}`}
         chamados={chamados}
+        filtrosIniciais={filtrosIniciais}
         rts={rts}
         podeCriar={podeCriar}
         podeResponder={podeResponder}

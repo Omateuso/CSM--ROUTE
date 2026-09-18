@@ -35,7 +35,7 @@ export function RelatorioManager({ linhas }: { linhas: LinhaRelatorio[] }) {
 
   if (datasDisponiveis.length === 0) {
     return (
-      <p className="rounded-[var(--radius-md)] border border-border bg-surface px-4 py-10 text-center text-sm text-text-tertiary">
+      <p className="rounded-[var(--radius-md)] bg-surface shadow-lift px-4 py-10 text-center text-sm text-text-tertiary">
         Nenhuma rota confirmada ainda — o relatório aparece assim que a primeira rota do dia for confirmada.
       </p>
     );
@@ -50,7 +50,7 @@ export function RelatorioManager({ linhas }: { linhas: LinhaRelatorio[] }) {
         id="relatorio-data"
         value={dataSelecionada}
         onChange={(e) => setDataSelecionada(e.target.value)}
-        className="rounded-[var(--radius-sm)] border border-border bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        className="rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-3 py-2 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       >
         {datasDisponiveis.map((d) => (
           <option key={d} value={d}>
@@ -59,7 +59,7 @@ export function RelatorioManager({ linhas }: { linhas: LinhaRelatorio[] }) {
         ))}
       </select>
 
-      <div className="mt-4 overflow-x-auto rounded-[var(--radius-md)] border border-border bg-surface">
+      <div className="mt-4 overflow-x-auto rounded-[var(--radius-md)] bg-surface shadow-lift">
         <table className="w-full min-w-[520px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-text-tertiary">

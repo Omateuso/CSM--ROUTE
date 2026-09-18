@@ -5,7 +5,6 @@ export default function Loading() {
     <PaginaCarregando
       secao="Execução"
       titulo="Pendências"
-      uppercase
       descricao="Atendimento iniciado, mas não concluído — some sozinha daqui assim que o chamado entrar numa rota nova."
     >
       <EsqueletoLista quantidade={4} />

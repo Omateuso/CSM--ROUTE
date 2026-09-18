@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { FOCUS_RING } from "@/lib/ui/styles";
+import { PlacaRt } from "@/lib/ui/placa-rt";
 
 // Agrupa os serviços da rota por RT: o técnico clica em "SRT 50" e a lista de
 // chamados daquela residência abre; clica de novo e volta a ser só "SRT 50".
@@ -38,7 +39,7 @@ export function RtGrupo({
   const [aberta, setAberta] = useState(false);
 
   return (
-    <li className="rounded-[var(--radius-md)] border border-border bg-surface">
+    <li className="rounded-[var(--radius-md)] bg-surface shadow-lift">
       {/* O gatilho e o link de navegação são IRMÃOS, não aninhados: um <a>
           dentro de um <button> é HTML inválido e o clique fica ambíguo. */}
       <div className="flex items-stretch gap-1 p-2">
@@ -52,20 +53,20 @@ export function RtGrupo({
             {aberta ? "▾" : "▸"}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-mono text-sm font-semibold text-text-primary">{codigo}</span>
-            <span className="block truncate text-xs text-text-tertiary">{endereco}</span>
+            <PlacaRt codigo={codigo} />
+            <span className="mt-1 block truncate text-xs text-text-secondary">{endereco}</span>
           </span>
           {paraRevisaoQuantidade > 0 && paraRevisaoQuantidade < quantidade ? (
             <span className="flex shrink-0 items-center gap-1">
-              <span className="rounded-full bg-sla-dentro/15 px-2 py-0.5 text-[10px] font-semibold text-sla-dentro">
+              <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-dentro-tint text-sla-dentro">
                 {quantidade - paraRevisaoQuantidade} hoje
               </span>
-              <span className="rounded-full bg-sla-proximo/15 px-2 py-0.5 text-[10px] font-semibold text-sla-proximo">
+              <span className="inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-proximo-tint text-sla-proximo">
                 {paraRevisaoQuantidade} revisão
               </span>
             </span>
           ) : paraRevisaoQuantidade > 0 && paraRevisaoQuantidade === quantidade ? (
-            <span className="shrink-0 rounded-full bg-sla-proximo/15 px-2 py-0.5 text-xs font-medium text-sla-proximo">
+            <span className="shrink-0 inline-flex h-[22px] items-center rounded-full px-2 text-xs font-medium bg-sla-proximo-tint text-sla-proximo">
               {quantidade} para revisão
             </span>
           ) : (

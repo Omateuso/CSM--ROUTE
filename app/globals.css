@@ -1,71 +1,98 @@
 @import "tailwindcss";
 
+/* Identidade visual "Azulejo" (18/09/2026) — direção "operacional claro":
+   fundo claro contínuo, menu na mesma cor do fundo, uma única cor de
+   destaque (o teal que já era do ícone PWA/login, escurecido pra passar
+   WCAG AA com texto branco), profundidade por sombra discreta em vez de
+   moldura escura. Prévia aprovada pelo usuário em
+   https://claude.ai/artifact/JmHYEUtpE6NP3KQ4aJkbEr (opção A).
+   Decisões e medidas em .interface-design/system.md. */
 :root {
-  /* Base neutra levemente quente ("papel de registro"), não cinza frio de
-     template — decisão do design system, ver .interface-design/system.md */
-  --background: #faf9f7;
+  /* Superfícies — neutros quentes (stone), do fundo pra dentro. */
+  --background: #f7f6f3;
   --surface: #ffffff;
-  --surface-input: #f5f4f2;
+  --surface-input: #f1efea;
+  --surface-hover: rgba(28, 25, 23, 0.04);
 
   --border: rgba(28, 25, 23, 0.08);
   --border-strong: rgba(28, 25, 23, 0.16);
 
+  /* Texto — 3 níveis usáveis (todos ≥ AA 4.5:1 sobre --background). */
   --text-primary: #1c1917;
   --text-secondary: #57534e;
-  --text-tertiary: #6b6560; /* ~5.3:1 sobre --background — AA ok com folga */
-  /* --text-muted NÃO passa WCAG AA (~2.2:1) sobre --background — só usar
-     em contexto genuinamente decorativo (nunca em texto que o usuário
-     precisa ler). Para qualquer texto informativo de baixa ênfase, usar
-     --text-tertiary. */
+  --text-tertiary: #6b665f;
+  /* --text-muted NÃO passa WCAG AA (~2.2:1) — só em contexto decorativo. */
   --text-muted: #a8a29e;
 
-  /* Azul "planta baixa" — único accent de ação/foco do sistema. Não usar
-     as cores operacionais (vermelho/laranja/amarelo/verde/roxo) fora dos
-     badges de prioridade/SLA definidos no CLAUDE.md. */
-  --accent: #1e3a6e;
-  --accent-hover: #16305a;
+  /* Único destaque de ação/foco/marca. `tint` é o fundo de item ativo,
+     chip selecionado e realce leve; `on-tint` é o texto que vai em cima. */
+  --accent: #0b6e68;
+  --accent-hover: #095b56;
+  --accent-tint: #e3f1ef;
+  --accent-tint-strong: #c6e3e0;
+  --accent-on-tint: #0a5c57;
+  /* Texto sobre fundo colorido sólido (botão primário, badge cheio, parada
+     concluída): branco no claro; no escuro os sólidos ficam mais claros e
+     o texto vira quase-preto pra manter AA. */
+  --on-accent: #ffffff;
 
-  --danger: #b91c1c;
+  /* Feedback genérico de UI (não são as cores operacionais abaixo). */
+  --danger: #b42318;
   --danger-hover: #991b1b;
-  /* Contraparte positiva genérica do --danger (mesma ideia: sinal de
-     feedback de UI, não uma das "cores operacionais" reservadas pra
-     prioridade/SLA abaixo) — usado pelo selo de integridade quando a
-     localização da evidência confere com a RT (25/08/2026), e desde
-     15/09/2026 também pelos botões de ação primária "totalmente verdes"
-     do app do técnico (Iniciar/Concluir atendimento, gravar áudio) — ver
-     PRIMARY_ACTION_BUTTON em lib/ui/styles.ts. */
+  --danger-tint: #fdecea;
+  /* Verde: selo de localização OK e os botões de ação primária do app do
+     técnico (Iniciar/Concluir atendimento, gravar áudio) — decisão do
+     usuário em 15/09/2026, ver PRIMARY_ACTION_BUTTON em lib/ui/styles.ts. */
   --success: #15803d;
   --success-hover: #116c32;
+  --success-tint: #e7f5ec;
+  /* Azul "planejado / informação" da tabela de cores do CLAUDE.md. */
+  --info: #1d4ed8;
+  --info-tint: #e8effd;
 
-  /* Preenchimento dos esqueletos de carregamento (loading.tsx). Alpha, não
-     cor sólida, de propósito: o mesmo bloco precisa ler bem sobre o branco
-     do --surface (dentro de um card) e sobre o --paper do menu-pasta (o
-     corpo da pasta, ver app/app-nav.module.css). Uma cor sólida acertaria
-     um fundo e sumiria no outro. */
-  --skeleton: rgba(28, 25, 23, 0.09);
+  --skeleton: rgba(28, 25, 23, 0.08);
 
-  /* Cores operacionais (ver CLAUDE.md, "Sistema de cores") — só usar nos
-     badges de prioridade/SLA de chamados, nunca como accent genérico.
-     Prioridade "baixa" fica sem cor (neutra) — não faz parte da tabela
-     original do CLAUDE.md, decisão tomada ao implementar B3: preservar
-     verde/azul só pros significados já definidos alhures. */
-  --priority-emergencial: #b91c1c; /* vermelho */
-  --priority-alta: #c2410c;        /* laranja */
-  --priority-normal: #d97706;      /* amarelo */
+  /* Cores operacionais (ver CLAUDE.md, "Sistema de cores") — só nos badges
+     de prioridade/SLA de chamados, nunca como destaque genérico. Cada uma
+     tem a versão `-tint` pro fundo da pílula (texto escuro em cima passa AA). */
+  --priority-emergencial: #b42318; /* vermelho */
+  --priority-emergencial-tint: #fdecea;
+  --priority-alta: #b4400b; /* laranja */
+  --priority-alta-tint: #fdeee3;
+  --priority-normal: #946200; /* amarelo */
+  --priority-normal-tint: #fbf3d9;
 
-  --sla-dentro: #16a34a;   /* verde */
-  --sla-proximo: #d97706;  /* amarelo — mesma escala de "normal", eixo diferente (SLA, não prioridade) */
-  --sla-vencido: #7e22ce;  /* roxo */
+  --sla-dentro: #15803d; /* verde */
+  --sla-dentro-tint: #e7f5ec;
+  --sla-proximo: #946200; /* amarelo — mesma escala de "normal", eixo diferente (SLA, não prioridade) */
+  --sla-proximo-tint: #fbf3d9;
+  --sla-vencido: #6d28d9; /* roxo */
+  --sla-vencido-tint: #f0eafb;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Profundidade: UMA estratégia — anel de 1px + duas sombras suaves pra
+     card/superfície que "sobe"; borda hairline só pra divisor e campo. */
+  --lift:
+    0 0 0 1px rgba(28, 25, 23, 0.05), 0 1px 2px -1px rgba(28, 25, 23, 0.06),
+    0 2px 6px rgba(28, 25, 23, 0.04);
+  --lift-hover:
+    0 0 0 1px rgba(28, 25, 23, 0.07), 0 4px 14px -4px rgba(28, 25, 23, 0.1);
+  --lift-overlay:
+    0 0 0 1px rgba(28, 25, 23, 0.06), 0 20px 50px -20px rgba(28, 25, 23, 0.3);
+
+  /* Escala de raio: campo/botão < card < diálogo. Concêntrico: um card
+     de 12px com padding 4px abriga um filho de 8px. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-input: var(--surface-input);
+  --color-surface-hover: var(--surface-hover);
 
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
@@ -77,32 +104,212 @@
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-tint-strong: var(--accent-tint-strong);
+  --color-accent-on-tint: var(--accent-on-tint);
+  --color-on-accent: var(--on-accent);
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
+  --color-danger-tint: var(--danger-tint);
   --color-success: var(--success);
   --color-success-hover: var(--success-hover);
+  --color-success-tint: var(--success-tint);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
   --color-skeleton: var(--skeleton);
 
   --color-priority-emergencial: var(--priority-emergencial);
+  --color-priority-emergencial-tint: var(--priority-emergencial-tint);
   --color-priority-alta: var(--priority-alta);
+  --color-priority-alta-tint: var(--priority-alta-tint);
   --color-priority-normal: var(--priority-normal);
+  --color-priority-normal-tint: var(--priority-normal-tint);
 
   --color-sla-dentro: var(--sla-dentro);
+  --color-sla-dentro-tint: var(--sla-dentro-tint);
   --color-sla-proximo: var(--sla-proximo);
+  --color-sla-proximo-tint: var(--sla-proximo-tint);
   --color-sla-vencido: var(--sla-vencido);
+  --color-sla-vencido-tint: var(--sla-vencido-tint);
+
+  --shadow-lift: var(--lift);
+  --shadow-lift-hover: var(--lift-hover);
+  --shadow-lift-overlay: var(--lift-overlay);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
+
+  --ease-out: var(--ease-out);
+}
+
+
+/* ---------- Tema escuro ----------
+   Mesma hierarquia, valores invertidos: UM matiz (stone quente), só muda a
+   luminosidade entre as superfícies (base → +1 → +2). Cores operacionais
+   dessaturadas de leve e clareadas (texto) com fundo em alpha, pra passar
+   AA sobre o escuro. Sombras não leem em fundo escuro — `--lift` vira só o
+   anel de 1px em branco translúcido.
+
+   Aplicado de duas formas (ver app/layout.tsx + lib/ui/theme-toggle.tsx):
+   1) preferência explícita do usuário: `<html data-theme="dark">` (cookie
+      `tema`, lido no servidor — sem flash no primeiro paint);
+   2) sem preferência salva: segue o sistema (`prefers-color-scheme`),
+      exceto se o usuário fixou `data-theme="light"`. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #161514;
+    --surface: #201f1d;
+    --surface-input: #2a2826;
+    --surface-hover: rgba(255, 255, 255, 0.05);
+
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+
+    --text-primary: #f2efea;
+    --text-secondary: #b8b2aa;
+    --text-tertiary: #8f8880;
+    --text-muted: #5f5952;
+
+    --accent: #3fb3aa;
+    --accent-hover: #5cc4bb;
+    --accent-tint: rgba(63, 179, 170, 0.14);
+    --accent-tint-strong: rgba(63, 179, 170, 0.26);
+    --accent-on-tint: #8fdcd5;
+    --on-accent: #0f1b1a;
+
+    --danger: #f0655a;
+    --danger-hover: #f4837a;
+    --danger-tint: rgba(240, 101, 90, 0.16);
+    --success: #4cc27a;
+    --success-hover: #6ad091;
+    --success-tint: rgba(76, 194, 122, 0.16);
+    --info: #7ea6ff;
+    --info-tint: rgba(126, 166, 255, 0.16);
+
+    --skeleton: rgba(255, 255, 255, 0.07);
+
+    --priority-emergencial: #f0655a;
+    --priority-emergencial-tint: rgba(240, 101, 90, 0.16);
+    --priority-alta: #f0924e;
+    --priority-alta-tint: rgba(240, 146, 78, 0.16);
+    --priority-normal: #e2b33c;
+    --priority-normal-tint: rgba(226, 179, 60, 0.16);
+
+    --sla-dentro: #4cc27a;
+    --sla-dentro-tint: rgba(76, 194, 122, 0.16);
+    --sla-proximo: #e2b33c;
+    --sla-proximo-tint: rgba(226, 179, 60, 0.16);
+    --sla-vencido: #b391f5;
+    --sla-vencido-tint: rgba(179, 145, 245, 0.18);
+
+    --lift: 0 0 0 1px rgba(255, 255, 255, 0.07);
+    --lift-hover: 0 0 0 1px rgba(255, 255, 255, 0.12);
+    --lift-overlay: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --background: #161514;
+  --surface: #201f1d;
+  --surface-input: #2a2826;
+  --surface-hover: rgba(255, 255, 255, 0.05);
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text-primary: #f2efea;
+  --text-secondary: #b8b2aa;
+  --text-tertiary: #8f8880;
+  --text-muted: #5f5952;
+
+  --accent: #3fb3aa;
+  --accent-hover: #5cc4bb;
+  --accent-tint: rgba(63, 179, 170, 0.14);
+  --accent-tint-strong: rgba(63, 179, 170, 0.26);
+  --accent-on-tint: #8fdcd5;
+  --on-accent: #0f1b1a;
+
+  --danger: #f0655a;
+  --danger-hover: #f4837a;
+  --danger-tint: rgba(240, 101, 90, 0.16);
+  --success: #4cc27a;
+  --success-hover: #6ad091;
+  --success-tint: rgba(76, 194, 122, 0.16);
+  --info: #7ea6ff;
+  --info-tint: rgba(126, 166, 255, 0.16);
+
+  --skeleton: rgba(255, 255, 255, 0.07);
+
+  --priority-emergencial: #f0655a;
+  --priority-emergencial-tint: rgba(240, 101, 90, 0.16);
+  --priority-alta: #f0924e;
+  --priority-alta-tint: rgba(240, 146, 78, 0.16);
+  --priority-normal: #e2b33c;
+  --priority-normal-tint: rgba(226, 179, 60, 0.16);
+
+  --sla-dentro: #4cc27a;
+  --sla-dentro-tint: rgba(76, 194, 122, 0.16);
+  --sla-proximo: #e2b33c;
+  --sla-proximo-tint: rgba(226, 179, 60, 0.16);
+  --sla-vencido: #b391f5;
+  --sla-vencido-tint: rgba(179, 145, 245, 0.18);
+
+  --lift: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --lift-hover: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --lift-overlay: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   background: var(--color-background);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
+}
+/* Troca de tema sem piscar: só cor/fundo, 200ms. Desligada em
+   prefers-reduced-motion como todo movimento do sistema. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-theme-transition] * {
+    transition:
+      background-color 200ms var(--ease-out),
+      border-color 200ms var(--ease-out),
+      color 200ms var(--ease-out),
+      box-shadow 200ms var(--ease-out) !important;
+  }
+}
+
+/* Títulos: tracking levemente negativo em tamanho grande e quebra
+   balanceada — o que separa "documento" de "produto". */
+h1 {
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+/* Todo número dinâmico alinha em coluna (tabelas, contadores, horários). */
+.tabular-nums,
+.font-mono {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Anel de destaque do marcador "crítico" (emergencial + SLA vencido) no
@@ -120,5 +327,87 @@ body {
   100% {
     transform: scale(1.6);
     opacity: 0;
+  }
+}
+
+/* Ponto "Ao vivo": pulso suave só pra indicar que a tela está conectada.
+   Um único ponto por tela — nunca em lista. */
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 184, 90, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(34, 184, 90, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 184, 90, 0);
+  }
+}
+.live-dot {
+  animation: live-pulse 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
+
+/* Entrada do diálogo (lib/ui/modal.tsx): nunca a partir de scale(0) —
+   começa em 0.96 + transparente. Só transform/opacity (composição na GPU). */
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Entrada da busca rápida (lib/ui/busca-rapida.tsx): desce 8px e aparece. */
+@keyframes busca-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* ---------- Leaflet no tema do sistema ----------
+   Popup e controles seguem os tokens (senão ficam brancos no escuro). No
+   escuro, os tiles do OpenStreetMap recebem um filtro de inversão suave —
+   os marcadores são camadas separadas e não são afetados. */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: var(--lift-overlay);
+}
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-md);
+}
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--text-tertiary);
+}
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--surface);
+  color: var(--text-primary);
+  border-bottom-color: var(--border);
+}
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface) 80%, transparent) !important;
+  color: var(--text-tertiary) !important;
+}
+:root[data-theme="dark"] .leaflet-tile-pane {
+  filter: brightness(0.75) invert(1) hue-rotate(180deg) saturate(0.55) contrast(0.95);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-tile-pane {
+    filter: brightness(0.75) invert(1) hue-rotate(180deg) saturate(0.55) contrast(0.95);
   }
 }

@@ -103,8 +103,8 @@ export default async function MapaPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="mx-auto w-full max-w-6xl px-6 pt-12 pb-6">
-        <p className="font-mono text-xs uppercase tracking-wider text-text-tertiary">
+      <header className="mx-auto w-full max-w-6xl px-4 pt-7 pb-5 sm:px-6 sm:pt-10 sm:pb-6">
+        <p className="text-xs font-medium text-text-tertiary">
           Visão geral
         </p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Mapa operacional</h1>
@@ -114,7 +114,7 @@ export default async function MapaPage() {
         </p>
       </header>
 
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pb-12">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 pb-8 sm:px-6 sm:pb-10">
         <MapaClient rts={rts} />
       </div>
     </div>

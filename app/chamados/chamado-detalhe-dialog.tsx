@@ -12,6 +12,7 @@ import { HistoricoChamado } from "@/lib/ui/historico-chamado";
 import { responderChamado, type RespostaChamadoState } from "./actions";
 import type { ChamadoRow } from "./chamados-manager";
 import type { DetalheChamado } from "./actions";
+import { PlacaRt, nomeSemCodigo } from "@/lib/ui/placa-rt";
 
 const formatoData = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -58,7 +59,7 @@ export function ChamadoDetalheDialog({
             <div>
               <dt className="text-xs text-text-tertiary">RT</dt>
               <dd className="text-text-primary">
-                <span className="font-mono text-xs">{chamado.rtCodigo}</span> — {chamado.rtNome}
+                <PlacaRt codigo={chamado.rtCodigo} /> {nomeSemCodigo(chamado.rtNome, chamado.rtCodigo)}
               </dd>
             </div>
             <div>
@@ -75,7 +76,7 @@ export function ChamadoDetalheDialog({
 
           <div>
             <p className="mb-1 text-xs text-text-tertiary">Mensagem</p>
-            <p className="max-h-64 overflow-y-auto rounded-[var(--radius-sm)] border border-border bg-surface-input p-3 text-sm whitespace-pre-wrap text-text-primary">
+            <p className="max-h-64 overflow-y-auto rounded-[var(--radius-sm)] border border-border-strong bg-surface-input p-3 text-sm whitespace-pre-wrap text-text-primary">
               {detalhe === null
                 ? "Carregando..."
                 : detalhe.descricao || "Sem mensagem registrada."}
@@ -257,7 +258,7 @@ function ResponderChamadoForm({
         <button
           type="submit"
           disabled={isPending || excedeu || vazia}
-          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+          className={`rounded-[var(--radius-sm)] bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
         >
           {isPending ? "Enviando..." : "Enviar resposta ao TomTicket"}
         </button>

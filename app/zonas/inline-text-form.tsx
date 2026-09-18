@@ -62,12 +62,12 @@ export function InlineTextForm({
           required
           disabled={isPending}
           onKeyDown={handleKeyDown}
-          className={`w-full rounded-[var(--radius-sm)] border border-border bg-surface-input px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent ${FOCUS_RING}`}
+          className={`w-full rounded-[var(--radius-sm)] border border-border-strong bg-surface-input px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent ${FOCUS_RING}`}
         />
         <button
           type="submit"
           disabled={isPending}
-          className={`shrink-0 rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+          className={`shrink-0 rounded-[var(--radius-sm)] bg-accent px-3 py-1.5 text-xs font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
         >
           {isPending ? "Salvando..." : submitLabel}
         </button>

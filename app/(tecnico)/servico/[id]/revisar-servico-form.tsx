@@ -50,7 +50,7 @@ export function RevisarServicoForm({ servicoId }: { servicoId: string }) {
       <button
         type="submit"
         disabled={isPending || !fotoPronta}
-        className={`w-full rounded-[var(--radius-sm)] bg-sla-proximo px-4 py-3 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+        className={`w-full rounded-[var(--radius-sm)] bg-sla-proximo px-4 py-3 text-sm font-semibold text-on-accent transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
       >
         {isPending ? "Enviando..." : "Marcar como revisado"}
       </button>
